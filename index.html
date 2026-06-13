@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ProPresenter Clone</title>
+    <link rel="stylesheet" href="/src/styles/variables.css" />
+    <link rel="stylesheet" href="/src/styles/global.css" />
+    <link rel="stylesheet" href="/src/styles/layout.css" />
+    <link rel="stylesheet" href="/src/styles/components.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app" class="app-layout">
+      <header class="app-toolbar" id="toolbar"></header>
+      
+      <div class="app-main">
+        <div class="panel-left" id="panel-left">
+          <div class="library-panel" id="library-panel"></div>
+          <div class="playlist-panel" id="playlist-panel"></div>
+        </div>
+        
+        <div class="panel-resizer" id="resizer-left"></div>
+        
+        <div class="panel-center" id="panel-center">
+          <div class="slide-view" id="slide-view"></div>
+        </div>
+        
+        <div class="panel-resizer" id="resizer-right"></div>
+        
+        <div class="panel-right" id="panel-right">
+          <div class="preview-panel" id="preview-panel"></div>
+          <div class="show-controls" id="show-controls"></div>
+        </div>
+      </div>
+    </div>
+    
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

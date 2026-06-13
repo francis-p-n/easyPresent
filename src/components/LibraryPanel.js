@@ -23,6 +23,9 @@ export class LibraryPanel {
     header.innerHTML = `
       <span class="panel-header__title">Library</span>
       <div class="panel-header__actions">
+        <button class="btn btn--icon" id="library-import-pptx-btn" title="Import PPTX">
+          ${icon('upload', 14).outerHTML}
+        </button>
         <button class="btn btn--icon" id="library-add-btn" title="New Presentation">
           ${icon('plus', 14).outerHTML}
         </button>
@@ -113,6 +116,38 @@ export class LibraryPanel {
   }
 
   _bindEvents() {
+    // PPTX Import
+    this.container.querySelector('#library-import-pptx-btn')?.addEventListener('click', async () => {
+      if (window.electronAPI && window.electronAPI.importPptx) {
+        try {
+          const slidesData = await window.electronAPI.importPptx();
+          if (slidesData) {
+            const newPres = {
+              id: 'pptx-' + Date.now(),
+              name: 'Imported Presentation',
+              category: 'Default',
+              slides: slidesData.map(s => ({
+                id: 'slide-' + Math.random().toString(36).substr(2, 9),
+                text: s.text,
+                type: 'text'
+              }))
+            };
+            const presentations = [...state.get('presentations'), newPres];
+            state.set('presentations', presentations);
+            state.set('selectedPresentation', newPres);
+            state.set('slides', newPres.slides);
+            state.set('activeSlideIndex', 0);
+            this._renderList();
+          }
+        } catch (error) {
+          console.error('Failed to import PPTX:', error);
+          alert('Failed to import PPTX. See console for details.');
+        }
+      } else {
+        alert('PPTX import requires Electron environment.');
+      }
+    });
+
     // Category filter
     this.container.addEventListener('click', (e) => {
       const catBtn = e.target.closest('.library-cat-btn')

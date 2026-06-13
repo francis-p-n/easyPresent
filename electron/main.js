@@ -1,5 +1,6 @@
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
+const { parsePptx } = require('./pptx-parser')
 
 let mainWindow
 
@@ -29,6 +30,26 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  ipcMain.handle('import-pptx', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: 'Import PowerPoint Presentation',
+      filters: [{ name: 'PowerPoint Files', extensions: ['pptx'] }],
+      properties: ['openFile']
+    });
+
+    if (canceled || filePaths.length === 0) {
+      return null;
+    }
+
+    try {
+      const slides = await parsePptx(filePaths[0]);
+      return slides;
+    } catch (error) {
+      console.error('Error parsing PPTX:', error);
+      throw error;
+    }
+  });
+
   createWindow()
 
   app.on('activate', () => {

@@ -1,0 +1,51 @@
+:root {
+  /* Dark Mode Palette (ProPresenter 7 Style) */
+  --bg-app: #1e1e1e;
+  --bg-panel: #252526;
+  --bg-toolbar: #333333;
+  --bg-active: #37373d;
+  --bg-hover: #2a2d2e;
+  
+  --border-color: #454545;
+  --border-light: #555555;
+  
+  /* Text Colors */
+  --text-primary: #cccccc;
+  --text-secondary: #999999;
+  --text-highlight: #ffffff;
+  
+  /* Accent Colors */
+  --accent-blue: #007acc;
+  --accent-hover: #0098ff;
+  --accent-red: #d13438;
+  --accent-green: #379f00;
+  
+  /* UI Elements */
+  --btn-bg: #3c3c3c;
+  --btn-hover: #4a4a4a;
+  --btn-border: #555555;
+  
+  /* Slide Group Colors */
+  --group-verse: #4a8cdb;
+  --group-chorus: #cd5c5c;
+  --group-bridge: #e2a03f;
+  --group-intro: #7f7f7f;
+  
+  /* Typography */
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-md: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  
+  /* Layout */
+  --toolbar-height: 60px;
+  --resizer-width: 4px;
+}

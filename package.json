@@ -7,10 +7,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && electron-builder",
+    "build:native": "cmake-js compile",
     "preview": "vite preview"
   },
   "dependencies": {
-    "lucide": "^1.18.0"
+    "cmake-js": "^8.0.0",
+    "lucide": "^1.18.0",
+    "node-addon-api": "^8.8.0"
   },
   "devDependencies": {
     "electron": "^42.4.0",

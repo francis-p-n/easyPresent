@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/src/styles/global.css" />
     <link rel="stylesheet" href="/src/styles/layout.css" />
     <link rel="stylesheet" href="/src/styles/components.css" />
+    <link rel="stylesheet" href="/src/styles/toolbar.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -26,6 +27,11 @@
         
         <div class="panel-center" id="panel-center">
           <div class="slide-view" id="slide-view"></div>
+          <div class="panel-resizer-horizontal" id="resizer-bottom" style="display: none; height: 4px; cursor: row-resize; background: transparent; flex-shrink: 0; z-index: 10;"></div>
+          <div class="bottom-view" id="bottom-view" style="display: none; height: 250px; flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-color); overflow: hidden;">
+            <div id="media-bin-container" style="height: 100%;"></div>
+            <div id="audio-bin-container" style="display: none; height: 100%;"></div>
+          </div>
         </div>
         
         <div class="panel-resizer" id="resizer-right"></div>

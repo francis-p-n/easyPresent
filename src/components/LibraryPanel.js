@@ -1,0 +1,176 @@
+import { state } from '../engine/StateManager.js'
+import { icon } from './Icons.js'
+
+/**
+ * LibraryPanel — Left panel showing presentation library with folders
+ */
+export class LibraryPanel {
+  constructor(container) {
+    this.container = container
+    this.render()
+    this._bindEvents()
+
+    // Re-render when search changes
+    state.on('searchQuery', () => this._renderList())
+  }
+
+  render() {
+    this.container.innerHTML = ''
+
+    // Header
+    const header = document.createElement('div')
+    header.className = 'panel-header'
+    header.innerHTML = `
+      <span class="panel-header__title">Library</span>
+      <div class="panel-header__actions">
+        <button class="btn btn--icon" id="library-add-btn" title="New Presentation">
+          ${icon('plus', 14).outerHTML}
+        </button>
+        <button class="btn btn--icon" id="library-folder-btn" title="New Folder">
+          ${icon('folder', 14).outerHTML}
+        </button>
+      </div>
+    `
+    this.container.appendChild(header)
+
+    // Category Tabs
+    const catTabs = document.createElement('div')
+    catTabs.className = 'library-categories'
+    catTabs.id = 'library-categories'
+
+    const categories = ['All', ...new Set(state.get('presentations').map(p => p.category))]
+    this._activeCategory = 'All'
+
+    categories.forEach(cat => {
+      const tab = document.createElement('button')
+      tab.className = `library-cat-btn ${cat === 'All' ? 'active' : ''}`
+      tab.dataset.category = cat
+      tab.textContent = cat
+      catTabs.appendChild(tab)
+    })
+
+    this.container.appendChild(catTabs)
+
+    // List
+    const content = document.createElement('div')
+    content.className = 'panel-content'
+    content.id = 'library-list'
+    this.container.appendChild(content)
+
+    this._renderList()
+  }
+
+  _renderList() {
+    const list = this.container.querySelector('#library-list')
+    if (!list) return
+    list.innerHTML = ''
+
+    let presentations = state.get('presentations')
+    const query = state.get('searchQuery')?.toLowerCase() || ''
+    
+    // Filter by category
+    if (this._activeCategory && this._activeCategory !== 'All') {
+      presentations = presentations.filter(p => p.category === this._activeCategory)
+    }
+
+    // Filter by search
+    if (query) {
+      presentations = presentations.filter(p => p.name.toLowerCase().includes(query))
+    }
+
+    if (presentations.length === 0) {
+      list.innerHTML = `
+        <div class="empty-state">
+          ${icon('file', 48).outerHTML}
+          <div class="empty-state__text">No presentations found</div>
+        </div>
+      `
+      return
+    }
+
+    presentations.forEach(pres => {
+      const item = document.createElement('div')
+      item.className = `list-item ${state.get('selectedPresentation')?.id === pres.id ? 'active' : ''}`
+      item.dataset.id = pres.id
+      item.id = `lib-item-${pres.id}`
+
+      const iconEl = icon('file', 16)
+      iconEl.className = 'list-item__icon'
+      item.appendChild(iconEl)
+
+      const name = document.createElement('span')
+      name.className = 'text-ellipsis'
+      name.textContent = pres.name
+      item.appendChild(name)
+
+      const badge = document.createElement('span')
+      badge.className = 'badge'
+      badge.textContent = pres.slides.length
+      item.appendChild(badge)
+
+      list.appendChild(item)
+    })
+  }
+
+  _bindEvents() {
+    // Category filter
+    this.container.addEventListener('click', (e) => {
+      const catBtn = e.target.closest('.library-cat-btn')
+      if (catBtn) {
+        this._activeCategory = catBtn.dataset.category
+        this.container.querySelectorAll('.library-cat-btn').forEach(b => b.classList.remove('active'))
+        catBtn.classList.add('active')
+        this._renderList()
+        return
+      }
+
+      // Presentation selection
+      const item = e.target.closest('.list-item')
+      if (item) {
+        const id = item.dataset.id
+        const pres = state.get('presentations').find(p => p.id === id)
+        if (pres) {
+          state.set('selectedPresentation', pres)
+          state.set('slides', pres.slides)
+          state.set('activeSlideIndex', -1)
+          this._renderList()
+        }
+      }
+    })
+
+    // Right-click context menu
+    this.container.addEventListener('contextmenu', (e) => {
+      const item = e.target.closest('.list-item')
+      if (!item) return
+      e.preventDefault()
+      this._showContextMenu(e.clientX, e.clientY, item.dataset.id)
+    })
+  }
+
+  _showContextMenu(x, y, presId) {
+    // Remove existing
+    document.querySelector('.context-menu')?.remove()
+
+    const menu = document.createElement('div')
+    menu.className = 'context-menu'
+    menu.style.left = `${x}px`
+    menu.style.top = `${y}px`
+    menu.innerHTML = `
+      <div class="context-menu__item" data-action="add-to-playlist">Add to Playlist</div>
+      <div class="context-menu__item" data-action="duplicate">${icon('copy', 14).outerHTML} Duplicate</div>
+      <div class="context-menu__separator"></div>
+      <div class="context-menu__item" data-action="rename">${icon('edit', 14).outerHTML} Rename</div>
+      <div class="context-menu__separator"></div>
+      <div class="context-menu__item context-menu__item--danger" data-action="delete">${icon('trash', 14).outerHTML} Delete</div>
+    `
+
+    document.body.appendChild(menu)
+
+    // Close on click outside
+    const close = () => {
+      menu.remove()
+      document.removeEventListener('click', close)
+    }
+    setTimeout(() => document.addEventListener('click', close), 0)
+  }
+}

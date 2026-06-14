@@ -88,8 +88,9 @@ export class LibraryPanel {
     if (presentations.length === 0) {
       list.innerHTML = `
         <div class="empty-state">
-          ${icon('file', 48).outerHTML}
-          <div class="empty-state__text">No presentations found</div>
+          ${icon('folder', 48).outerHTML}
+          <div class="empty-state__text" style="margin-bottom: var(--spacing-sm);">No presentations found</div>
+          <button class="btn btn--primary">${icon('plus', 14).outerHTML} New Presentation</button>
         </div>
       `
       return

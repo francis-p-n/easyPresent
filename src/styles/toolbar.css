@@ -73,7 +73,11 @@
 
 .toolbar-clear-group {
   display: flex;
-  gap: 4px;
+  gap: 8px;
+}
+
+.clear-btn--all {
+  margin-right: 12px; /* Extra padding to prevent accidental misclicks on Clear All */
 }
 
 .clear-btn__shortcut {
@@ -132,7 +136,7 @@
 
 .playlist-header-item {
   padding: 8px var(--spacing-sm);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;

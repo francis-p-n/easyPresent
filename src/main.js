@@ -4,16 +4,11 @@ import { PlaylistPanel } from './components/PlaylistPanel.js'
 import { SlideView } from './components/SlideView.js'
 import { PreviewPanel } from './components/PreviewPanel.js'
 import { ShowControls } from './components/ShowControls.js'
-import { createMediaBin } from './components/MediaBin.js'
-import { createAudioBin } from './components/AudioBin.js'
-import { createImportExport } from './components/ImportExport.js'
-import { createSlideEditor } from './components/SlideEditor.js'
-import { createBiblePanel } from './components/BiblePanel.js'
 import { state } from './engine/StateManager.js'
 import { storageManager } from './engine/StorageManager.js'
 
 /**
- * Main App Entry Point — Mounts all panels and sets up keyboard shortcuts
+ * Main App Entry Point — Mounts core panels and lazy-loads optional modules
  */
 class App {
   constructor() {
@@ -24,7 +19,7 @@ class App {
     // Load persisted data before rendering
     storageManager.load()
 
-    // Mount components
+    // Mount core components synchronously
     this.toolbar = new Toolbar(document.getElementById('toolbar'))
     this.library = new LibraryPanel(document.getElementById('library-panel'))
     this.playlist = new PlaylistPanel(document.getElementById('playlist-panel'))
@@ -32,17 +27,6 @@ class App {
     this.preview = new PreviewPanel(document.getElementById('preview-panel'))
     this.showControls = new ShowControls(document.getElementById('show-controls'))
     
-    // Phase 3 components
-    document.getElementById('media-bin-container').appendChild(createMediaBin())
-    document.getElementById('audio-bin-container').appendChild(createAudioBin())
-    
-    // Bible Panel
-    const bibleContainer = document.createElement('div')
-    bibleContainer.id = 'bible-panel-container'
-    bibleContainer.style.height = '100%'
-    document.getElementById('panel-center').appendChild(bibleContainer)
-    createBiblePanel(bibleContainer)
-
     // Setup panel resizers
     this._setupResizer('resizer-left', 'panel-left', 'left')
     this._setupResizer('resizer-right', 'panel-right', 'right')
@@ -50,10 +34,10 @@ class App {
     // Keyboard shortcuts
     this._setupKeyboardShortcuts()
     
-    // Handle view toggling
+    // Handle view toggling (Lazy load panels if needed)
     state.on('activeView', (view) => this._updateView(view))
     
-    // Handle edit mode
+    // Handle edit mode (Lazy load editor)
     state.on('isEditing', (editing) => this._updateEditMode(editing))
 
     // Broadcast live slide updates
@@ -73,7 +57,6 @@ class App {
         if (!layers.slide.active) {
           window.electronAPI.broadcastSlide({ text: '' })
         } else {
-          // If active, broadcast the current content
           window.electronAPI.broadcastSlide(layers.slide.content || { text: '' })
         }
       }
@@ -85,7 +68,7 @@ class App {
     console.log('EasyPresent initialized')
   }
 
-  _updateView(view) {
+  async _updateView(view) {
     const bottomView = document.getElementById('bottom-view')
     const resizer = document.getElementById('resizer-bottom')
     const mediaBin = document.getElementById('media-bin-container')
@@ -95,13 +78,41 @@ class App {
     // Handle slide view vs bible view
     if (view === 'bible') {
       slideView.style.display = 'none'
+      
+      let bibleContainer = document.getElementById('bible-panel-container')
+      if (!bibleContainer) {
+        bibleContainer = document.createElement('div')
+        bibleContainer.id = 'bible-panel-container'
+        bibleContainer.style.height = '100%'
+        document.getElementById('panel-center').appendChild(bibleContainer)
+        
+        // Lazy-load Bible Panel
+        const { createBiblePanel } = await import('./components/BiblePanel.js')
+        createBiblePanel(bibleContainer)
+      }
+      bibleContainer.style.display = 'flex'
     } else {
+      const bibleContainer = document.getElementById('bible-panel-container')
+      if (bibleContainer) bibleContainer.style.display = 'none'
+      
       slideView.style.display = state.get('isEditing') ? 'none' : 'block'
     }
 
     if (view === 'media' || view === 'audio') {
       bottomView.style.display = 'flex'
       resizer.style.display = 'block'
+      
+      if (view === 'media' && !this.mediaBinLoaded) {
+        const { createMediaBin } = await import('./components/MediaBin.js')
+        mediaBin.appendChild(createMediaBin())
+        this.mediaBinLoaded = true
+      }
+      if (view === 'audio' && !this.audioBinLoaded) {
+        const { createAudioBin } = await import('./components/AudioBin.js')
+        audioBin.appendChild(createAudioBin())
+        this.audioBinLoaded = true
+      }
+      
       mediaBin.style.display = view === 'media' ? 'block' : 'none'
       audioBin.style.display = view === 'audio' ? 'block' : 'none'
     } else {
@@ -110,7 +121,7 @@ class App {
     }
   }
 
-  _updateEditMode(editing) {
+  async _updateEditMode(editing) {
     const centerPanel = document.getElementById('panel-center')
     const slideView = document.getElementById('slide-view')
     let slideEditor = document.getElementById('slide-editor-container')
@@ -122,6 +133,9 @@ class App {
         slideEditor.style.width = '100%'
         slideEditor.style.height = '100%'
         centerPanel.appendChild(slideEditor)
+        
+        // Lazy-load Slide Editor
+        const { createSlideEditor } = await import('./components/SlideEditor.js')
         this.slideEditorInstance = createSlideEditor(slideEditor)
       }
       

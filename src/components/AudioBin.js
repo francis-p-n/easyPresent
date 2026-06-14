@@ -1,16 +1,18 @@
+import { icon } from './Icons.js';
+
 export function createAudioBin() {
     const container = document.createElement('div');
     container.className = 'audio-bin';
     container.innerHTML = `
-        <div class="audio-header">
-            <h3>Audio Playlist</h3>
+        <div class="audio-header" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-active);">
+            <h3 style="font-size: var(--font-size-sm); font-weight: 600; margin: 0; color: var(--text-primary);">Audio Playlist</h3>
             <div class="audio-controls">
-                <button id="import-audio" class="btn-icon">
-                    <i data-lucide="plus"></i>
+                <button id="import-audio" class="btn btn--icon">
+                    ${icon('plus', 16).outerHTML}
                 </button>
             </div>
         </div>
-        <div class="audio-list" id="audio-list"></div>
+        <div class="audio-list" id="audio-list" style="padding: 8px;"></div>
     `;
 
     setTimeout(() => {
@@ -22,16 +24,12 @@ export function createAudioBin() {
                 
                 state.on('audio:loaded', (items) => {
                     list.innerHTML = items.map(item => `
-                        <div class="audio-item" data-id="${item.id}">
-                            <i data-lucide="music"></i>
-                            <span class="audio-label">${item.name}</span>
-                            <span class="audio-duration">${formatTime(item.duration)}</span>
+                        <div class="list-item audio-item" data-id="${item.id}">
+                            <div class="list-item__icon">${icon('audio', 16).outerHTML}</div>
+                            <span class="audio-label text-ellipsis flex-1">${item.name}</span>
+                            <span class="audio-duration text-muted" style="margin-left: auto;">${formatTime(item.duration)}</span>
                         </div>
                     `).join('');
-                    
-                    if (window.lucide) {
-                        window.lucide.createIcons({ root: list });
-                    }
                 });
 
                 MediaManager.loadAudioLibrary();

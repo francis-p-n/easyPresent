@@ -1,6 +1,7 @@
 import { state } from '../engine/StateManager.js'
 import { icon } from './Icons.js'
 import { createSongImporter } from './SongImporter.js'
+import { showToast } from './ToastManager.js'
 
 /**
  * LibraryPanel — Left panel showing presentation library with folders
@@ -70,20 +71,30 @@ export class LibraryPanel {
   _renderList() {
     const list = this.container.querySelector('#library-list')
     if (!list) return
-    list.innerHTML = ''
+
+    if (!this.searchWorker) {
+        this.searchWorker = new Worker(new URL('../engine/SearchWorker.js', import.meta.url));
+        this.searchWorker.onmessage = (e) => {
+            this._renderListWithResults(e.data.results);
+        };
+    }
 
     let presentations = state.get('presentations')
-    const query = state.get('searchQuery')?.toLowerCase() || ''
+    const query = state.get('searchQuery') || ''
     
     // Filter by category
     if (this._activeCategory && this._activeCategory !== 'All') {
       presentations = presentations.filter(p => p.category === this._activeCategory)
     }
 
-    // Filter by search
-    if (query) {
-      presentations = presentations.filter(p => p.name.toLowerCase().includes(query))
-    }
+    // Pass to worker for search
+    this.searchWorker.postMessage({ query, presentations });
+  }
+
+  _renderListWithResults(presentations) {
+    const list = this.container.querySelector('#library-list')
+    if (!list) return
+    list.innerHTML = ''
 
     if (presentations.length === 0) {
       list.innerHTML = `
@@ -143,13 +154,14 @@ export class LibraryPanel {
             state.set('slides', newPres.slides);
             state.set('activeSlideIndex', 0);
             this._renderList();
+            showToast('Successfully imported PPTX!', 'success')
           }
         } catch (error) {
           console.error('Failed to import PPTX:', error);
-          alert('Failed to import PPTX. See console for details.');
+          showToast('Failed to import PPTX.', 'error');
         }
       } else {
-        alert('PPTX import requires Electron environment.');
+        showToast('PPTX import requires Electron environment.', 'error');
       }
     });
 
@@ -168,6 +180,7 @@ export class LibraryPanel {
         state.set('slides', newPres.slides);
         state.set('activeSlideIndex', 0);
         this._renderList();
+        showToast('Song imported successfully!', 'success')
       });
     });
 

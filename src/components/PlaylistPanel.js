@@ -53,7 +53,6 @@ export class PlaylistPanel {
   _renderItems() {
     const list = this.container.querySelector('#playlist-items')
     if (!list) return
-    list.innerHTML = ''
 
     const playlist = state.get('activePlaylist')
     if (!playlist) {
@@ -67,45 +66,73 @@ export class PlaylistPanel {
       return
     }
 
-    const presentations = state.get('presentations')
+    if (!this.scroller) {
+      list.innerHTML = '';
+      import('./VirtualScroller.js').then(({ VirtualScroller }) => {
+        this.scroller = new VirtualScroller(list, {
+          getItemHeight: (item) => item.type === 'header' ? 36 : 44,
+          renderItem: (item, index) => {
+            const el = document.createElement('div')
+            this._updateItemDom(el, item, index)
+            return el
+          },
+          updateItem: (el, item, index) => {
+            this._updateItemDom(el, item, index)
+          }
+        })
+        this._updateScrollerData()
+      })
+    } else {
+      this._updateScrollerData()
+    }
+  }
 
-    playlist.items.forEach((item, index) => {
-      if (item.type === 'header') {
-        const header = document.createElement('div')
-        header.className = 'playlist-header-item'
-        header.innerHTML = `<span>${item.text}</span>`
-        list.appendChild(header)
-      } else if (item.type === 'presentation') {
-        const pres = presentations.find(p => p.id === item.id)
-        if (!pres) return
+  _updateScrollerData() {
+    if (!this.scroller) return;
+    const playlist = state.get('activePlaylist')
+    if (!playlist) {
+        this.scroller.setItems([]);
+        return;
+    }
+    this.scroller.setItems(playlist.items)
+  }
 
-        const el = document.createElement('div')
-        const isSelected = state.get('selectedPresentation')?.id === pres.id
-        el.className = `list-item playlist-item ${isSelected ? 'active' : ''}`
-        el.dataset.id = pres.id
-        el.dataset.index = index
-
-        const grip = icon('grip', 14)
-        grip.className = 'list-item__icon playlist-item__grip'
-        el.appendChild(grip)
-
-        const fileIcon = icon('file', 14)
-        fileIcon.className = 'list-item__icon'
-        el.appendChild(fileIcon)
-
-        const name = document.createElement('span')
-        name.className = 'text-ellipsis'
-        name.textContent = pres.name
-        el.appendChild(name)
-
-        const badge = document.createElement('span')
-        badge.className = 'badge'
-        badge.textContent = pres.slides.length
-        el.appendChild(badge)
-
-        list.appendChild(el)
+  _updateItemDom(el, item, index) {
+    if (item.type === 'header') {
+      el.className = 'playlist-header-item'
+      el.innerHTML = `<span>${item.text}</span>`
+    } else if (item.type === 'presentation') {
+      const presentations = state.get('presentations')
+      const pres = presentations.find(p => p.id === item.id)
+      if (!pres) {
+        el.innerHTML = '';
+        return;
       }
-    })
+
+      const isSelected = state.get('selectedPresentation')?.id === pres.id
+      el.className = `list-item playlist-item ${isSelected ? 'active' : ''}`
+      el.dataset.id = pres.id
+      el.dataset.index = index
+      el.innerHTML = ''
+
+      const grip = icon('grip', 14)
+      grip.className = 'list-item__icon playlist-item__grip'
+      el.appendChild(grip)
+
+      const fileIcon = icon('file', 14)
+      fileIcon.className = 'list-item__icon'
+      el.appendChild(fileIcon)
+
+      const name = document.createElement('span')
+      name.className = 'text-ellipsis flex-1'
+      name.textContent = pres.name
+      el.appendChild(name)
+
+      const badge = document.createElement('span')
+      badge.className = 'badge'
+      badge.textContent = pres.slides.length
+      el.appendChild(badge)
+    }
   }
 
   _bindEvents() {

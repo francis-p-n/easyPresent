@@ -1,8 +1,8 @@
 version: 1.0.0
 files:
   - url: EasyPresent-Setup-1.0.0.exe
-    sha512: SAcm8sHb9GrY0bSJ+mkHzp7dGqPPqf29g0IpRx1IvEteSnbBCJQMgGjsM4kqc19vEJmQVO1oVUD2WWgKuxo7Nw==
-    size: 104985812
+    sha512: byuKMcmQxWwIHo574VwMBn6XR/33sskvSjuYUOoYTyTK2L9idvJ9j3CIVzkhrqZj8fTgKjuWGQ2DJxFhSFxQRQ==
+    size: 104985880
 path: EasyPresent-Setup-1.0.0.exe
-sha512: SAcm8sHb9GrY0bSJ+mkHzp7dGqPPqf29g0IpRx1IvEteSnbBCJQMgGjsM4kqc19vEJmQVO1oVUD2WWgKuxo7Nw==
-releaseDate: '2026-06-14T07:29:20.242Z'
+sha512: byuKMcmQxWwIHo574VwMBn6XR/33sskvSjuYUOoYTyTK2L9idvJ9j3CIVzkhrqZj8fTgKjuWGQ2DJxFhSFxQRQ==
+releaseDate: '2026-06-14T11:38:47.195Z'

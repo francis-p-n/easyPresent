@@ -8,7 +8,7 @@ EasyPresent is a modern, high-performance desktop application designed for live 
 
 ## 🏗️ Architecture
 
-The application is built in two distinct layers:
+The application is built in three distinct layers:
 
 1. **Frontend UI (Electron + JS)**
    - **Framework:** Vanilla JS, CSS Custom Properties, and HTML5.
@@ -22,6 +22,19 @@ The application is built in two distinct layers:
    - **Audio:** WASAPI for low-latency, multi-channel audio mixing.
    - **Role:** Handles heavy lifting. Composites text, video, and image layers at 60fps, and shares texture handles directly with Electron output windows for zero-copy rendering.
    - *Note: If the C++ native addon cannot be compiled or loaded, the application elegantly falls back to HTML5 Canvas for rendering!*
+
+3. **Presentation Import (Electron Main Process)**
+   - **Frameworks:** Node.js, `adm-zip`, `xml2js`.
+   - **Role:** Parses PPTX files directly within the Electron Main process for easy integration into the frontend UI.
+
+---
+
+## 📁 Directory Structure
+
+- `/src`: Frontend code (HTML/JS/CSS assets)
+- `/electron`: Main, Preload, and PPTX Parsing scripts (`pptx-parser.js`) for Electron
+- `/native`: C++ source files for native bindings and integrations
+- `/dist-electron`: Built output folder for the Electron main/preload bundles
 
 ---
 

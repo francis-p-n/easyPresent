@@ -1,8 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
 const { parsePptx } = require('./pptx-parser')
+const { startServer } = require('./server')
 
 let mainWindow
+let stageServer
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -49,6 +51,35 @@ app.whenReady().then(() => {
       throw error;
     }
   });
+
+  // Start Stage Server
+  stageServer = startServer(8080);
+
+  ipcMain.on('broadcast-slide', (event, slideData) => {
+    if (stageServer) {
+      stageServer.broadcastSlide(slideData);
+    }
+  });
+
+  ipcMain.on('create-stage-display', () => {
+    const stageWindow = new BrowserWindow({
+      width: 1280,
+      height: 720,
+      title: 'Stage Display',
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false
+      }
+    })
+    
+    // In dev, load localhost:5173/stage.html or similar, but for now we'll just load the stage HTML directly or through dev server
+    // Assuming stage.html exists in project root or we can just load a specific route
+    if (process.env.NODE_ENV === 'development') {
+      stageWindow.loadURL('http://localhost:5173/src/output/stage.html')
+    } else {
+      stageWindow.loadFile(path.join(__dirname, '../dist/src/output/stage.html'))
+    }
+  })
 
   createWindow()
 

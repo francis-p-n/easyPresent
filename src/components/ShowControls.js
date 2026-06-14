@@ -1,4 +1,5 @@
 import { state } from '../engine/StateManager.js'
+import { timerEngine } from '../engine/TimerEngine.js'
 import { icon } from './Icons.js'
 
 /**
@@ -74,6 +75,12 @@ export class ShowControls {
             </div>
           </div>
         `
+        
+        // Listen for timer updates
+        state.on('timer_main', (timeStr) => {
+          const display = this.container.querySelector('.timer-display__time')
+          if (display) display.textContent = timeStr
+        })
         break
 
       case 'messages':
@@ -202,6 +209,42 @@ export class ShowControls {
       if (msgItem) {
         const input = this.container.querySelector('#message-input')
         if (input) input.value = msgItem.dataset.msg
+      }
+
+      // Timer Actions
+      if (e.target.id === 'timer-start') {
+        const display = this.container.querySelector('.timer-display__time')
+        const parts = display.textContent.split(':')
+        const minutes = parseInt(parts[0], 10) + parseInt(parts[1], 10)/60
+        timerEngine.startCountdown('main', minutes)
+      } else if (e.target.id === 'timer-stop') {
+        timerEngine.stop('main')
+      } else if (e.target.id === 'timer-reset') {
+        timerEngine.reset('main', 5)
+      }
+
+      // Message Actions
+      if (e.target.id === 'message-show') {
+        const input = this.container.querySelector('#message-input')
+        if (input && input.value) {
+          const layers = { ...state.get('layers') }
+          layers.message = { active: true, content: input.value }
+          state.set('layers', layers)
+        }
+      } else if (e.target.id === 'message-hide') {
+        const layers = { ...state.get('layers') }
+        layers.message = { active: false, content: null }
+        state.set('layers', layers)
+      }
+
+      // Stage Display Actions
+      const stageOpenBtn = e.target.closest('#stage-open-window')
+      if (stageOpenBtn) {
+        if (window.electronAPI && window.electronAPI.createStageDisplay) {
+          window.electronAPI.createStageDisplay()
+        } else {
+          console.warn('Stage Display requires Electron environment.')
+        }
       }
     })
   }

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stage Display</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        background-color: #000;
+        color: #fff;
+        font-family: 'Inter', sans-serif;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        box-sizing: border-box;
+      }
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        font-size: 32px;
+        font-weight: bold;
+        color: #888;
+        margin-bottom: 20px;
+      }
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+      }
+      .current-slide {
+        font-size: 80px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 40px;
+      }
+      .next-slide {
+        font-size: 40px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="top-bar">
+      <div id="clock">00:00</div>
+      <div id="timer">--:--</div>
+    </div>
+    <div class="main-content">
+      <div class="current-slide" id="current-slide">EasyPresent Stage Display</div>
+      <div class="next-slide" id="next-slide">Ready...</div>
+    </div>
+    
+    <script>
+      function updateClock() {
+        const now = new Date();
+        document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+      }
+      setInterval(updateClock, 1000);
+      updateClock();
+
+      // Assuming StageServer broadcast receives here if we set up websockets.
+      // For now, in a real implementation we'd connect to the Stage Server websocket.
+      const ws = new WebSocket('ws://localhost:8080');
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'slide') {
+            document.getElementById('current-slide').innerText = data.data.text || '';
+          }
+        } catch(e) {}
+      };
+    </script>
+  </body>
+</html>

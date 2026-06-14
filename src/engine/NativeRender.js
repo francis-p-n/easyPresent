@@ -91,16 +91,21 @@ class NativeRender {
     return true;
   }
 
+  setBackgroundColor(color) {
+    this.backgroundColor = color;
+  }
+
   compositeLayers() {
     if (this.useNative) {
+      // For native, we could pass it or handle it in C++, but for now we rely on Canvas fallback for web
       return this.engine.compositeLayers();
     }
 
     const ctx = this.compositeContext;
     if (!ctx) return false;
 
-    // 1. Draw solid black backdrop
-    ctx.fillStyle = '#000000';
+    // 1. Draw solid backdrop
+    ctx.fillStyle = this.backgroundColor || '#000000';
     ctx.fillRect(0, 0, this.width, this.height);
 
     // 2. Blend layers in chronological order: Media -> Slide -> Props -> Announcement
@@ -309,7 +314,7 @@ class NativeRender {
 
     // Clear and draw solid dark backdrop
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#0f1115'; // Darker theme color matching slide panels
+    ctx.fillStyle = style.backgroundColor || '#0f1115'; // Darker theme color matching slide panels
     ctx.fillRect(0, 0, w, h);
 
     if (!slideText) {

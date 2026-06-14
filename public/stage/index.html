@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Chords Stage Display</title>
+  <style>
+    body {
+      background-color: #000;
+      color: #fff;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 40px;
+      overflow-x: hidden;
+    }
+    
+    #slide-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      min-height: 3em; /* Ensure space for chords even if none */
+    }
+
+    .chord-word {
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      margin-right: 0.3em;
+      font-size: 4vw; /* Responsive font size */
+    }
+
+    .chord {
+      color: #ffcc00;
+      font-weight: bold;
+      font-size: 0.6em;
+      height: 1.2em; /* Reserve space for the chord */
+      margin-bottom: 0.1em;
+    }
+
+    .lyric {
+      display: inline-block;
+    }
+
+    /* Controls */
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(30, 30, 30, 0.8);
+      padding: 10px 20px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0.3;
+      transition: opacity 0.3s;
+      z-index: 100;
+    }
+    
+    .controls:hover {
+      opacity: 1;
+    }
+
+    .controls button {
+      background: #444;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .controls button:hover {
+      background: #666;
+    }
+
+    #transpo-val {
+      font-size: 1.5rem;
+      font-weight: bold;
+      min-width: 40px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  
+  <div id="slide-content">Waiting for presentation to start...</div>
+
+  <div class="controls">
+    <button onclick="changeTransposition(-1)">-</button>
+    <div id="transpo-val">0</div>
+    <button onclick="changeTransposition(1)">+</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

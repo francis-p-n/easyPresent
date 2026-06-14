@@ -13,8 +13,10 @@
   "dependencies": {
     "adm-zip": "^0.5.17",
     "cmake-js": "^8.0.0",
+    "express": "^5.2.1",
     "lucide": "^1.18.0",
     "node-addon-api": "^8.8.0",
+    "socket.io": "^4.8.3",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
@@ -23,5 +25,24 @@
     "vite": "^8.0.16",
     "vite-plugin-electron": "^1.0.4",
     "vite-plugin-electron-renderer": "^1.0.0"
+  },
+  "build": {
+    "appId": "com.easypresent.app",
+    "productName": "EasyPresent",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ]
   }
 }

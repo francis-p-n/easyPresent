@@ -1,5 +1,6 @@
 import { state } from '../engine/StateManager.js'
 import { icon } from './Icons.js'
+import { createSongImporter } from './SongImporter.js'
 
 /**
  * LibraryPanel — Left panel showing presentation library with folders
@@ -25,6 +26,9 @@ export class LibraryPanel {
       <div class="panel-header__actions">
         <button class="btn btn--icon" id="library-import-pptx-btn" title="Import PPTX">
           ${icon('upload', 14).outerHTML}
+        </button>
+        <button class="btn btn--icon" id="library-add-song-btn" title="New Song">
+          ${icon('music', 14).outerHTML}
         </button>
         <button class="btn btn--icon" id="library-add-btn" title="New Presentation">
           ${icon('plus', 14).outerHTML}
@@ -146,6 +150,24 @@ export class LibraryPanel {
       } else {
         alert('PPTX import requires Electron environment.');
       }
+    });
+
+    // New Song Import
+    this.container.querySelector('#library-add-song-btn')?.addEventListener('click', () => {
+      createSongImporter((songData) => {
+        const newPres = {
+          id: 'song-' + Date.now(),
+          name: songData.name,
+          category: songData.category,
+          slides: songData.slides.map(s => ({ ...s, type: 'text' }))
+        };
+        const presentations = [...state.get('presentations'), newPres];
+        state.set('presentations', presentations);
+        state.set('selectedPresentation', newPres);
+        state.set('slides', newPres.slides);
+        state.set('activeSlideIndex', 0);
+        this._renderList();
+      });
     });
 
     // Category filter

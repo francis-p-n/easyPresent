@@ -74,6 +74,14 @@ export class Toolbar {
     editBtn.appendChild(icon('edit', 18))
     this.container.appendChild(editBtn)
 
+    // Theme Button
+    const themeBtn = document.createElement('button')
+    themeBtn.className = 'btn btn--icon tooltip'
+    themeBtn.id = 'toolbar-theme-btn'
+    themeBtn.dataset.tooltip = 'Theme Editor'
+    themeBtn.appendChild(icon('droplet', 18)) // Or any other suitable icon
+    this.container.appendChild(themeBtn)
+
     // Screens Button
     const screensBtn = document.createElement('button')
     screensBtn.className = 'btn btn--icon tooltip'
@@ -165,6 +173,12 @@ export class Toolbar {
       const editing = !state.get('isEditing')
       state.set('isEditing', editing)
       this.container.querySelector('#toolbar-edit-btn')?.classList.toggle('active', editing)
+    })
+
+    // Theme editor
+    this.container.querySelector('#toolbar-theme-btn')?.addEventListener('click', async () => {
+      const { createThemeEditor } = await import('./ThemeEditor.js')
+      createThemeEditor()
     })
   }
 

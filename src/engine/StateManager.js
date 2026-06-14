@@ -24,11 +24,13 @@ export class StateManager {
 
       // Layers
       layers: {
-        slide: { active: false, content: null },
         media: { active: false, content: null },
-        props: { active: false, content: null },
-        announcements: { active: false, content: null },
+        slide: { active: false, content: null },
+        props: { active: false, content: [] }, // Array of active props
+        message: { active: false, content: null }, // message text
         audio: { active: false, content: null },
+        logo: { active: false, content: null },
+        announcement: { active: false, content: null }
       },
 
       // Show Controls
@@ -42,6 +44,10 @@ export class StateManager {
       isEditing: false,
       searchQuery: '',
       showLogo: false,
+
+      // Themes
+      themes: [],
+      activeThemeId: 'default',
     }
 
     // Load sample data
@@ -153,6 +159,36 @@ export class StateManager {
     ]
 
     this._state.activePlaylist = this._state.playlists[0]
+
+    this._state.themes = [
+      {
+        id: 'default',
+        name: 'Default Dark',
+        styles: {
+          fontFamily: 'Inter',
+          fontSize: '48px',
+          color: '#ffffff',
+          backgroundColor: '#000000',
+          textAlign: 'center',
+          justifyContent: 'center',
+          fontWeight: 'bold'
+        }
+      },
+      {
+        id: 'classic-blue',
+        name: 'Classic Blue',
+        styles: {
+          fontFamily: 'Georgia',
+          fontSize: '56px',
+          color: '#ffffff',
+          backgroundColor: '#0a3d91',
+          textAlign: 'center',
+          justifyContent: 'center',
+          fontWeight: 'normal',
+          textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
+        }
+      }
+    ]
   }
 }
 

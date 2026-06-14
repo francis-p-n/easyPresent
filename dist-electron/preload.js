@@ -1,4 +1,1 @@
-//#region electron/preload.js
-var { contextBridge, ipcRenderer } = require("electron");
-contextBridge.exposeInMainWorld("electronAPI", {});
-//#endregion
+var{contextBridge:e,ipcRenderer:t}=require("electron");e.exposeInMainWorld(`electronAPI`,{createStageDisplay:()=>t.send(`create-stage-display`),importPptx:()=>t.invoke(`import-pptx`),broadcastSlide:e=>t.send(`broadcast-slide`,e)});

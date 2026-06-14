@@ -82,8 +82,11 @@ export class SlideView {
       const content = document.createElement('div')
       content.className = 'slide-thumbnail__content'
       
-      // Generate a high-fidelity scaled JPEG data URL of the slide text
-      const imgUrl = NativeRender.generateThumbnailDataUrl(slide.text || '', {
+      const activeThemeId = state.get('activeThemeId')
+      const themes = state.get('themes') || []
+      const activeTheme = themes.find(t => t.id === activeThemeId) || themes[0]
+
+      const styleOpts = {
         fontSize: 48,
         bold: true,
         strokeWidth: 4,
@@ -92,13 +95,23 @@ export class SlideView {
         shadowOffsetX: 3,
         shadowOffsetY: 3,
         color: '#FFFFFF'
-      })
+      }
+
+      if (activeTheme && activeTheme.styles) {
+        Object.assign(styleOpts, activeTheme.styles)
+        if (activeTheme.styles.textAlign) {
+          styleOpts.hAlign = activeTheme.styles.textAlign
+        }
+      }
+
+      // Generate a high-fidelity scaled JPEG data URL of the slide text
+      const imgUrl = NativeRender.generateThumbnailDataUrl(slide.text || '', styleOpts)
       
       content.style.backgroundImage = `url(${imgUrl})`
       content.style.backgroundSize = 'contain'
       content.style.backgroundPosition = 'center'
       content.style.backgroundRepeat = 'no-repeat'
-      content.style.backgroundColor = '#000000'
+      content.style.backgroundColor = styleOpts.backgroundColor || '#000000'
       
       thumb.appendChild(content)
 

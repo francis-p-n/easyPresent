@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
   // We can add window opening APIs here for stage/audience screens
-  // createStageDisplay: () => ipcRenderer.send('create-stage-display'),
-  importPptx: () => ipcRenderer.invoke('import-pptx')
+  createStageDisplay: () => ipcRenderer.send('create-stage-display'),
+  importPptx: () => ipcRenderer.invoke('import-pptx'),
+  broadcastSlide: (slideData) => ipcRenderer.send('broadcast-slide', slideData)
 })

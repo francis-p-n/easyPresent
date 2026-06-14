@@ -7,7 +7,10 @@ import { ShowControls } from './components/ShowControls.js'
 import { createMediaBin } from './components/MediaBin.js'
 import { createAudioBin } from './components/AudioBin.js'
 import { createImportExport } from './components/ImportExport.js'
+import { createSlideEditor } from './components/SlideEditor.js'
+import { createBiblePanel } from './components/BiblePanel.js'
 import { state } from './engine/StateManager.js'
+import { storageManager } from './engine/StorageManager.js'
 
 /**
  * Main App Entry Point — Mounts all panels and sets up keyboard shortcuts
@@ -18,6 +21,9 @@ class App {
   }
 
   init() {
+    // Load persisted data before rendering
+    storageManager.load()
+
     // Mount components
     this.toolbar = new Toolbar(document.getElementById('toolbar'))
     this.library = new LibraryPanel(document.getElementById('library-panel'))
@@ -29,8 +35,13 @@ class App {
     // Phase 3 components
     document.getElementById('media-bin-container').appendChild(createMediaBin())
     document.getElementById('audio-bin-container').appendChild(createAudioBin())
-    // For now, ImportExport can be part of Library
-    // document.getElementById('library-panel').appendChild(createImportExport())
+    
+    // Bible Panel
+    const bibleContainer = document.createElement('div')
+    bibleContainer.id = 'bible-panel-container'
+    bibleContainer.style.height = '100%'
+    document.getElementById('panel-center').appendChild(bibleContainer)
+    createBiblePanel(bibleContainer)
 
     // Setup panel resizers
     this._setupResizer('resizer-left', 'panel-left', 'left')
@@ -41,6 +52,35 @@ class App {
     
     // Handle view toggling
     state.on('activeView', (view) => this._updateView(view))
+    
+    // Handle edit mode
+    state.on('isEditing', (editing) => this._updateEditMode(editing))
+
+    // Broadcast live slide updates
+    state.on('liveSlideIndex', (idx) => {
+      if (window.electronAPI && window.electronAPI.broadcastSlide) {
+        const pres = state.get('selectedPresentation')
+        if (pres && pres.slides[idx]) {
+          window.electronAPI.broadcastSlide(pres.slides[idx])
+        } else {
+          window.electronAPI.broadcastSlide({ text: '' })
+        }
+      }
+    })
+
+    state.on('layers', (layers) => {
+      if (window.electronAPI && window.electronAPI.broadcastSlide) {
+        if (!layers.slide.active) {
+          window.electronAPI.broadcastSlide({ text: '' })
+        } else {
+          // If active, broadcast the current content
+          window.electronAPI.broadcastSlide(layers.slide.content || { text: '' })
+        }
+      }
+    })
+
+    // Auto save data
+    storageManager.initAutoSave()
 
     console.log('EasyPresent initialized')
   }
@@ -50,6 +90,14 @@ class App {
     const resizer = document.getElementById('resizer-bottom')
     const mediaBin = document.getElementById('media-bin-container')
     const audioBin = document.getElementById('audio-bin-container')
+    const slideView = document.getElementById('slide-view')
+
+    // Handle slide view vs bible view
+    if (view === 'bible') {
+      slideView.style.display = 'none'
+    } else {
+      slideView.style.display = state.get('isEditing') ? 'none' : 'block'
+    }
 
     if (view === 'media' || view === 'audio') {
       bottomView.style.display = 'flex'
@@ -59,6 +107,40 @@ class App {
     } else {
       bottomView.style.display = 'none'
       resizer.style.display = 'none'
+    }
+  }
+
+  _updateEditMode(editing) {
+    const centerPanel = document.getElementById('panel-center')
+    const slideView = document.getElementById('slide-view')
+    let slideEditor = document.getElementById('slide-editor-container')
+
+    if (editing) {
+      if (!slideEditor) {
+        slideEditor = document.createElement('div')
+        slideEditor.id = 'slide-editor-container'
+        slideEditor.style.width = '100%'
+        slideEditor.style.height = '100%'
+        centerPanel.appendChild(slideEditor)
+        this.slideEditorInstance = createSlideEditor(slideEditor)
+      }
+      
+      slideView.style.display = 'none'
+      slideEditor.style.display = 'block'
+      
+      // Update editor data for current slide
+      const pres = state.get('selectedPresentation')
+      const idx = state.get('activeSlideIndex')
+      if (pres && pres.slides[idx]) {
+        state.set('activeSlideIndex', idx) // Trigger editor update
+      }
+      
+      if (this.slideEditorInstance) {
+        this.slideEditorInstance.resize()
+      }
+    } else {
+      slideView.style.display = 'block'
+      if (slideEditor) slideEditor.style.display = 'none'
     }
   }
 
@@ -132,6 +214,7 @@ class App {
 
         case 'ArrowRight':
         case 'ArrowDown':
+        case 'PageDown':
         case ' ':
           e.preventDefault()
           if (pres) {
@@ -147,6 +230,7 @@ class App {
 
         case 'ArrowLeft':
         case 'ArrowUp':
+        case 'PageUp':
           e.preventDefault()
           if (pres) {
             const current = state.get('liveSlideIndex')
@@ -156,6 +240,16 @@ class App {
             const layers = { ...state.get('layers') }
             layers.slide = { active: true, content: pres.slides[prev] }
             state.set('layers', layers)
+          }
+          break
+
+        case 'b':
+        case 'B':
+        case '.':
+          // Standard clicker 'Black screen' toggle
+          if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault()
+            document.getElementById('clear-btn-all')?.click()
           }
           break
 

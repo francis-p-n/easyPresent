@@ -73,11 +73,31 @@
   position: relative;
   z-index: 10;
   flex-shrink: 0;
+}
+
+.panel-resizer::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 0;
+  bottom: 0;
+  z-index: 11;
+}
+
+.panel-resizer::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  width: 2px;
+  top: 0;
+  bottom: 0;
+  background: transparent;
   transition: background 0.15s ease;
 }
 
-.panel-resizer:hover,
-.panel-resizer.active {
+.panel-resizer:hover::after,
+.panel-resizer.active::after {
   background: var(--accent-blue);
 }
 

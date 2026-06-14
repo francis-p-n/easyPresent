@@ -124,6 +124,7 @@
 .input:focus {
   outline: none;
   border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.2);
 }
 
 .input::placeholder {
@@ -180,8 +181,8 @@
 }
 
 @keyframes contextMenuIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .context-menu__item {
@@ -318,6 +319,7 @@
 .slide-thumbnail:hover {
   border-color: var(--border-light);
   transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .slide-thumbnail.active {
@@ -328,6 +330,21 @@
 .slide-thumbnail.live {
   border-color: var(--accent-red);
   box-shadow: 0 0 0 1px var(--accent-red), 0 0 12px rgba(209, 52, 56, 0.3);
+}
+
+.slide-thumbnail.live::before {
+  content: 'LIVE';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--accent-red);
+  color: white;
+  font-size: 8px;
+  font-weight: bold;
+  padding: 2px 4px;
+  border-radius: 3px;
+  z-index: 10;
+  letter-spacing: 0.5px;
 }
 
 .slide-thumbnail__content {

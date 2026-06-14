@@ -1,7 +1,7 @@
 :root {
   /* Dark Mode Palette (ProPresenter 7 Style) */
-  --bg-app: #1e1e1e;
-  --bg-panel: #252526;
+  --bg-app: #18181a;
+  --bg-panel: #222225;
   --bg-toolbar: #333333;
   --bg-active: #37373d;
   --bg-hover: #2a2d2e;
@@ -11,7 +11,7 @@
   
   /* Text Colors */
   --text-primary: #cccccc;
-  --text-secondary: #999999;
+  --text-secondary: #a1a1aa;
   --text-highlight: #ffffff;
   
   /* Accent Colors */
@@ -33,9 +33,9 @@
   
   /* Typography */
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-size-xs: 11px;
-  --font-size-sm: 13px;
-  --font-size-md: 15px;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
   --font-size-lg: 18px;
   --font-size-xl: 24px;
   

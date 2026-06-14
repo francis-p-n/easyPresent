@@ -60,7 +60,8 @@ export class PlaylistPanel {
       list.innerHTML = `
         <div class="empty-state">
           ${icon('list', 48).outerHTML}
-          <div class="empty-state__text">No playlist selected</div>
+          <div class="empty-state__text" style="margin-bottom: var(--spacing-sm);">No playlist selected</div>
+          <button class="btn btn--primary">${icon('plus', 14).outerHTML} Create Playlist</button>
         </div>
       `
       return

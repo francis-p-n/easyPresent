@@ -19,12 +19,21 @@ export class PlaylistPanel {
     // Header
     const header = document.createElement('div')
     header.className = 'panel-header'
-    header.innerHTML = `
-      <span class="panel-header__title">Playlist</span>
-      <div class="panel-header__actions">
+    const menuBtnHtml = `
+      <div style="position: relative;" id="playlist-add-menu-container">
         <button class="btn" id="playlist-add-btn" title="Add Item">
           ${icon('plus', 14).outerHTML} Add Item
         </button>
+        <div id="playlist-add-dropdown" style="display: none; position: absolute; right: 0; top: 100%; background: var(--bg-toolbar); border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 0; min-width: 150px; z-index: 10;">
+          <div class="dropdown-item" id="add-header-btn" style="padding: 8px 16px; cursor: pointer; font-size: 13px;">Add Header</div>
+          <div class="dropdown-item" id="add-note-btn" style="padding: 8px 16px; cursor: pointer; font-size: 13px;">Add Note</div>
+        </div>
+      </div>
+    `
+    header.innerHTML = `
+      <span class="panel-header__title">Playlist</span>
+      <div class="panel-header__actions">
+        ${menuBtnHtml}
       </div>
     `
     this.container.appendChild(header)
@@ -46,6 +55,52 @@ export class PlaylistPanel {
     content.className = 'panel-content'
     content.id = 'playlist-items'
     this.container.appendChild(content)
+
+    // Add event listeners for the dropdown
+    const addBtn = this.container.querySelector('#playlist-add-btn')
+    const dropdown = this.container.querySelector('#playlist-add-dropdown')
+    const menuContainer = this.container.querySelector('#playlist-add-menu-container')
+
+    if (addBtn && dropdown) {
+      addBtn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none'
+      })
+
+      document.addEventListener('click', (e) => {
+        if (menuContainer && !menuContainer.contains(e.target)) {
+          dropdown.style.display = 'none'
+        }
+      })
+
+      // Add Header
+      this.container.querySelector('#add-header-btn')?.addEventListener('click', () => {
+        dropdown.style.display = 'none'
+        const text = prompt('Enter header text:')
+        if (text) {
+          const playlist = state.get('activePlaylist')
+          if (playlist) {
+            playlist.items.push({ type: 'header', text })
+            state.set('activePlaylist', playlist)
+            this._renderItems()
+          }
+        }
+      })
+
+      // Add Note
+      this.container.querySelector('#add-note-btn')?.addEventListener('click', () => {
+        dropdown.style.display = 'none'
+        const text = prompt('Enter note text:')
+        if (text) {
+          const playlist = state.get('activePlaylist')
+          if (playlist) {
+            playlist.items.push({ type: 'note', text })
+            state.set('activePlaylist', playlist)
+            this._renderItems()
+          }
+        }
+      })
+    }
 
     this._renderItems()
   }
@@ -100,7 +155,16 @@ export class PlaylistPanel {
   _updateItemDom(el, item, index) {
     if (item.type === 'header') {
       el.className = 'playlist-header-item'
-      el.innerHTML = `<span>${item.text}</span>`
+      el.innerHTML = `<span style="font-weight: 600; color: var(--text-muted); font-size: 11px; text-transform: uppercase;">${item.text}</span>`
+      el.style.padding = '8px 12px 4px 12px'
+      el.style.borderBottom = '1px solid var(--border-color)'
+    } else if (item.type === 'note') {
+      el.className = 'playlist-note-item'
+      el.innerHTML = `<span style="color: var(--text-color); font-style: italic; font-size: 12px;">${item.text}</span>`
+      el.style.padding = '8px 12px'
+      el.style.backgroundColor = 'var(--bg-toolbar)'
+      el.style.borderLeft = '3px solid var(--primary-color)'
+      el.style.marginBottom = '4px'
     } else if (item.type === 'presentation') {
       const presentations = state.get('presentations')
       const pres = presentations.find(p => p.id === item.id)

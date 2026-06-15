@@ -26,6 +26,15 @@ export function createSlideEditor(container) {
             <option value="right">Right</option>
           </select>
         </label>
+        
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 10px 0;">
+        
+        <h3>Presentation Settings</h3>
+        <label style="display:flex; flex-direction:column; gap: 4px;">
+          Rehearsal Audio Path
+          <input type="text" id="prop-rehearsal-audio" class="input" placeholder="e.g. /path/to/click.mp3" />
+        </label>
+
         <div style="margin-top: auto; display: flex; gap: 10px;">
           <button class="btn btn--primary" id="editor-save-btn" style="flex: 1;">Save</button>
           <button class="btn" id="editor-close-btn" style="flex: 1;">Close</button>
@@ -42,6 +51,7 @@ export function createSlideEditor(container) {
   const fontSizeInput = container.querySelector('#prop-font-size')
   const colorInput = container.querySelector('#prop-color')
   const alignInput = container.querySelector('#prop-align')
+  const rehearsalAudioInput = container.querySelector('#prop-rehearsal-audio')
 
   let currentSlideIndex = -1
 
@@ -72,6 +82,7 @@ export function createSlideEditor(container) {
     if (pres && pres.slides[idx]) {
       currentSlideIndex = idx
       textarea.value = pres.slides[idx].text || ''
+      rehearsalAudioInput.value = pres.linkedAudio || ''
       // If we had individual slide styles, we'd load them here
     }
   })
@@ -81,7 +92,10 @@ export function createSlideEditor(container) {
       const pres = state.get('selectedPresentation')
       if (pres && pres.slides[currentSlideIndex]) {
         pres.slides[currentSlideIndex].text = textarea.value
+        pres.linkedAudio = rehearsalAudioInput.value.trim()
+        
         state.set('selectedPresentation', { ...pres }) // force update
+        
         // Also update layers if this is the active slide
         const layers = state.get('layers')
         if (layers.slide.active && state.get('liveSlideIndex') === currentSlideIndex) {

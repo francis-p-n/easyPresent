@@ -27,7 +27,18 @@ export class SlideView {
     header.className = 'panel-header slide-view-header'
     header.innerHTML = `
       <span class="panel-header__title">${pres ? pres.name : 'No Presentation Selected'}</span>
-      <div class="panel-header__actions">
+      <div class="panel-header__actions" style="display:flex; align-items:center; gap:10px;">
+        ${pres && pres.linkedAudio ? `
+          <button class="btn btn--icon" id="play-rehearsal-audio" title="Play Rehearsal Audio" style="color: var(--primary-color);">
+            ${icon('play', 14).outerHTML}
+          </button>
+          <audio id="rehearsal-audio-player" src="${pres.linkedAudio}" style="display:none;"></audio>
+        ` : ''}
+        ${pres && pres.slides.some(s => s.linesData && s.linesData.some(l => l.chords && l.chords.length > 0)) ? `
+          <label style="font-size:12px; display:flex; align-items:center; gap:4px; cursor:pointer;">
+            <input type="checkbox" id="toggle-chords-checkbox" /> Show Chords
+          </label>
+        ` : ''}
         ${pres ? `<span class="text-muted text-xs">${pres.slides.length} slides</span>` : ''}
       </div>
     `
@@ -39,7 +50,118 @@ export class SlideView {
     grid.id = 'slide-grid'
     this.container.appendChild(grid)
 
+    // Chord sheet container
+    const chordSheet = document.createElement('div')
+    chordSheet.className = 'chord-sheet'
+    chordSheet.id = 'chord-sheet'
+    chordSheet.style.display = 'none'
+    chordSheet.style.padding = '20px'
+    chordSheet.style.overflowY = 'auto'
+    chordSheet.style.height = 'calc(100% - 40px)'
+    chordSheet.style.fontFamily = 'monospace'
+    chordSheet.style.fontSize = '18px'
+    chordSheet.style.backgroundColor = 'var(--bg-panel)'
+    this.container.appendChild(chordSheet)
+
+    // Checkbox event
+    const checkbox = header.querySelector('#toggle-chords-checkbox')
+    if (checkbox) {
+      checkbox.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          grid.style.display = 'none'
+          chordSheet.style.display = 'block'
+          this._renderChordSheet()
+        } else {
+          grid.style.display = 'grid'
+          chordSheet.style.display = 'none'
+        }
+      })
+    }
+
+    // Audio Playback Event
+    const playBtn = header.querySelector('#play-rehearsal-audio')
+    const audioPlayer = header.querySelector('#rehearsal-audio-player')
+    if (playBtn && audioPlayer) {
+      playBtn.addEventListener('click', () => {
+        if (audioPlayer.paused) {
+          audioPlayer.play()
+          playBtn.innerHTML = icon('pause', 14).outerHTML
+        } else {
+          audioPlayer.pause()
+          playBtn.innerHTML = icon('play', 14).outerHTML
+        }
+      })
+      audioPlayer.addEventListener('ended', () => {
+        playBtn.innerHTML = icon('play', 14).outerHTML
+      })
+    }
+
     this._renderSlides()
+  }
+
+  _renderChordSheet() {
+    const chordSheet = this.container.querySelector('#chord-sheet')
+    if (!chordSheet) return
+    chordSheet.innerHTML = ''
+    const pres = state.get('selectedPresentation')
+    if (!pres) return
+
+    pres.slides.forEach(slide => {
+      const block = document.createElement('div')
+      block.style.marginBottom = '24px'
+      
+      if (slide.label) {
+        const label = document.createElement('div')
+        label.style.fontWeight = 'bold'
+        label.style.color = 'var(--primary-color)'
+        label.style.marginBottom = '12px'
+        label.textContent = slide.label
+        block.appendChild(label)
+      }
+
+      if (slide.linesData && slide.linesData.length > 0) {
+        slide.linesData.forEach(line => {
+          const lineDiv = document.createElement('div')
+          lineDiv.style.marginBottom = '12px'
+          lineDiv.style.position = 'relative'
+          lineDiv.style.lineHeight = '1.4'
+          
+          if (line.chords && line.chords.length > 0) {
+            const chordsDiv = document.createElement('div')
+            chordsDiv.style.color = '#4ea8de' // blueish chords
+            chordsDiv.style.fontWeight = 'bold'
+            chordsDiv.style.height = '1.2em'
+            chordsDiv.style.whiteSpace = 'pre'
+            
+            // Build chord line with spaces
+            let chordLine = ''
+            let lastPos = 0
+            line.chords.forEach(c => {
+              const spaces = Math.max(0, c.pos - lastPos)
+              chordLine += ' '.repeat(spaces) + c.chord
+              lastPos = c.pos + c.chord.length
+            })
+            chordsDiv.textContent = chordLine
+            lineDiv.appendChild(chordsDiv)
+          }
+
+          const textDiv = document.createElement('div')
+          textDiv.style.whiteSpace = 'pre'
+          textDiv.textContent = line.text || ' ' // keep space if empty
+          lineDiv.appendChild(textDiv)
+          
+          block.appendChild(lineDiv)
+        })
+      } else {
+        // Fallback for presentations without linesData
+        const textDiv = document.createElement('div')
+        textDiv.style.whiteSpace = 'pre-wrap'
+        textDiv.textContent = slide.text
+        block.appendChild(textDiv)
+      }
+
+      chordSheet.appendChild(block)
+    })
   }
 
   _renderSlides() {

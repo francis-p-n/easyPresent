@@ -31,8 +31,8 @@ export class LibraryPanel {
         <button class="btn btn--icon" id="library-add-song-btn" title="New Song">
           ${icon('music', 14).outerHTML}
         </button>
-        <button class="btn btn--icon" id="library-add-btn" title="New Presentation">
-          ${icon('plus', 14).outerHTML}
+        <button class="btn" id="library-add-btn" title="New Presentation">
+          ${icon('plus', 14).outerHTML} Add Pres
         </button>
         <button class="btn btn--icon" id="library-folder-btn" title="New Folder">
           ${icon('folder', 14).outerHTML}

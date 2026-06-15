@@ -22,8 +22,8 @@ export class PlaylistPanel {
     header.innerHTML = `
       <span class="panel-header__title">Playlist</span>
       <div class="panel-header__actions">
-        <button class="btn btn--icon" id="playlist-add-btn" title="Add Item">
-          ${icon('plus', 14).outerHTML}
+        <button class="btn" id="playlist-add-btn" title="Add Item">
+          ${icon('plus', 14).outerHTML} Add Item
         </button>
       </div>
     `

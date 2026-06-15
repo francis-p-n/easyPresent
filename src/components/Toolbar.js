@@ -68,26 +68,26 @@ export class Toolbar {
 
     // Edit Button
     const editBtn = document.createElement('button')
-    editBtn.className = 'btn btn--icon tooltip'
+    editBtn.className = 'btn tooltip'
     editBtn.id = 'toolbar-edit-btn'
     editBtn.dataset.tooltip = 'Edit Mode'
-    editBtn.appendChild(icon('edit', 18))
+    editBtn.innerHTML = `${icon('edit', 16).outerHTML} Edit`
     this.container.appendChild(editBtn)
 
     // Theme Button
     const themeBtn = document.createElement('button')
-    themeBtn.className = 'btn btn--icon tooltip'
+    themeBtn.className = 'btn tooltip'
     themeBtn.id = 'toolbar-theme-btn'
     themeBtn.dataset.tooltip = 'Theme Editor'
-    themeBtn.appendChild(icon('droplet', 18)) // Or any other suitable icon
+    themeBtn.innerHTML = `${icon('droplet', 16).outerHTML} Themes`
     this.container.appendChild(themeBtn)
 
     // Screens Button
     const screensBtn = document.createElement('button')
-    screensBtn.className = 'btn btn--icon tooltip'
+    screensBtn.className = 'btn tooltip'
     screensBtn.id = 'toolbar-screens-btn'
     screensBtn.dataset.tooltip = 'Screen Configuration'
-    screensBtn.appendChild(icon('monitor', 18))
+    screensBtn.innerHTML = `${icon('monitor', 16).outerHTML} Screens`
     this.container.appendChild(screensBtn)
 
     // Separator

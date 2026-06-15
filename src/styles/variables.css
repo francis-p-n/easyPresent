@@ -11,7 +11,7 @@
   
   /* Text Colors */
   --text-primary: #cccccc;
-  --text-secondary: #a1a1aa;
+  --text-secondary: #b5b5b5;
   --text-highlight: #ffffff;
   
   /* Accent Colors */
@@ -33,11 +33,11 @@
   
   /* Typography */
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-size-xs: 12px;
-  --font-size-sm: 14px;
-  --font-size-md: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 24px;
+  --font-size-xs: 13px;
+  --font-size-sm: 15px;
+  --font-size-md: 18px;
+  --font-size-lg: 20px;
+  --font-size-xl: 26px;
   
   /* Spacing */
   --spacing-xs: 4px;

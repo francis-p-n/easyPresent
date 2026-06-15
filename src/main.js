@@ -65,6 +65,15 @@ class App {
     // Auto save data
     storageManager.initAutoSave()
 
+    // Show welcome modal on first launch
+    if (!localStorage.getItem('hasSeenWelcome')) {
+      import('./components/WelcomeModal.js').then(({ WelcomeModal }) => {
+        new WelcomeModal(() => {
+          localStorage.setItem('hasSeenWelcome', 'true')
+        })
+      })
+    }
+
     console.log('EasyPresent initialized')
   }
 

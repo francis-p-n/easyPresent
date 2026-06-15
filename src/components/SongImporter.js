@@ -204,6 +204,7 @@ function parseChordProToSlides(text) {
   let currentGroup = 'Verse'
   let currentLabel = 'Verse 1'
   let currentTextLines = []
+  let currentLineData = [] // Stores { text, chords: [{pos, chord}] }
 
   const commitSlide = () => {
     if (currentTextLines.length > 0) {
@@ -211,9 +212,11 @@ function parseChordProToSlides(text) {
         id: 'slide-' + Math.random().toString(36).substr(2, 9),
         group: currentGroup.toLowerCase(),
         label: currentLabel,
-        text: currentTextLines.join('\n')
+        text: currentTextLines.join('\n'),
+        linesData: currentLineData
       })
       currentTextLines = []
+      currentLineData = []
     }
   }
 
@@ -232,8 +235,24 @@ function parseChordProToSlides(text) {
       // Blank line means new slide within the same group
       commitSlide()
     } else {
-      // Standard lyric/chord line
-      currentTextLines.push(trimmed)
+      // Parse chords from line (e.g., "[C]Amazing [F]grace")
+      let cleanText = ''
+      let chords = []
+      let chordRegex = /\[(.*?)\]/g
+      let match
+      let lastIdx = 0
+      let textOffset = 0
+      
+      while ((match = chordRegex.exec(trimmed)) !== null) {
+        cleanText += trimmed.substring(lastIdx, match.index)
+        textOffset += (match.index - lastIdx)
+        chords.push({ pos: textOffset, chord: match[1] })
+        lastIdx = chordRegex.lastIndex
+      }
+      cleanText += trimmed.substring(lastIdx)
+      
+      currentTextLines.push(cleanText)
+      currentLineData.push({ text: cleanText, chords })
     }
   })
 

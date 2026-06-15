@@ -49,7 +49,7 @@ HRESULT TransitionEngine::RenderTransition(
             
             // Clip target to slide in from left to right
             D2D1_RECT_F clipRect = D2D1::RectF(0.0f, 0.0f, width * progress, static_cast<float>(height));
-            d2dContext->PushAxisAlignedClip(&clipRect, D2D1_ANTIALIAS_MODE_ALIGNED);
+            d2dContext->PushAxisAlignedClip(&clipRect, D2D1_ANTIALIAS_MODE_ALIASED);
             d2dContext->DrawBitmap(targetBitmap, &fullRect, 1.0f, D2D1_INTERPOLATION_MODE_LINEAR);
             d2dContext->PopAxisAlignedClip();
             break;
@@ -60,7 +60,7 @@ HRESULT TransitionEngine::RenderTransition(
 
             // Clip target to slide in from right to left
             D2D1_RECT_F clipRect = D2D1::RectF(width * (1.0f - progress), 0.0f, static_cast<float>(width), static_cast<float>(height));
-            d2dContext->PushAxisAlignedClip(&clipRect, D2D1_ANTIALIAS_MODE_ALIGNED);
+            d2dContext->PushAxisAlignedClip(&clipRect, D2D1_ANTIALIAS_MODE_ALIASED);
             d2dContext->DrawBitmap(targetBitmap, &fullRect, 1.0f, D2D1_INTERPOLATION_MODE_LINEAR);
             d2dContext->PopAxisAlignedClip();
             break;
@@ -71,7 +71,7 @@ HRESULT TransitionEngine::RenderTransition(
 
             // Clip target to slide in from top to bottom
             D2D1_RECT_F clipRect = D2D1::RectF(0.0f, 0.0f, static_cast<float>(width), height * progress);
-            d2dContext->PushAxisAlignedClip(&clipRect, D2D1_ANTIALIAS_MODE_ALIGNED);
+            d2dContext->PushAxisAlignedClip(&clipRect, D2D1_ANTIALIAS_MODE_ALIASED);
             d2dContext->DrawBitmap(targetBitmap, &fullRect, 1.0f, D2D1_INTERPOLATION_MODE_LINEAR);
             d2dContext->PopAxisAlignedClip();
             break;
@@ -82,7 +82,7 @@ HRESULT TransitionEngine::RenderTransition(
 
             // Clip target to slide in from bottom to top
             D2D1_RECT_F clipRect = D2D1::RectF(0.0f, height * (1.0f - progress), static_cast<float>(width), static_cast<float>(height));
-            d2dContext->PushAxisAlignedClip(&clipRect, D2D1_ANTIALIAS_MODE_ALIGNED);
+            d2dContext->PushAxisAlignedClip(&clipRect, D2D1_ANTIALIAS_MODE_ALIASED);
             d2dContext->DrawBitmap(targetBitmap, &fullRect, 1.0f, D2D1_INTERPOLATION_MODE_LINEAR);
             d2dContext->PopAxisAlignedClip();
             break;

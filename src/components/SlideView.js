@@ -175,7 +175,10 @@ export class SlideView {
         <div class="empty-state" style="grid-column: 1 / -1;">
           ${icon('tv', 48).outerHTML}
           <div class="empty-state__text" style="margin-bottom: var(--spacing-sm);">Select a presentation from the library<br>or playlist to view slides</div>
-          <button class="btn btn--primary">${icon('plus', 14).outerHTML} Create Presentation</button>
+          <button class="btn btn--primary" id="slideview-create-btn">
+            <span style="display:flex; align-items:center; justify-content:center;">${icon('plus', 14).outerHTML}</span>
+            Create Presentation
+          </button>
         </div>
       `
       return

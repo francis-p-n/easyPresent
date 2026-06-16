@@ -46,6 +46,10 @@ The application is built in three distinct layers:
 - **Multi-Screen Support:** Independent Audience and Stage Display outputs.
 - **Non-Destructive Editing:** Edit presentations without interrupting the live output.
 - **Live Output Preview:** Real-time preview of the audience screen directly in the control panel.
+- **Church Presentation Best Practices:** 
+  - Automated song import splitting with configurable max lines per slide.
+  - Real-time visual readability warnings in the slide editor.
+  - Pre-configured high-contrast default themes (Worship, Sermon, Announcements).
 
 ---
 

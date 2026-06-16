@@ -78,8 +78,8 @@
 .panel-resizer::before {
   content: '';
   position: absolute;
-  left: -10px;
-  right: -10px;
+  left: -5px; /* Creates an invisible 14px hit area (4px center + 5px left + 5px right) */
+  right: -5px;
   top: 0;
   bottom: 0;
   z-index: 11;

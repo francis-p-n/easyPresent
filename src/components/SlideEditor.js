@@ -3,9 +3,12 @@ import { state } from '../engine/StateManager.js'
 export function createSlideEditor(container) {
   container.innerHTML = `
     <div class="slide-editor-layout" style="display: flex; height: 100%; width: 100%; background: var(--bg-panel);">
-      <div class="editor-canvas-container" style="flex: 1; display: flex; align-items: center; justify-content: center; background: #000; padding: 20px; overflow: auto;">
+      <div class="editor-canvas-container" style="flex: 1; display: flex; align-items: center; justify-content: center; background: #000; padding: 20px; overflow: auto; position: relative;">
         <div class="editor-canvas" id="editor-canvas" style="width: 1920px; height: 1080px; background: #111; position: relative; transform-origin: top left; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
           <textarea id="editor-textarea" style="width: 100%; height: 100%; background: transparent; border: 2px dashed #444; color: white; font-family: Inter, sans-serif; font-size: 80px; text-align: center; resize: none; outline: none; padding: 40px; box-sizing: border-box;"></textarea>
+        </div>
+        <div id="editor-warning" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: #ffcc00; color: #000; padding: 8px 16px; border-radius: 4px; font-weight: bold; display: none; z-index: 10; font-size: 14px; pointer-events: none;">
+          ⚠️ Recommended: Max 4 lines for readability
         </div>
       </div>
       <div class="editor-properties" style="width: 300px; background: var(--bg-toolbar); border-left: 1px solid var(--border-color); padding: 15px; display: flex; flex-direction: column; gap: 15px;">
@@ -45,6 +48,7 @@ export function createSlideEditor(container) {
 
   const canvas = container.querySelector('#editor-canvas')
   const textarea = container.querySelector('#editor-textarea')
+  const warningLabel = container.querySelector('#editor-warning')
   const saveBtn = container.querySelector('#editor-save-btn')
   const closeBtn = container.querySelector('#editor-close-btn')
   
@@ -73,6 +77,18 @@ export function createSlideEditor(container) {
     textarea.style.textAlign = alignInput.value
   }
 
+  const checkLineCount = () => {
+    const lines = textarea.value.split('\n').length
+    const maxLines = state.get('maxLinesPerSlide') || 4
+    warningLabel.textContent = `⚠️ Recommended: Max ${maxLines} lines for readability`
+    warningLabel.style.display = lines > maxLines ? 'block' : 'none'
+  }
+
+  textarea.addEventListener('input', () => {
+    updateStyles()
+    checkLineCount()
+  })
+
   fontSizeInput.addEventListener('input', updateStyles)
   colorInput.addEventListener('input', updateStyles)
   alignInput.addEventListener('input', updateStyles)
@@ -83,6 +99,7 @@ export function createSlideEditor(container) {
       currentSlideIndex = idx
       textarea.value = pres.slides[idx].text || ''
       rehearsalAudioInput.value = pres.linkedAudio || ''
+      checkLineCount()
       // If we had individual slide styles, we'd load them here
     }
   })

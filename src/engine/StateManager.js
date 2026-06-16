@@ -44,6 +44,7 @@ export class StateManager {
       isEditing: false,
       searchQuery: '',
       showLogo: false,
+      maxLinesPerSlide: 4,
 
       // Themes
       themes: [],
@@ -163,10 +164,10 @@ export class StateManager {
     this._state.themes = [
       {
         id: 'default',
-        name: 'Default Dark',
+        name: 'Worship Default',
         styles: {
           fontFamily: 'Inter',
-          fontSize: '48px',
+          fontSize: '64px',
           color: '#ffffff',
           backgroundColor: '#000000',
           textAlign: 'center',
@@ -175,17 +176,29 @@ export class StateManager {
         }
       },
       {
-        id: 'classic-blue',
-        name: 'Classic Blue',
+        id: 'sermon-default',
+        name: 'Sermon Default',
         styles: {
-          fontFamily: 'Georgia',
+          fontFamily: 'Inter',
           fontSize: '56px',
           color: '#ffffff',
-          backgroundColor: '#0a3d91',
+          backgroundColor: '#111111',
+          textAlign: 'left',
+          justifyContent: 'center',
+          fontWeight: 'normal'
+        }
+      },
+      {
+        id: 'announcement-default',
+        name: 'Announcement Default',
+        styles: {
+          fontFamily: 'Inter',
+          fontSize: '72px',
+          color: '#ffffff',
+          backgroundColor: '#001f3f',
           textAlign: 'center',
           justifyContent: 'center',
-          fontWeight: 'normal',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
+          fontWeight: 'bold'
         }
       }
     ]

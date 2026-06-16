@@ -1,4 +1,5 @@
 import { icon } from './Icons.js'
+import { state } from '../engine/StateManager.js'
 
 export function createSongImporter(onImport) {
   // Create overlay
@@ -131,8 +132,24 @@ export function createSongImporter(onImport) {
   categoryInput.placeholder = 'Category (e.g. Worship)'
   categoryInput.style.flex = '1'
 
+  const maxLinesContainer = document.createElement('div')
+  maxLinesContainer.style.display = 'flex'
+  maxLinesContainer.style.alignItems = 'center'
+  maxLinesContainer.style.gap = '8px'
+  maxLinesContainer.innerHTML = '<span style="font-size: 12px; color: var(--text-muted);">Max Lines:</span>'
+  
+  const maxLinesInput = document.createElement('input')
+  maxLinesInput.className = 'input'
+  maxLinesInput.type = 'number'
+  maxLinesInput.min = '1'
+  maxLinesInput.max = '4'
+  maxLinesInput.value = state.get('maxLinesPerSlide') || 4
+  maxLinesInput.style.width = '60px'
+  maxLinesContainer.appendChild(maxLinesInput)
+
   inputsRow.appendChild(titleInput)
   inputsRow.appendChild(categoryInput)
+  inputsRow.appendChild(maxLinesContainer)
 
   const lyricsArea = document.createElement('textarea')
   lyricsArea.className = 'input'
@@ -172,7 +189,10 @@ export function createSongImporter(onImport) {
       return
     }
 
-    const slides = parseChordProToSlides(rawText)
+    const maxLines = parseInt(maxLinesInput.value, 10) || 4
+    state.set('maxLinesPerSlide', maxLines)
+
+    const slides = parseChordProToSlides(rawText, maxLines)
     if (slides.length > 0) {
       onImport({
         name: titleInput.value.trim(),
@@ -196,7 +216,7 @@ export function createSongImporter(onImport) {
   document.body.appendChild(overlay)
 }
 
-function parseChordProToSlides(text) {
+function parseChordProToSlides(text, maxLines = 4) {
   // Split text into blocks by blank lines or bracket headers like [Verse 1]
   const lines = text.split(/\r?\n/)
   const slides = []
@@ -253,6 +273,11 @@ function parseChordProToSlides(text) {
       
       currentTextLines.push(cleanText)
       currentLineData.push({ text: cleanText, chords })
+
+      // Auto-split slides if exceeding max lines (best practice)
+      if (currentTextLines.length >= maxLines) {
+        commitSlide()
+      }
     }
   })
 

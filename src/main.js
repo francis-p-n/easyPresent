@@ -1,9 +1,9 @@
-import { Toolbar } from './components/Toolbar.js'
-import { LibraryPanel } from './components/LibraryPanel.js'
-import { PlaylistPanel } from './components/PlaylistPanel.js'
-import { SlideView } from './components/SlideView.js'
-import { PreviewPanel } from './components/PreviewPanel.js'
-import { ShowControls } from './components/ShowControls.js'
+import { Toolbar } from './features/controls/Toolbar.js'
+import { LibraryPanel } from './features/library/LibraryPanel.js'
+import { PlaylistPanel } from './features/library/PlaylistPanel.js'
+import { SlideView } from './features/presentation/SlideView.js'
+import { PreviewPanel } from './features/stage/PreviewPanel.js'
+import { ShowControls } from './features/controls/ShowControls.js'
 import { state } from './engine/StateManager.js'
 import { storageManager } from './engine/StorageManager.js'
 
@@ -26,17 +26,17 @@ class App {
     this.slideView = new SlideView(document.getElementById('slide-view'))
     this.preview = new PreviewPanel(document.getElementById('preview-panel'))
     this.showControls = new ShowControls(document.getElementById('show-controls'))
-    
+
     // Setup panel resizers
     this._setupResizer('resizer-left', 'panel-left', 'left')
     this._setupResizer('resizer-right', 'panel-right', 'right')
 
     // Keyboard shortcuts
     this._setupKeyboardShortcuts()
-    
+
     // Handle view toggling (Lazy load panels if needed)
     state.on('activeView', (view) => this._updateView(view))
-    
+
     // Handle edit mode (Lazy load editor)
     state.on('isEditing', (editing) => this._updateEditMode(editing))
 
@@ -67,7 +67,7 @@ class App {
 
     // Show welcome modal on first launch
     if (!localStorage.getItem('hasSeenWelcome')) {
-      import('./components/WelcomeModal.js').then(({ WelcomeModal }) => {
+      import('./components/common/WelcomeModal.js').then(({ WelcomeModal }) => {
         new WelcomeModal(() => {
           localStorage.setItem('hasSeenWelcome', 'true')
         })
@@ -87,41 +87,41 @@ class App {
     // Handle slide view vs bible view
     if (view === 'bible') {
       slideView.style.display = 'none'
-      
+
       let bibleContainer = document.getElementById('bible-panel-container')
       if (!bibleContainer) {
         bibleContainer = document.createElement('div')
         bibleContainer.id = 'bible-panel-container'
         bibleContainer.style.height = '100%'
         document.getElementById('panel-center').appendChild(bibleContainer)
-        
+
         // Lazy-load Bible Panel
-        const { createBiblePanel } = await import('./components/BiblePanel.js')
+        const { createBiblePanel } = await import('./features/bible/BiblePanel.js')
         createBiblePanel(bibleContainer)
       }
       bibleContainer.style.display = 'flex'
     } else {
       const bibleContainer = document.getElementById('bible-panel-container')
       if (bibleContainer) bibleContainer.style.display = 'none'
-      
+
       slideView.style.display = state.get('isEditing') ? 'none' : 'block'
     }
 
     if (view === 'media' || view === 'audio') {
       bottomView.style.display = 'flex'
       resizer.style.display = 'block'
-      
+
       if (view === 'media' && !this.mediaBinLoaded) {
-        const { createMediaBin } = await import('./components/MediaBin.js')
+        const { createMediaBin } = await import('./features/media/MediaBin.js')
         mediaBin.appendChild(createMediaBin())
         this.mediaBinLoaded = true
       }
       if (view === 'audio' && !this.audioBinLoaded) {
-        const { createAudioBin } = await import('./components/AudioBin.js')
+        const { createAudioBin } = await import('./features/media/AudioBin.js')
         audioBin.appendChild(createAudioBin())
         this.audioBinLoaded = true
       }
-      
+
       mediaBin.style.display = view === 'media' ? 'block' : 'none'
       audioBin.style.display = view === 'audio' ? 'block' : 'none'
     } else {
@@ -142,22 +142,22 @@ class App {
         slideEditor.style.width = '100%'
         slideEditor.style.height = '100%'
         centerPanel.appendChild(slideEditor)
-        
+
         // Lazy-load Slide Editor
-        const { createSlideEditor } = await import('./components/SlideEditor.js')
+        const { createSlideEditor } = await import('./features/presentation/SlideEditor.js')
         this.slideEditorInstance = createSlideEditor(slideEditor)
       }
-      
+
       slideView.style.display = 'none'
       slideEditor.style.display = 'block'
-      
+
       // Update editor data for current slide
       const pres = state.get('selectedPresentation')
       const idx = state.get('activeSlideIndex')
       if (pres && pres.slides[idx]) {
         state.set('activeSlideIndex', idx) // Trigger editor update
       }
-      
+
       if (this.slideEditorInstance) {
         this.slideEditorInstance.resize()
       }

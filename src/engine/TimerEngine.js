@@ -38,7 +38,7 @@ class TimerEngine {
     const mins = Math.floor(totalSeconds / 60)
     const secs = totalSeconds % 60
     state.set(`timer_${id}`, `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`)
-    
+
     if (remaining === 0) {
       this.stop(id)
     }

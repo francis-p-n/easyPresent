@@ -1,10 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Stage Display</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
     <style>
       body {
         margin: 0;
@@ -54,26 +57,28 @@
       <div class="current-slide" id="current-slide">EasyPresent Stage Display</div>
       <div class="next-slide" id="next-slide">Ready...</div>
     </div>
-    
+
     <script>
       function updateClock() {
-        const now = new Date();
-        document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+        const now = new Date()
+        document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', {
+          hour12: false
+        })
       }
-      setInterval(updateClock, 1000);
-      updateClock();
+      setInterval(updateClock, 1000)
+      updateClock()
 
       // Assuming StageServer broadcast receives here if we set up websockets.
       // For now, in a real implementation we'd connect to the Stage Server websocket.
-      const ws = new WebSocket('ws://localhost:8080');
+      const ws = new WebSocket('ws://localhost:8080')
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
+          const data = JSON.parse(event.data)
           if (data.type === 'slide') {
-            document.getElementById('current-slide').innerText = data.data.text || '';
+            document.getElementById('current-slide').innerText = data.data.text || ''
           }
-        } catch(e) {}
-      };
+        } catch (e) {}
+      }
     </script>
   </body>
 </html>

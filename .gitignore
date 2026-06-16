@@ -50,3 +50,5 @@ yarn-error.log*
 # Project specific ignores
 architecture.md
 
+
+release/

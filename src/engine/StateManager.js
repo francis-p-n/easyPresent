@@ -48,7 +48,7 @@ export class StateManager {
 
       // Themes
       themes: [],
-      activeThemeId: 'default',
+      activeThemeId: 'default'
     }
 
     // Load sample data
@@ -80,7 +80,7 @@ export class StateManager {
   _notify(key, newValue, oldValue) {
     const listeners = this._listeners.get(key)
     if (listeners) {
-      listeners.forEach(cb => cb(newValue, oldValue))
+      listeners.forEach((cb) => cb(newValue, oldValue))
     }
   }
 
@@ -92,11 +92,36 @@ export class StateManager {
         name: 'Amazing Grace',
         category: 'Hymns',
         slides: [
-          { id: 's1', group: 'verse', label: 'Verse 1', text: 'Amazing grace, how sweet the sound\nThat saved a wretch like me\nI once was lost, but now am found\nWas blind but now I see' },
-          { id: 's2', group: 'verse', label: 'Verse 2', text: "T'was grace that taught my heart to fear\nAnd grace my fears relieved\nHow precious did that grace appear\nThe hour I first believed" },
-          { id: 's3', group: 'chorus', label: 'Chorus', text: 'My chains are gone, I\'ve been set free\nMy God, my Savior has ransomed me\nAnd like a flood His mercy reigns\nUnending love, amazing grace' },
-          { id: 's4', group: 'verse', label: 'Verse 3', text: 'The Lord has promised good to me\nHis word my hope secures\nHe will my shield and portion be\nAs long as life endures' },
-          { id: 's5', group: 'bridge', label: 'Bridge', text: 'The earth shall soon dissolve like snow\nThe sun forbear to shine\nBut God who called me here below\nWill be forever mine' },
+          {
+            id: 's1',
+            group: 'verse',
+            label: 'Verse 1',
+            text: 'Amazing grace, how sweet the sound\nThat saved a wretch like me\nI once was lost, but now am found\nWas blind but now I see'
+          },
+          {
+            id: 's2',
+            group: 'verse',
+            label: 'Verse 2',
+            text: "T'was grace that taught my heart to fear\nAnd grace my fears relieved\nHow precious did that grace appear\nThe hour I first believed"
+          },
+          {
+            id: 's3',
+            group: 'chorus',
+            label: 'Chorus',
+            text: "My chains are gone, I've been set free\nMy God, my Savior has ransomed me\nAnd like a flood His mercy reigns\nUnending love, amazing grace"
+          },
+          {
+            id: 's4',
+            group: 'verse',
+            label: 'Verse 3',
+            text: 'The Lord has promised good to me\nHis word my hope secures\nHe will my shield and portion be\nAs long as life endures'
+          },
+          {
+            id: 's5',
+            group: 'bridge',
+            label: 'Bridge',
+            text: 'The earth shall soon dissolve like snow\nThe sun forbear to shine\nBut God who called me here below\nWill be forever mine'
+          }
         ]
       },
       {
@@ -104,10 +129,30 @@ export class StateManager {
         name: 'How Great Is Our God',
         category: 'Worship',
         slides: [
-          { id: 's6', group: 'verse', label: 'Verse 1', text: 'The splendor of the King\nClothed in majesty\nLet all the earth rejoice\nAll the earth rejoice' },
-          { id: 's7', group: 'verse', label: 'Verse 2', text: 'He wraps Himself in light\nAnd darkness tries to hide\nAnd trembles at His voice\nTrembles at His voice' },
-          { id: 's8', group: 'chorus', label: 'Chorus', text: 'How great is our God\nSing with me, how great is our God\nAnd all will see how great\nHow great is our God' },
-          { id: 's9', group: 'bridge', label: 'Bridge', text: 'Name above all names\nWorthy of all praise\nMy heart will sing\nHow great is our God' },
+          {
+            id: 's6',
+            group: 'verse',
+            label: 'Verse 1',
+            text: 'The splendor of the King\nClothed in majesty\nLet all the earth rejoice\nAll the earth rejoice'
+          },
+          {
+            id: 's7',
+            group: 'verse',
+            label: 'Verse 2',
+            text: 'He wraps Himself in light\nAnd darkness tries to hide\nAnd trembles at His voice\nTrembles at His voice'
+          },
+          {
+            id: 's8',
+            group: 'chorus',
+            label: 'Chorus',
+            text: 'How great is our God\nSing with me, how great is our God\nAnd all will see how great\nHow great is our God'
+          },
+          {
+            id: 's9',
+            group: 'bridge',
+            label: 'Bridge',
+            text: 'Name above all names\nWorthy of all praise\nMy heart will sing\nHow great is our God'
+          }
         ]
       },
       {
@@ -115,9 +160,24 @@ export class StateManager {
         name: '10,000 Reasons',
         category: 'Worship',
         slides: [
-          { id: 's10', group: 'chorus', label: 'Chorus', text: 'Bless the Lord, O my soul\nO my soul, worship His holy name\nSing like never before\nO my soul, I\'ll worship Your holy name' },
-          { id: 's11', group: 'verse', label: 'Verse 1', text: 'The sun comes up, it\'s a new day dawning\nIt\'s time to sing Your song again\nWhatever may pass and whatever lies before me\nLet me be singing when the evening comes' },
-          { id: 's12', group: 'verse', label: 'Verse 2', text: 'You\'re rich in love and You\'re slow to anger\nYour name is great and Your heart is kind\nFor all Your goodness I will keep on singing\nTen thousand reasons for my heart to find' },
+          {
+            id: 's10',
+            group: 'chorus',
+            label: 'Chorus',
+            text: "Bless the Lord, O my soul\nO my soul, worship His holy name\nSing like never before\nO my soul, I'll worship Your holy name"
+          },
+          {
+            id: 's11',
+            group: 'verse',
+            label: 'Verse 1',
+            text: "The sun comes up, it's a new day dawning\nIt's time to sing Your song again\nWhatever may pass and whatever lies before me\nLet me be singing when the evening comes"
+          },
+          {
+            id: 's12',
+            group: 'verse',
+            label: 'Verse 2',
+            text: "You're rich in love and You're slow to anger\nYour name is great and Your heart is kind\nFor all Your goodness I will keep on singing\nTen thousand reasons for my heart to find"
+          }
         ]
       },
       {
@@ -126,7 +186,12 @@ export class StateManager {
         category: 'Announcements',
         slides: [
           { id: 's13', group: 'intro', label: 'Welcome', text: 'Welcome to\nSunday Service' },
-          { id: 's14', group: 'intro', label: 'Announcements', text: 'Announcements\n\n• Small Groups — Wednesday 7PM\n• Youth Night — Friday 6PM\n• Serve Team Meeting — After Service' },
+          {
+            id: 's14',
+            group: 'intro',
+            label: 'Announcements',
+            text: 'Announcements\n\n• Small Groups — Wednesday 7PM\n• Youth Night — Friday 6PM\n• Serve Team Meeting — After Service'
+          }
         ]
       },
       {
@@ -135,11 +200,26 @@ export class StateManager {
         category: 'Sermon',
         slides: [
           { id: 's15', group: 'intro', label: 'Title', text: 'Walking by Faith\nHebrews 11:1' },
-          { id: 's16', group: 'verse', label: 'Point 1', text: '1. Faith is the substance\n   of things hoped for' },
-          { id: 's17', group: 'verse', label: 'Point 2', text: '2. Faith requires action\n   James 2:17' },
-          { id: 's18', group: 'verse', label: 'Point 3', text: '3. Faith grows through\n   trials and testing' },
+          {
+            id: 's16',
+            group: 'verse',
+            label: 'Point 1',
+            text: '1. Faith is the substance\n   of things hoped for'
+          },
+          {
+            id: 's17',
+            group: 'verse',
+            label: 'Point 2',
+            text: '2. Faith requires action\n   James 2:17'
+          },
+          {
+            id: 's18',
+            group: 'verse',
+            label: 'Point 3',
+            text: '3. Faith grows through\n   trials and testing'
+          }
         ]
-      },
+      }
     ]
 
     this._state.playlists = [
@@ -154,9 +234,9 @@ export class StateManager {
           { type: 'presentation', id: 'p2' },
           { type: 'presentation', id: 'p3' },
           { type: 'header', text: 'Message' },
-          { type: 'presentation', id: 'p5' },
+          { type: 'presentation', id: 'p5' }
         ]
-      },
+      }
     ]
 
     this._state.activePlaylist = this._state.playlists[0]
@@ -164,7 +244,7 @@ export class StateManager {
     this._state.themes = [
       {
         id: 'default',
-        name: 'Worship Default',
+        name: 'Worship Lyrics',
         styles: {
           fontFamily: 'Inter',
           fontSize: '64px',
@@ -177,9 +257,9 @@ export class StateManager {
       },
       {
         id: 'sermon-default',
-        name: 'Sermon Default',
+        name: 'Sermon Notes',
         styles: {
-          fontFamily: 'Inter',
+          fontFamily: 'Open Sans',
           fontSize: '56px',
           color: '#ffffff',
           backgroundColor: '#111111',
@@ -190,9 +270,9 @@ export class StateManager {
       },
       {
         id: 'announcement-default',
-        name: 'Announcement Default',
+        name: 'Announcements',
         styles: {
-          fontFamily: 'Inter',
+          fontFamily: 'Montserrat',
           fontSize: '72px',
           color: '#ffffff',
           backgroundColor: '#001f3f',

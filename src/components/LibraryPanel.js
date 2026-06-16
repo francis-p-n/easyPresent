@@ -101,7 +101,10 @@ export class LibraryPanel {
         <div class="empty-state">
           ${icon('folder', 48).outerHTML}
           <div class="empty-state__text" style="margin-bottom: var(--spacing-sm);">No presentations found</div>
-          <button class="btn btn--primary">${icon('plus', 14).outerHTML} New Presentation</button>
+          <button class="btn btn--primary" id="lib-create-pres-btn">
+            <span style="display:flex; align-items:center; justify-content:center;">${icon('plus', 14).outerHTML}</span>
+            New Presentation
+          </button>
         </div>
       `
       return

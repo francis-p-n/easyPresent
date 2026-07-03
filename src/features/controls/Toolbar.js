@@ -45,6 +45,7 @@ export class Toolbar {
       btn.id = `view-btn-${v.key}`
       btn.appendChild(icon(v.icon, 18))
       const lbl = document.createElement('span')
+      lbl.className = 'toolbar-btn-label'
       lbl.textContent = v.label
       btn.appendChild(lbl)
       viewTabs.appendChild(btn)
@@ -71,7 +72,7 @@ export class Toolbar {
     editBtn.className = 'btn tooltip'
     editBtn.id = 'toolbar-edit-btn'
     editBtn.dataset.tooltip = 'Edit Mode'
-    editBtn.innerHTML = `${icon('edit', 16).outerHTML} Edit`
+    editBtn.innerHTML = `${icon('edit', 16).outerHTML}<span class="toolbar-btn-label">Edit</span>`
     this.container.appendChild(editBtn)
 
     // Theme Button
@@ -79,7 +80,7 @@ export class Toolbar {
     themeBtn.className = 'btn tooltip'
     themeBtn.id = 'toolbar-theme-btn'
     themeBtn.dataset.tooltip = 'Theme Editor'
-    themeBtn.innerHTML = `${icon('droplet', 16).outerHTML} Themes`
+    themeBtn.innerHTML = `${icon('droplet', 16).outerHTML}<span class="toolbar-btn-label">Themes</span>`
     this.container.appendChild(themeBtn)
 
     // Screens Button
@@ -87,7 +88,7 @@ export class Toolbar {
     screensBtn.className = 'btn tooltip'
     screensBtn.id = 'toolbar-screens-btn'
     screensBtn.dataset.tooltip = 'Screen Configuration'
-    screensBtn.innerHTML = `${icon('monitor', 16).outerHTML} Screens`
+    screensBtn.innerHTML = `${icon('monitor', 16).outerHTML}<span class="toolbar-btn-label">Screens</span>`
     this.container.appendChild(screensBtn)
 
     // Separator

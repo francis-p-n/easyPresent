@@ -68,21 +68,63 @@
 
 .toolbar-search {
   width: 220px;
-  flex-shrink: 0;
+  min-width: 110px;
+  flex-shrink: 1; /* let search give up space before anything overflows */
 }
 
 .toolbar-clear-group {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .clear-btn--all {
-  margin-right: 12px; /* Extra padding to prevent accidental misclicks on Clear All */
+  margin-right: 10px; /* Extra padding to prevent accidental misclicks on Clear All */
 }
 
 .clear-btn__shortcut {
   font-size: 8px;
   opacity: 0.6;
+}
+
+/* ===== RESPONSIVE TOOLBAR ===== */
+/* Standard laptops (1366-1600px): drop view-tab and action-button labels,
+   keeping icons + tooltips, so the clear group always fits */
+@media (max-width: 1600px) {
+  .toolbar-view-btn .toolbar-btn-label,
+  #toolbar-edit-btn .toolbar-btn-label,
+  #toolbar-theme-btn .toolbar-btn-label,
+  #toolbar-screens-btn .toolbar-btn-label {
+    display: none;
+  }
+
+  .toolbar-search {
+    width: 160px;
+  }
+}
+
+/* Small laptops (~1280px): compact everything further */
+@media (max-width: 1280px) {
+  .toolbar-logo__text {
+    display: none;
+  }
+
+  .clear-btn__shortcut {
+    display: none;
+  }
+
+  .clear-btn {
+    min-width: 40px;
+    height: 32px;
+  }
+
+  .toolbar-search {
+    width: 130px;
+  }
+
+  .toolbar-clear-group {
+    gap: 4px;
+  }
 }
 
 /* ===== LIBRARY SPECIFIC ===== */

@@ -133,7 +133,7 @@
     min-height: var(--toolbar-height);
   }
 
-  .toolbar-section--clear {
+  .toolbar-clear-group {
     display: none;
   }
 }

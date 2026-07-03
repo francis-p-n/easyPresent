@@ -276,7 +276,6 @@ class App {
       }
     })
   }
-}
 
   _setupTouchGestures() {
     let touchStartX = 0
@@ -292,9 +291,6 @@ class App {
       const dy = e.changedTouches[0].clientY - touchStartY
       // Only treat as horizontal swipe if dx dominates and is large enough
       if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return
-
-      const pres = state.get('selectedPresentation')
-      if (!pres) return
 
       if (dx < 0) goLiveNext()
       else goLivePrev()

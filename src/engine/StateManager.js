@@ -76,6 +76,33 @@ export class StateManager {
     return () => this._listeners.get(key)?.delete(callback)
   }
 
+  /**
+   * Copy-on-write update of a presentation by id.
+   *
+   * Never mutate a presentation object that's already in state — other code
+   * (caches, memoization) relies on object identity as a change signal.
+   * This clones the presentation, applies the updater to the clone (mutation
+   * inside the updater is fine), and re-sets both the array and
+   * selectedPresentation with fresh references.
+   */
+  updatePresentation(id, updater) {
+    const presentations = this._state.presentations
+    const idx = presentations.findIndex((p) => p.id === id)
+    if (idx === -1) return null
+
+    const clone = JSON.parse(JSON.stringify(presentations[idx]))
+    updater(clone)
+
+    const next = [...presentations]
+    next[idx] = clone
+    this.set('presentations', next)
+
+    if (this._state.selectedPresentation?.id === id) {
+      this.set('selectedPresentation', clone)
+    }
+    return clone
+  }
+
   /** Notify all listeners for a key */
   _notify(key, newValue, oldValue) {
     const listeners = this._listeners.get(key)

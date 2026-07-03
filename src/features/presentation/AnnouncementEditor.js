@@ -106,18 +106,19 @@ export class AnnouncementEditor {
 
       const pres = state.get('selectedPresentation')
       if (pres && pres.slides[this.currentSlideIndex]) {
-        pres.slides[this.currentSlideIndex].text = parts.join('\n')
-        pres.slides[this.currentSlideIndex].announcementData = {
-          headline: headlineVal,
-          body: bodyVal,
-          time: timeVal,
-          location: locationVal,
-        }
-        state.set('selectedPresentation', { ...pres })
+        const updated = state.updatePresentation(pres.id, (p) => {
+          p.slides[this.currentSlideIndex].text = parts.join('\n')
+          p.slides[this.currentSlideIndex].announcementData = {
+            headline: headlineVal,
+            body: bodyVal,
+            time: timeVal,
+            location: locationVal,
+          }
+        })
 
         const layers = state.get('layers')
-        if (layers.slide.active && state.get('liveSlideIndex') === this.currentSlideIndex) {
-          layers.slide.content = pres.slides[this.currentSlideIndex]
+        if (updated && layers.slide.active && state.get('liveSlideIndex') === this.currentSlideIndex) {
+          layers.slide.content = updated.slides[this.currentSlideIndex]
           state.set('layers', { ...layers })
         }
       }

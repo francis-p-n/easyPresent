@@ -13,7 +13,19 @@ export default [
         localStorage: "readonly",
         setInterval: "readonly",
         clearInterval: "readonly",
-        setTimeout: "readonly"
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        requestAnimationFrame: "readonly",
+        crypto: "readonly",
+        navigator: "readonly",
+        Worker: "readonly",
+        URL: "readonly",
+        Blob: "readonly",
+        CustomEvent: "readonly",
+        ResizeObserver: "readonly",
+        alert: "readonly",
+        prompt: "readonly",
+        self: "readonly"
       }
     },
     rules: {

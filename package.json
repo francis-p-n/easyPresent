@@ -15,16 +15,15 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.17",
-    "cmake-js": "^8.0.0",
     "express": "^5.2.1",
-    "lucide": "^1.18.0",
-    "node-addon-api": "^8.8.0",
     "pixi.js": "^8.19.0",
     "socket.io": "^4.8.3",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "cmake-js": "^8.0.0",
+    "node-addon-api": "^8.8.0",
     "electron": "^42.4.0",
     "electron-builder": "^26.15.3",
     "eslint": "^10.5.0",

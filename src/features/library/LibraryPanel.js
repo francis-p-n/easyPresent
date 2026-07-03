@@ -424,11 +424,9 @@ export class LibraryPanel {
     const confirm = () => {
       const name = input.value.trim()
       if (name) {
-        pres.name = name
-        state.set('presentations', [...state.get('presentations')])
-        if (state.get('selectedPresentation')?.id === pres.id) {
-          state.set('selectedPresentation', { ...pres })
-        }
+        state.updatePresentation(pres.id, (p) => {
+          p.name = name
+        })
         this._renderList()
         showToast('Renamed presentation', 'success')
       }

@@ -630,21 +630,21 @@ export function createSlideEditor(container) {
     if (currentSlideIndex < 0) return
     const pres = state.get('selectedPresentation')
     if (!pres || !pres.slides[currentSlideIndex]) return
-    const slide = pres.slides[currentSlideIndex]
 
-    slide.elements = elements.map((e) => e.toJSON())
-    // Keep plain text in sync so thumbnails, search, and stage display still work
-    slide.text = elements.map((e) => e.text).filter((s) => s.trim()).join('\n')
-    slide.type = slideTypeSelect.value
-    slide.templateId = templateSelect.value
-    slide.background = { ...(slide.background || {}), type: 'color', color: bgColorInput.value }
-    pres.linkedAudio = rehearsalAudioInput.value.trim()
-
-    state.set('selectedPresentation', { ...pres })
+    const updated = state.updatePresentation(pres.id, (p) => {
+      const slide = p.slides[currentSlideIndex]
+      slide.elements = elements.map((e) => e.toJSON())
+      // Keep plain text in sync so thumbnails, search, and stage display still work
+      slide.text = elements.map((e) => e.text).filter((s) => s.trim()).join('\n')
+      slide.type = slideTypeSelect.value
+      slide.templateId = templateSelect.value
+      slide.background = { ...(slide.background || {}), type: 'color', color: bgColorInput.value }
+      p.linkedAudio = rehearsalAudioInput.value.trim()
+    })
 
     const layers = state.get('layers')
-    if (layers.slide.active && state.get('liveSlideIndex') === currentSlideIndex) {
-      layers.slide.content = slide
+    if (updated && layers.slide.active && state.get('liveSlideIndex') === currentSlideIndex) {
+      layers.slide.content = updated.slides[currentSlideIndex]
       state.set('layers', { ...layers })
     }
   })

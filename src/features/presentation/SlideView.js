@@ -14,7 +14,6 @@ export class SlideView {
     this.render()
     this._bindEvents()
 
-    state.on('slides', () => this._renderSlides())
     state.on('selectedPresentation', () => this.render())
     state.on('liveSlideIndex', () => this._updateLiveState())
     state.on('activeSlideIndex', () => this._updateActiveState())

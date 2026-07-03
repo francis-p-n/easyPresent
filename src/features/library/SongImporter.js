@@ -1,5 +1,6 @@
 import { icon } from '../../components/common/Icons.js'
 import { state } from '../../engine/StateManager.js'
+import { showToast } from '../../components/common/ToastManager.js'
 
 export function createSongImporter(onImport) {
   // Create overlay
@@ -15,7 +16,7 @@ export function createSongImporter(onImport) {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: '1000'
+    zIndex: '2000' // modal layer — above tooltips (1001) and context menus (1000)
   })
 
   // Create modal container
@@ -196,7 +197,7 @@ export function createSongImporter(onImport) {
   importBtn.addEventListener('click', () => {
     const rawText = lyricsArea.value
     if (!rawText.trim() || !titleInput.value.trim()) {
-      alert('Please enter a title and lyrics.')
+      showToast('Please enter a title and lyrics.', 'error')
       return
     }
 
@@ -212,7 +213,7 @@ export function createSongImporter(onImport) {
       })
       overlay.remove()
     } else {
-      alert('Could not parse any slides.')
+      showToast('Could not parse any slides.', 'error')
     }
   })
 

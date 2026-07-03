@@ -14,7 +14,7 @@ export function createThemeEditor() {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: '1000'
+    zIndex: '2000' // modal layer — above tooltips (1001) and context menus (1000)
   })
 
   const modal = document.createElement('div')

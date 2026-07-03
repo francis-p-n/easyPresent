@@ -302,6 +302,23 @@
   font-size: 10px;
 }
 
+/* Show Controls has 7 tabs — a single scrolling row hides most of them in
+   the 320px right panel (hidden scrollbar = no affordance). Grid keeps every
+   tab visible at any panel width. */
+#show-controls-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+#show-controls-tabs .tab {
+  justify-content: center;
+  padding: 8px 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .show-controls-content {
   padding: var(--spacing-md);
 }

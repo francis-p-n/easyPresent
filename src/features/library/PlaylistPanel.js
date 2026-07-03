@@ -73,36 +73,75 @@ export class PlaylistPanel {
         }
       })
 
-      // Add Header
+      // Add Header (window.prompt is unavailable in Electron renderers)
       this.container.querySelector('#add-header-btn')?.addEventListener('click', () => {
         dropdown.style.display = 'none'
-        const text = prompt('Enter header text:')
-        if (text) {
+        this._showTextPrompt('Add Header', 'Header text', (text) => {
           const playlist = state.get('activePlaylist')
           if (playlist) {
             playlist.items.push({ type: 'header', text })
             state.set('activePlaylist', playlist)
             this._renderItems()
           }
-        }
+        })
       })
 
       // Add Note
       this.container.querySelector('#add-note-btn')?.addEventListener('click', () => {
         dropdown.style.display = 'none'
-        const text = prompt('Enter note text:')
-        if (text) {
+        this._showTextPrompt('Add Note', 'Note text', (text) => {
           const playlist = state.get('activePlaylist')
           if (playlist) {
             playlist.items.push({ type: 'note', text })
             state.set('activePlaylist', playlist)
             this._renderItems()
           }
-        }
+        })
       })
     }
 
     this._renderItems()
+  }
+
+  // Minimal input dialog — window.prompt does not work in Electron renderers
+  _showTextPrompt(title, placeholder, onConfirm) {
+    document.getElementById('playlist-prompt-overlay')?.remove()
+
+    const overlay = document.createElement('div')
+    overlay.id = 'playlist-prompt-overlay'
+    overlay.style.cssText =
+      'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;'
+    overlay.innerHTML = `
+      <div style="background:var(--bg-panel);border-radius:10px;padding:20px;width:340px;max-width:90vw;border:1px solid var(--border-color);display:flex;flex-direction:column;gap:12px;">
+        <h3 style="margin:0;font-size:14px;color:var(--text-primary);">${title}</h3>
+        <input id="playlist-prompt-input" class="input" placeholder="${placeholder}" style="font-size:14px;" />
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn" id="playlist-prompt-cancel">Cancel</button>
+          <button class="btn btn--primary" id="playlist-prompt-ok">Add</button>
+        </div>
+      </div>
+    `
+    document.body.appendChild(overlay)
+
+    const input = overlay.querySelector('#playlist-prompt-input')
+    input.focus()
+
+    const close = () => overlay.remove()
+    const confirm = () => {
+      const text = input.value.trim()
+      if (text) onConfirm(text)
+      close()
+    }
+
+    overlay.querySelector('#playlist-prompt-cancel').addEventListener('click', close)
+    overlay.querySelector('#playlist-prompt-ok').addEventListener('click', confirm)
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') confirm()
+      if (e.key === 'Escape') close()
+    })
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close()
+    })
   }
 
   _renderItems() {

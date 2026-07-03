@@ -34,7 +34,7 @@ export const CAMP_TEMPLATE_SETS = [
   {
     id: 'game-show',
     name: 'Camp Games',
-    icon: 'gamepad-2',
+    icon: 'gamepad2',
     description: 'Score tracker, trivia, and countdown slides',
     type: 'game',
     slides: [
@@ -48,7 +48,7 @@ export const CAMP_TEMPLATE_SETS = [
   {
     id: 'scripture',
     name: 'Scripture',
-    icon: 'book-open',
+    icon: 'bookOpen',
     description: 'Scripture verses with reference',
     type: 'scripture',
     slides: [

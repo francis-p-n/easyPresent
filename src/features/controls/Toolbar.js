@@ -59,7 +59,7 @@ export class Toolbar {
     // Search Bar
     const searchWrap = document.createElement('div')
     searchWrap.className = 'toolbar-search'
-    searchWrap.innerHTML = `<input type="text" class="input input--search" placeholder="Search presentations..." id="toolbar-search-input" />`
+    searchWrap.innerHTML = `<input type="text" class="input input--search" placeholder="Search..." id="toolbar-search-input" />`
     this.container.appendChild(searchWrap)
 
     // Spacer

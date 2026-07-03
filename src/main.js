@@ -86,9 +86,14 @@ class App {
     const audioBin = document.getElementById('audio-bin-container')
     const slideView = document.getElementById('slide-view')
 
-    // Handle slide view vs bible view
+    // The center panel shows exactly ONE of: bible, slide editor, slide grid
+    const slideEditor = document.getElementById('slide-editor-container')
+
     if (view === 'bible') {
+      // Bible takes over the center — leave edit mode if it was open
+      if (state.get('isEditing')) state.set('isEditing', false)
       slideView.style.display = 'none'
+      if (slideEditor) slideEditor.style.display = 'none'
 
       let bibleContainer = document.getElementById('bible-panel-container')
       if (!bibleContainer) {
@@ -106,7 +111,13 @@ class App {
       const bibleContainer = document.getElementById('bible-panel-container')
       if (bibleContainer) bibleContainer.style.display = 'none'
 
-      slideView.style.display = state.get('isEditing') ? 'none' : 'block'
+      if (state.get('isEditing')) {
+        slideView.style.display = 'none'
+        if (slideEditor) slideEditor.style.display = 'block'
+      } else {
+        slideView.style.display = 'block'
+        if (slideEditor) slideEditor.style.display = 'none'
+      }
     }
 
     if (view === 'media' || view === 'audio') {
@@ -149,6 +160,11 @@ class App {
         const { createSlideEditor } = await import('./features/presentation/SlideEditor.js')
         this.slideEditorInstance = createSlideEditor(slideEditor)
       }
+
+      // Editor takes over the center — switch away from Bible if it was open
+      if (state.get('activeView') === 'bible') state.set('activeView', 'library')
+      const bibleContainer = document.getElementById('bible-panel-container')
+      if (bibleContainer) bibleContainer.style.display = 'none'
 
       slideView.style.display = 'none'
       slideEditor.style.display = 'block'

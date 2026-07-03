@@ -185,11 +185,23 @@ export class SlideView {
         }
       }
 
-      // Generate a high-fidelity scaled JPEG data URL of the slide text
+      // Slides with an image background (e.g. imported PPTX designs) get a
+      // transparent text layer composited over the image via layered CSS
+      const bgMedia =
+        slide.background && slide.background.type === 'media' && slide.background.mediaPath
+
+      if (bgMedia) styleOpts.transparentBg = true
+
+      // Generate a high-fidelity scaled data URL of the slide text
       const imgUrl = NativeRender.generateThumbnailDataUrl(slide.text || '', styleOpts)
 
-      content.style.backgroundImage = `url(${imgUrl})`
-      content.style.backgroundSize = 'contain'
+      if (bgMedia) {
+        content.style.backgroundImage = `url(${imgUrl}), url(${slide.background.mediaPath})`
+        content.style.backgroundSize = 'contain, cover'
+      } else {
+        content.style.backgroundImage = `url(${imgUrl})`
+        content.style.backgroundSize = 'contain'
+      }
       content.style.backgroundPosition = 'center'
       content.style.backgroundRepeat = 'no-repeat'
       content.style.backgroundColor = styleOpts.backgroundColor || '#000000'

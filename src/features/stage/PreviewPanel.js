@@ -61,9 +61,12 @@ export class PreviewPanel {
 
     // Skip redundant repaints: navigation fires both 'liveSlideIndex' and
     // 'layers', and rasterizing slide text into a GPU texture isn't free.
+    const bg = slideLayer.content?.background
+    const bgMarker = bg?.mediaPath ? `media:${bg.mediaPath.length}` : `color:${bg?.color || ''}`
     const signature = JSON.stringify([
       slideLayer.active,
       slideLayer.content?.text || '',
+      bgMarker,
       layers.message?.active,
       layers.message?.content,
       state.get('activeThemeId'),
@@ -76,9 +79,16 @@ export class PreviewPanel {
     const themes = state.get('themes') || []
     const activeTheme = themes.find((t) => t.id === activeThemeId) || themes[0]
 
-    // Set background
-    if (activeTheme && activeTheme.styles.backgroundColor) {
-      NativeRender.setBackgroundColor(activeTheme.styles.backgroundColor)
+    // Background is CSS-layered behind the transparent PIXI canvas so image
+    // backgrounds (imported PPTX designs) work without a GPU texture pipeline
+    if (slideLayer.active && bg?.mediaPath) {
+      screen.style.background = `#000 url(${bg.mediaPath}) center / cover no-repeat`
+    } else if (slideLayer.active && bg?.color) {
+      screen.style.background = bg.color
+    } else if (activeTheme && activeTheme.styles.backgroundColor) {
+      screen.style.background = activeTheme.styles.backgroundColor
+    } else {
+      screen.style.background = '#000'
     }
 
     if (slideLayer.active && slideLayer.content) {

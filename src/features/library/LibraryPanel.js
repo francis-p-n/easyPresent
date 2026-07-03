@@ -165,16 +165,26 @@ export class LibraryPanel {
       ?.addEventListener('click', async () => {
         if (window.electronAPI && window.electronAPI.importPptx) {
           try {
-            const slidesData = await window.electronAPI.importPptx()
-            if (slidesData) {
+            const imported = await window.electronAPI.importPptx()
+            if (imported) {
+              // Parser returns { name, slides }; older builds returned a bare array
+              const slidesData = Array.isArray(imported) ? imported : imported.slides
+              const presName = Array.isArray(imported)
+                ? 'Imported Presentation'
+                : imported.name || 'Imported Presentation'
+
               const newPres = {
                 id: 'pptx-' + Date.now(),
-                name: 'Imported Presentation',
-                category: 'Default',
-                slides: slidesData.map((s) => ({
+                name: presName,
+                category: 'Templates',
+                slides: slidesData.map((s, i) => ({
                   id: 'slide-' + Math.random().toString(36).substr(2, 9),
+                  label: `Slide ${i + 1}`,
                   text: s.text,
-                  type: 'text'
+                  type: 'worship',
+                  background: s.bgImage
+                    ? { type: 'media', color: '#000000', mediaPath: s.bgImage }
+                    : { type: 'color', color: '#000000', mediaPath: null }
                 }))
               }
               const presentations = [...state.get('presentations'), newPres]

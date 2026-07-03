@@ -6,6 +6,7 @@ import { PreviewPanel } from './features/stage/PreviewPanel.js'
 import { ShowControls } from './features/controls/ShowControls.js'
 import { state } from './engine/StateManager.js'
 import { storageManager } from './engine/StorageManager.js'
+import { goLive, goLiveNext, goLivePrev } from './engine/navigation.js'
 
 /**
  * Main App Entry Point — Mounts core panels and lazy-loads optional modules
@@ -15,9 +16,9 @@ class App {
     this.init()
   }
 
-  init() {
-    // Load persisted data before rendering
-    storageManager.load()
+  async init() {
+    // Load persisted data before rendering (file-backed, so it's async)
+    await storageManager.load()
 
     // Mount core components synchronously
     this.toolbar = new Toolbar(document.getElementById('toolbar'))
@@ -34,32 +35,33 @@ class App {
     // Keyboard shortcuts
     this._setupKeyboardShortcuts()
 
+    // Touch swipe gestures for iPad/mobile
+    this._setupTouchGestures()
+
     // Handle view toggling (Lazy load panels if needed)
     state.on('activeView', (view) => this._updateView(view))
 
     // Handle edit mode (Lazy load editor)
     state.on('isEditing', (editing) => this._updateEditMode(editing))
 
-    // Broadcast live slide updates
+    // Broadcast live slide updates (deduped — navigation fires both
+    // 'liveSlideIndex' and 'layers', but the stage only needs one message)
+    const broadcast = (slide) => {
+      if (!window.electronAPI || !window.electronAPI.broadcastSlide) return
+      const payload = slide || { text: '' }
+      const sig = JSON.stringify(payload)
+      if (sig === this._lastBroadcast) return
+      this._lastBroadcast = sig
+      window.electronAPI.broadcastSlide(payload)
+    }
+
     state.on('liveSlideIndex', (idx) => {
-      if (window.electronAPI && window.electronAPI.broadcastSlide) {
-        const pres = state.get('selectedPresentation')
-        if (pres && pres.slides[idx]) {
-          window.electronAPI.broadcastSlide(pres.slides[idx])
-        } else {
-          window.electronAPI.broadcastSlide({ text: '' })
-        }
-      }
+      const pres = state.get('selectedPresentation')
+      broadcast(pres && pres.slides[idx] ? pres.slides[idx] : { text: '' })
     })
 
     state.on('layers', (layers) => {
-      if (window.electronAPI && window.electronAPI.broadcastSlide) {
-        if (!layers.slide.active) {
-          window.electronAPI.broadcastSlide({ text: '' })
-        } else {
-          window.electronAPI.broadcastSlide(layers.slide.content || { text: '' })
-        }
-      }
+      broadcast(layers.slide.active ? layers.slide.content || { text: '' } : { text: '' })
     })
 
     // Auto save data
@@ -206,6 +208,8 @@ class App {
     document.addEventListener('keydown', (e) => {
       // Don't handle if typing in an input
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+      // Don't handle while the slide editor is open (it has its own key handling)
+      if (state.get('isEditing')) return
 
       const pres = state.get('selectedPresentation')
 
@@ -240,30 +244,14 @@ class App {
         case 'PageDown':
         case ' ':
           e.preventDefault()
-          if (pres) {
-            const current = state.get('liveSlideIndex')
-            const next = Math.min(current + 1, pres.slides.length - 1)
-            state.set('liveSlideIndex', next)
-            state.set('activeSlideIndex', next)
-            const layers = { ...state.get('layers') }
-            layers.slide = { active: true, content: pres.slides[next] }
-            state.set('layers', layers)
-          }
+          goLiveNext()
           break
 
         case 'ArrowLeft':
         case 'ArrowUp':
         case 'PageUp':
           e.preventDefault()
-          if (pres) {
-            const current = state.get('liveSlideIndex')
-            const prev = Math.max(current - 1, 0)
-            state.set('liveSlideIndex', prev)
-            state.set('activeSlideIndex', prev)
-            const layers = { ...state.get('layers') }
-            layers.slide = { active: true, content: pres.slides[prev] }
-            state.set('layers', layers)
-          }
+          goLivePrev()
           break
 
         case 'b':
@@ -284,16 +272,33 @@ class App {
 
       // Number keys 1-9 to jump to slide
       if (e.key >= '1' && e.key <= '9') {
-        const idx = parseInt(e.key, 10) - 1
-        if (pres && idx < pres.slides.length) {
-          state.set('liveSlideIndex', idx)
-          state.set('activeSlideIndex', idx)
-          const layers = { ...state.get('layers') }
-          layers.slide = { active: true, content: pres.slides[idx] }
-          state.set('layers', layers)
-        }
+        goLive(parseInt(e.key, 10) - 1)
       }
     })
+  }
+}
+
+  _setupTouchGestures() {
+    let touchStartX = 0
+    let touchStartY = 0
+
+    document.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX
+      touchStartY = e.touches[0].clientY
+    }, { passive: true })
+
+    document.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX
+      const dy = e.changedTouches[0].clientY - touchStartY
+      // Only treat as horizontal swipe if dx dominates and is large enough
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+
+      const pres = state.get('selectedPresentation')
+      if (!pres) return
+
+      if (dx < 0) goLiveNext()
+      else goLivePrev()
+    }, { passive: true })
   }
 }
 

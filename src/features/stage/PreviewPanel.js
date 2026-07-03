@@ -59,6 +59,19 @@ export class PreviewPanel {
     const layers = state.get('layers')
     const slideLayer = layers.slide
 
+    // Skip redundant repaints: navigation fires both 'liveSlideIndex' and
+    // 'layers', and rasterizing slide text into a GPU texture isn't free.
+    const signature = JSON.stringify([
+      slideLayer.active,
+      slideLayer.content?.text || '',
+      layers.message?.active,
+      layers.message?.content,
+      state.get('activeThemeId'),
+      state.get('timer_main') // {timer} token in messages depends on this
+    ])
+    if (signature === this._lastSignature) return
+    this._lastSignature = signature
+
     const activeThemeId = state.get('activeThemeId')
     const themes = state.get('themes') || []
     const activeTheme = themes.find((t) => t.id === activeThemeId) || themes[0]

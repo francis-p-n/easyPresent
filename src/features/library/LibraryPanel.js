@@ -2,6 +2,7 @@ import { state } from '../../engine/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
 import { createSongImporter } from './SongImporter.js'
 import { showToast } from '../../components/common/ToastManager.js'
+import { CAMP_TEMPLATE_SETS } from './CampTemplates.js'
 
 /**
  * LibraryPanel — Left panel showing presentation library with folders
@@ -30,6 +31,9 @@ export class LibraryPanel {
         </button>
         <button class="btn btn--icon" id="library-add-song-btn" title="New Song">
           ${icon('music', 14).outerHTML}
+        </button>
+        <button class="btn btn--icon" id="library-template-btn" title="New from Template">
+          ${icon('layoutTemplate', 14).outerHTML}
         </button>
         <button class="btn" id="library-add-btn" title="New Presentation">
           ${icon('plus', 14).outerHTML} New
@@ -75,7 +79,8 @@ export class LibraryPanel {
     if (!this.searchWorker) {
       this.searchWorker = new Worker(new URL('../../engine/SearchWorker.js', import.meta.url))
       this.searchWorker.onmessage = (e) => {
-        this._renderListWithResults(e.data.results)
+        const byId = new Map(state.get('presentations').map((p) => [p.id, p]))
+        this._renderListWithResults(e.data.ids.map((id) => byId.get(id)).filter(Boolean))
       }
     }
 
@@ -87,8 +92,27 @@ export class LibraryPanel {
       presentations = presentations.filter((p) => p.category === this._activeCategory)
     }
 
-    // Pass to worker for search
-    this.searchWorker.postMessage({ query, presentations })
+    // Send a flat, pre-lowercased index — much cheaper to clone than full decks.
+    // Rebuilt only when the library or category filter changes, not per keystroke.
+    if (
+      !this._searchIndex ||
+      this._searchIndexSource !== state.get('presentations') ||
+      this._searchIndexCategory !== this._activeCategory
+    ) {
+      this._searchIndex = presentations.map((p) => ({
+        id: p.id,
+        searchText: [
+          p.name || '',
+          ...(p.tags || []),
+          ...(p.slides || []).flatMap((s) => [s.label || '', s.text || ''])
+        ]
+          .join('\n')
+          .toLowerCase()
+      }))
+      this._searchIndexSource = state.get('presentations')
+      this._searchIndexCategory = this._activeCategory
+    }
+    this.searchWorker.postMessage({ query, items: this._searchIndex })
   }
 
   _renderListWithResults(presentations) {
@@ -189,6 +213,11 @@ export class LibraryPanel {
       })
     })
 
+    // New from Template
+    this.container.querySelector('#library-template-btn')?.addEventListener('click', () => {
+      this._showTemplatePicker()
+    })
+
     // Category filter
     this.container.addEventListener('click', (e) => {
       const catBtn = e.target.closest('.library-cat-btn')
@@ -225,6 +254,69 @@ export class LibraryPanel {
     })
   }
 
+  _showTemplatePicker() {
+    document.getElementById('template-picker-overlay')?.remove()
+
+    const overlay = document.createElement('div')
+    overlay.id = 'template-picker-overlay'
+    overlay.style.cssText =
+      'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:5000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);'
+
+    const cards = CAMP_TEMPLATE_SETS.map(
+      (set) => `
+        <button class="template-card" data-template="${set.id}" style="background:var(--bg-active);border:1px solid var(--border-color);border-radius:10px;padding:16px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px;transition:border-color 0.15s;">
+          <span style="font-size:14px;font-weight:700;color:var(--text-primary);">${set.name}</span>
+          <span style="font-size:11px;color:var(--text-secondary);line-height:1.4;">${set.description}</span>
+          <span style="font-size:10px;color:var(--text-muted);margin-top:auto;">${set.slides.length} slides</span>
+        </button>`
+    ).join('')
+
+    overlay.innerHTML = `
+      <div style="background:var(--bg-panel);border-radius:12px;padding:24px;width:640px;max-width:95vw;max-height:85vh;overflow-y:auto;border:1px solid var(--border-color);box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <h2 style="margin:0;font-size:16px;color:var(--text-primary);">New from Template</h2>
+          <button id="template-picker-close" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:20px;line-height:1;padding:4px;">&#x2715;</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+          ${cards}
+        </div>
+      </div>
+    `
+
+    document.body.appendChild(overlay)
+
+    overlay.querySelector('#template-picker-close').addEventListener('click', () => overlay.remove())
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove()
+    })
+
+    overlay.querySelectorAll('.template-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const set = CAMP_TEMPLATE_SETS.find((s) => s.id === card.dataset.template)
+        if (!set) return
+
+        const newPres = {
+          id: `tpl-${set.id}-` + Date.now(),
+          name: set.name,
+          category: set.type === 'worship' ? 'Worship' : set.type === 'game' ? 'Games' : 'Camp',
+          slides: set.slides.map((s) => ({
+            ...s,
+            id: 'slide-' + Math.random().toString(36).substr(2, 9)
+          }))
+        }
+
+        const presentations = [...state.get('presentations'), newPres]
+        state.set('presentations', presentations)
+        state.set('selectedPresentation', newPres)
+        state.set('slides', newPres.slides)
+        state.set('activeSlideIndex', 0)
+        this._renderList()
+        overlay.remove()
+        showToast(`Created "${set.name}" from template`, 'success')
+      })
+    })
+  }
+
   _showContextMenu(x, y, presId) {
     // Remove existing
     document.querySelector('.context-menu')?.remove()
@@ -244,11 +336,113 @@ export class LibraryPanel {
 
     document.body.appendChild(menu)
 
+    // Action handlers
+    menu.addEventListener('click', (e) => {
+      const actionEl = e.target.closest('[data-action]')
+      if (!actionEl) return
+      const action = actionEl.dataset.action
+      const presentations = state.get('presentations')
+      const pres = presentations.find((p) => p.id === presId)
+      if (!pres) return
+
+      switch (action) {
+        case 'delete': {
+          state.set('presentations', presentations.filter((p) => p.id !== presId))
+          if (state.get('selectedPresentation')?.id === presId) {
+            state.set('selectedPresentation', null)
+            state.set('slides', [])
+          }
+          this._renderList()
+          showToast(`Deleted "${pres.name}"`, 'success')
+          break
+        }
+        case 'duplicate': {
+          const copy = JSON.parse(JSON.stringify(pres))
+          copy.id = 'dup-' + Date.now()
+          copy.name = `${pres.name} (Copy)`
+          copy.slides.forEach((s) => {
+            s.id = 'slide-' + Math.random().toString(36).substr(2, 9)
+          })
+          state.set('presentations', [...presentations, copy])
+          this._renderList()
+          showToast(`Duplicated "${pres.name}"`, 'success')
+          break
+        }
+        case 'rename': {
+          this._showRenameDialog(pres)
+          break
+        }
+        case 'add-to-playlist': {
+          const playlist = state.get('activePlaylist')
+          if (!playlist) {
+            showToast('No active playlist', 'error')
+            break
+          }
+          playlist.items = [...(playlist.items || []), { type: 'presentation', id: presId }]
+          state.set('playlists', [...state.get('playlists')])
+          state.set('activePlaylist', playlist)
+          showToast(`Added "${pres.name}" to ${playlist.name}`, 'success')
+          break
+        }
+      }
+    })
+
     // Close on click outside
     const close = () => {
       menu.remove()
       document.removeEventListener('click', close)
     }
     setTimeout(() => document.addEventListener('click', close), 0)
+  }
+
+  // window.prompt is unavailable in Electron renderers, so rename uses a tiny modal
+  _showRenameDialog(pres) {
+    document.getElementById('rename-dialog-overlay')?.remove()
+
+    const overlay = document.createElement('div')
+    overlay.id = 'rename-dialog-overlay'
+    overlay.style.cssText =
+      'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:5000;display:flex;align-items:center;justify-content:center;'
+    overlay.innerHTML = `
+      <div style="background:var(--bg-panel);border-radius:10px;padding:20px;width:360px;max-width:90vw;border:1px solid var(--border-color);display:flex;flex-direction:column;gap:12px;">
+        <h3 style="margin:0;font-size:14px;color:var(--text-primary);">Rename Presentation</h3>
+        <input id="rename-input" class="input" style="font-size:14px;" />
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn" id="rename-cancel">Cancel</button>
+          <button class="btn btn--primary" id="rename-confirm">Rename</button>
+        </div>
+      </div>
+    `
+    document.body.appendChild(overlay)
+
+    const input = overlay.querySelector('#rename-input')
+    input.value = pres.name
+    input.focus()
+    input.select()
+
+    const closeDialog = () => overlay.remove()
+    const confirm = () => {
+      const name = input.value.trim()
+      if (name) {
+        pres.name = name
+        state.set('presentations', [...state.get('presentations')])
+        if (state.get('selectedPresentation')?.id === pres.id) {
+          state.set('selectedPresentation', { ...pres })
+        }
+        this._renderList()
+        showToast('Renamed presentation', 'success')
+      }
+      closeDialog()
+    }
+
+    overlay.querySelector('#rename-cancel').addEventListener('click', closeDialog)
+    overlay.querySelector('#rename-confirm').addEventListener('click', confirm)
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') confirm()
+      if (e.key === 'Escape') closeDialog()
+    })
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeDialog()
+    })
   }
 }

@@ -6,6 +6,8 @@ import { renderMessages } from './tabs/MessagesTab.js'
 import { renderProps } from './tabs/PropsTab.js'
 import { renderMacros } from './tabs/MacrosTab.js'
 import { renderStage } from './tabs/StageTab.js'
+import { renderGame } from './tabs/GameTab.js'
+import { renderScheduler } from './tabs/SchedulerTab.js'
 
 /**
  * ShowControls — Bottom-right panel with tabs for Timers, Messages, Props, Macros, Stage
@@ -30,7 +32,9 @@ export class ShowControls {
       { key: 'messages', icon: 'messageSquare', label: 'Messages' },
       { key: 'props', icon: 'layers', label: 'Props' },
       { key: 'macros', icon: 'zap', label: 'Macros' },
-      { key: 'stage', icon: 'tv', label: 'Stage' }
+      { key: 'stage', icon: 'tv', label: 'Stage' },
+      { key: 'game', icon: 'gamepad2', label: 'Game' },
+      { key: 'scheduler', icon: 'calendarDays', label: 'Schedule' }
     ]
 
     const activeTab = state.get('activeControlTab')
@@ -80,6 +84,12 @@ export class ShowControls {
         break
       case 'stage':
         this._tabCleanup = renderStage(content)
+        break
+      case 'game':
+        this._tabCleanup = renderGame(content)
+        break
+      case 'scheduler':
+        renderScheduler(content)
         break
     }
   }

@@ -1,32 +1,99 @@
 import { state } from './StateManager.js'
 
+const SAVE_DEBOUNCE_MS = 500
+
+/**
+ * StorageManager — persists the library.
+ *
+ * Primary store: a file in Electron's userData dir (via IPC, atomic write) —
+ * no 5MB localStorage quota, no silent data loss if slides ever hold images.
+ * Fallback: localStorage, used in browser/dev mode or if IPC is unavailable.
+ */
 class StorageManager {
   constructor() {
     this.SAVE_KEY = 'easy_present_data'
+    this._saveTimer = null
+    this._dirty = false
   }
 
+  _serialize() {
+    return JSON.stringify({
+      presentations: state.get('presentations'),
+      playlists: state.get('playlists'),
+      themes: state.get('themes')
+    })
+  }
+
+  _applyData(data) {
+    if (data.presentations) state.set('presentations', data.presentations)
+    if (data.playlists) state.set('playlists', data.playlists)
+    if (data.themes) state.set('themes', data.themes)
+  }
+
+  /** Immediate save (async when file-backed; sync fallback to localStorage) */
   save() {
-    try {
-      const data = {
-        presentations: state.get('presentations'),
-        playlists: state.get('playlists'),
-        themes: state.get('themes')
-      }
-      localStorage.setItem(this.SAVE_KEY, JSON.stringify(data))
-      console.log('Saved data to local storage')
-    } catch (e) {
-      console.error('Failed to save data', e)
+    this._dirty = false
+    const json = this._serialize()
+
+    if (window.electronAPI?.saveLibrary) {
+      window.electronAPI.saveLibrary(json).catch((e) => {
+        console.error('File save failed, falling back to localStorage', e)
+        this._saveLocal(json)
+      })
+    } else {
+      this._saveLocal(json)
     }
   }
 
-  load() {
+  _saveLocal(json) {
+    try {
+      localStorage.setItem(this.SAVE_KEY, json)
+    } catch (e) {
+      console.error('Failed to save data', e)
+      // Surface it — losing edits silently during a live service is the worst case
+      import('../components/common/ToastManager.js').then(({ showToast }) => {
+        showToast('Saving failed — storage may be full!', 'error')
+      })
+    }
+  }
+
+  /** Debounced save — coalesces rapid state changes */
+  scheduleSave() {
+    this._dirty = true
+    clearTimeout(this._saveTimer)
+    this._saveTimer = setTimeout(() => this.save(), SAVE_DEBOUNCE_MS)
+  }
+
+  /** Load persisted data. Await this before mounting the UI. */
+  async load() {
+    // Preferred: library file via IPC
+    if (window.electronAPI?.loadLibrary) {
+      try {
+        const json = await window.electronAPI.loadLibrary()
+        if (json) {
+          this._applyData(JSON.parse(json))
+          console.log('Loaded library from file')
+          return
+        }
+        // No file yet — migrate from localStorage if present
+        const legacy = localStorage.getItem(this.SAVE_KEY)
+        if (legacy) {
+          this._applyData(JSON.parse(legacy))
+          window.electronAPI.saveLibrary(legacy).catch(() => {})
+          console.log('Migrated library from localStorage to file')
+          return
+        }
+        return
+      } catch (e) {
+        console.error('File load failed, trying localStorage', e)
+      }
+    }
+
+    // Fallback: localStorage
     try {
       const str = localStorage.getItem(this.SAVE_KEY)
       if (str) {
-        const data = JSON.parse(str)
-        if (data.presentations) state.set('presentations', data.presentations)
-        if (data.playlists) state.set('playlists', data.playlists)
-        if (data.themes) state.set('themes', data.themes)
+        this._applyData(JSON.parse(str))
         console.log('Loaded data from local storage')
       }
     } catch (e) {
@@ -35,10 +102,14 @@ class StorageManager {
   }
 
   initAutoSave() {
-    // Save whenever these change
-    state.on('presentations', () => this.save())
-    state.on('playlists', () => this.save())
-    state.on('themes', () => this.save())
+    state.on('presentations', () => this.scheduleSave())
+    state.on('playlists', () => this.scheduleSave())
+    state.on('themes', () => this.scheduleSave())
+
+    // Don't lose a pending debounced save when the window closes
+    window.addEventListener('beforeunload', () => {
+      if (this._dirty) this.save()
+    })
   }
 }
 

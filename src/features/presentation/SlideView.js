@@ -2,6 +2,8 @@ import { state } from '../../engine/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
 import NativeRender from '../../engine/NativeRender.js'
 import { renderChordSheet } from './ChordSheet.js'
+import { announcementEditor } from './AnnouncementEditor.js'
+import { goLive } from '../../engine/navigation.js'
 
 /**
  * SlideView — Center panel showing slide thumbnails in a grid
@@ -139,6 +141,7 @@ export class SlideView {
 
     const liveIdx = state.get('liveSlideIndex')
     const activeIdx = state.get('activeSlideIndex')
+    const fragment = document.createDocumentFragment()
 
     pres.slides.forEach((slide, index) => {
       const thumb = document.createElement('div')
@@ -200,8 +203,18 @@ export class SlideView {
       num.textContent = index + 1
       thumb.appendChild(num)
 
-      grid.appendChild(thumb)
+      // Quick-edit badge for announcement slides
+      if (slide.type === 'announcement') {
+        const editBadge = document.createElement('div')
+        editBadge.style.cssText = 'position:absolute;top:4px;right:4px;background:rgba(59,130,246,0.85);color:white;font-size:9px;padding:2px 5px;border-radius:3px;pointer-events:none;font-weight:600;letter-spacing:0.3px;'
+        editBadge.textContent = 'DBL-EDIT'
+        thumb.appendChild(editBadge)
+      }
+
+      fragment.appendChild(thumb)
     })
+
+    grid.appendChild(fragment)
   }
 
   _updateLiveState() {
@@ -222,8 +235,16 @@ export class SlideView {
   }
 
   _bindEvents() {
-    // Click to trigger slide live
+    // Single click: go live
     this.container.addEventListener('click', (e) => {
+      const thumb = e.target.closest('.slide-thumbnail')
+      if (!thumb) return
+      const index = parseInt(thumb.dataset.index, 10)
+      if (!isNaN(index)) goLive(index)
+    })
+
+    // Double-click: open announcement quick-editor for announcement slides
+    this.container.addEventListener('dblclick', (e) => {
       const thumb = e.target.closest('.slide-thumbnail')
       if (!thumb) return
 
@@ -231,14 +252,10 @@ export class SlideView {
       const pres = state.get('selectedPresentation')
       if (!pres || isNaN(index)) return
 
-      // Set live
-      state.set('liveSlideIndex', index)
-      state.set('activeSlideIndex', index)
-
-      // Update layers
-      const layers = { ...state.get('layers') }
-      layers.slide = { active: true, content: pres.slides[index] }
-      state.set('layers', layers)
+      const slide = pres.slides[index]
+      if (slide && slide.type === 'announcement') {
+        announcementEditor.open(index)
+      }
     })
   }
 }

@@ -1,133 +1,667 @@
 import { state } from '../../engine/StateManager.js'
+import { TextElement } from '../../models/TextElement.js'
+
+const CANVAS_W = 1920
+const CANVAS_H = 1080
+const SNAP_THRESHOLD = 12 // canvas px
+
+const TEMPLATES = {
+  worship: { label: 'Worship', fontSize: 80, align: 'center', color: '#ffffff', bg: '#000000', maxLines: 4 },
+  worship_title: { label: 'Worship — Title', fontSize: 96, align: 'center', color: '#ffffff', bg: '#000000', maxLines: 1 },
+  announcement: { label: 'Announcement', fontSize: 56, align: 'left', color: '#ffffff', bg: '#1a1a2e', maxLines: 6 },
+  game: { label: 'Game', fontSize: 72, align: 'center', color: '#ffff00', bg: '#1a1a1a', maxLines: 3 },
+  scripture: { label: 'Scripture', fontSize: 64, align: 'center', color: '#f0e6d3', bg: '#1a1209', maxLines: 4 },
+  camp: { label: 'Camp', fontSize: 80, align: 'center', color: '#ffffff', bg: '#0d1b2a', maxLines: 4 },
+  blank: { label: 'Blank', fontSize: 80, align: 'center', color: '#ffffff', bg: '#000000', maxLines: 4 },
+}
+
+// Preset layouts a template can stamp onto a slide (multiple boxes)
+const TEMPLATE_LAYOUTS = {
+  worship: [
+    { x: 96, y: 220, width: 1728, height: 640, fontSize: 80, hAlign: 'center', role: 'Lyrics' },
+  ],
+  worship_title: [
+    { x: 96, y: 340, width: 1728, height: 280, fontSize: 110, hAlign: 'center', bold: true, role: 'Title' },
+    { x: 96, y: 660, width: 1728, height: 120, fontSize: 44, hAlign: 'center', color: '#cccccc', role: 'Subtitle' },
+  ],
+  announcement: [
+    { x: 120, y: 120, width: 1680, height: 200, fontSize: 88, hAlign: 'left', bold: true, role: 'Headline' },
+    { x: 120, y: 380, width: 1680, height: 420, fontSize: 52, hAlign: 'left', role: 'Details' },
+    { x: 120, y: 860, width: 1680, height: 120, fontSize: 40, hAlign: 'left', color: '#9ecbff', role: 'Time & place' },
+  ],
+  game: [
+    { x: 96, y: 80, width: 1728, height: 180, fontSize: 90, hAlign: 'center', bold: true, color: '#ffff00', role: 'Title' },
+    { x: 96, y: 320, width: 1728, height: 560, fontSize: 68, hAlign: 'center', role: 'Content' },
+  ],
+  scripture: [
+    { x: 160, y: 200, width: 1600, height: 540, fontSize: 64, hAlign: 'center', color: '#f0e6d3', role: 'Verse' },
+    { x: 160, y: 800, width: 1600, height: 100, fontSize: 40, hAlign: 'center', color: '#c9b896', italic: true, role: 'Reference' },
+  ],
+  camp: [
+    { x: 96, y: 160, width: 1728, height: 760, fontSize: 80, hAlign: 'center', role: 'Content' },
+  ],
+  blank: [
+    { x: 96, y: 240, width: 1728, height: 600, fontSize: 80, hAlign: 'center', role: 'Text' },
+  ],
+}
 
 export function createSlideEditor(container) {
+  const templateOptions = Object.entries(TEMPLATES)
+    .map(([k, t]) => `<option value="${k}">${t.label}</option>`)
+    .join('')
+
   container.innerHTML = `
-    <div class="slide-editor-layout" style="display: flex; height: 100%; width: 100%; background: var(--bg-panel);">
-      <div class="editor-canvas-container" style="flex: 1; display: flex; align-items: center; justify-content: center; background: #000; padding: 20px; overflow: auto; position: relative;">
-        <div class="editor-canvas" id="editor-canvas" style="width: 1920px; height: 1080px; background: #111; position: relative; transform-origin: top left; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
-          <textarea id="editor-textarea" style="width: 100%; height: 100%; background: transparent; border: 2px dashed #444; color: white; font-family: Inter, sans-serif; font-size: 80px; text-align: center; resize: none; outline: none; padding: 40px; box-sizing: border-box;"></textarea>
+    <div class="slide-editor-layout" style="display:flex;height:100%;width:100%;background:var(--bg-panel);">
+      <div class="editor-canvas-container" id="editor-canvas-container" style="flex:1;display:flex;align-items:center;justify-content:center;background:#000;padding:20px;overflow:hidden;position:relative;">
+        <div class="editor-canvas" id="editor-canvas" style="width:${CANVAS_W}px;height:${CANVAS_H}px;background:#111;position:absolute;transform-origin:top left;box-shadow:0 0 20px rgba(0,0,0,0.5);overflow:hidden;">
+          <div id="snap-guide-v" style="position:absolute;top:0;bottom:0;width:2px;background:#e91e8c;display:none;pointer-events:none;z-index:50;"></div>
+          <div id="snap-guide-h" style="position:absolute;left:0;right:0;height:2px;background:#e91e8c;display:none;pointer-events:none;z-index:50;"></div>
         </div>
-        <div id="editor-warning" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: #ffcc00; color: #000; padding: 8px 16px; border-radius: 4px; font-weight: bold; display: none; z-index: 10; font-size: 14px; pointer-events: none;">
-          ⚠️ Recommended: Max 4 lines for readability
+        <div id="editor-hint" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.45);font-size:12px;pointer-events:none;white-space:nowrap;">
+          Click to select · Drag to move · Double-click to edit text · Arrows to nudge
         </div>
       </div>
-      <div class="editor-properties" style="width: 300px; background: var(--bg-toolbar); border-left: 1px solid var(--border-color); padding: 15px; display: flex; flex-direction: column; gap: 15px;">
-        <h3>Text Properties</h3>
-        <label>
-          Font Size
-          <input type="number" id="prop-font-size" class="input" value="80" />
+
+      <div class="editor-properties" style="width:300px;background:var(--bg-toolbar);border-left:1px solid var(--border-color);padding:15px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;">
+        <h3 style="margin:0;font-size:14px;color:var(--text-primary);">Slide</h3>
+
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);">
+          Template
+          <select id="prop-template" class="input">${templateOptions}</select>
         </label>
-        <label>
-          Color
-          <input type="color" id="prop-color" class="input" value="#ffffff" />
-        </label>
-        <label>
-          Alignment
-          <select id="prop-align" class="input">
-            <option value="left">Left</option>
-            <option value="center" selected>Center</option>
-            <option value="right">Right</option>
-          </select>
-        </label>
-        
-        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 10px 0;">
-        
-        <h3>Presentation Settings</h3>
-        <label style="display:flex; flex-direction:column; gap: 4px;">
+
+        <div style="display:flex;gap:8px;">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);flex:1;">
+            Background
+            <input type="color" id="prop-bg-color" class="input" value="#000000" style="height:32px;" />
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);flex:1;">
+            Slide Type
+            <select id="prop-slide-type" class="input">
+              <option value="worship">Worship</option>
+              <option value="announcement">Announce</option>
+              <option value="game">Game</option>
+              <option value="scripture">Scripture</option>
+              <option value="camp">Camp</option>
+              <option value="blank">Blank</option>
+            </select>
+          </label>
+        </div>
+
+        <div style="display:flex;gap:6px;">
+          <button class="btn" id="add-textbox-btn" style="flex:1;font-size:11px;">+ Text Box</button>
+          <button class="btn" id="dup-textbox-btn" style="flex:1;font-size:11px;" disabled>Duplicate</button>
+          <button class="btn" id="del-textbox-btn" style="font-size:11px;" disabled title="Delete box">&#x1F5D1;</button>
+        </div>
+
+        <hr style="border:0;border-top:1px solid var(--border-color);margin:0;">
+
+        <h3 style="margin:0;font-size:14px;color:var(--text-primary);">Text Box <span id="selected-box-label" style="font-weight:400;color:var(--text-muted);font-size:11px;"></span></h3>
+
+        <div id="box-props" style="display:flex;flex-direction:column;gap:12px;opacity:0.4;pointer-events:none;">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);">
+            Font Size
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="number" id="prop-font-size" class="input" value="80" style="flex:1;" min="12" max="300" />
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;cursor:pointer;">
+                <input type="checkbox" id="prop-autosize" /> Auto
+              </label>
+            </div>
+          </label>
+
+          <div style="display:flex;gap:8px;">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);flex:1;">
+              Color
+              <input type="color" id="prop-color" class="input" value="#ffffff" style="height:32px;" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);flex:1;">
+              Align
+              <select id="prop-align" class="input">
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </label>
+          </div>
+
+          <div style="display:flex;gap:6px;">
+            <button class="btn" id="style-bold" style="flex:1;font-weight:700;">B</button>
+            <button class="btn" id="style-italic" style="flex:1;font-style:italic;">I</button>
+            <select id="prop-valign" class="input" style="flex:2;">
+              <option value="top">Top</option>
+              <option value="center" selected>Middle</option>
+              <option value="bottom">Bottom</option>
+            </select>
+          </div>
+        </div>
+
+        <hr style="border:0;border-top:1px solid var(--border-color);margin:0;">
+
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);">
           Rehearsal Audio Path
           <input type="text" id="prop-rehearsal-audio" class="input" placeholder="e.g. /path/to/click.mp3" />
         </label>
 
-        <div style="margin-top: auto; display: flex; gap: 10px;">
-          <button class="btn btn--primary" id="editor-save-btn" style="flex: 1;">Save</button>
-          <button class="btn" id="editor-close-btn" style="flex: 1;">Close</button>
+        <div style="margin-top:auto;display:flex;gap:10px;">
+          <button class="btn btn--primary" id="editor-save-btn" style="flex:1;">Save</button>
+          <button class="btn" id="editor-close-btn" style="flex:1;">Close</button>
         </div>
       </div>
     </div>
   `
 
+  const canvasContainer = container.querySelector('#editor-canvas-container')
   const canvas = container.querySelector('#editor-canvas')
-  const textarea = container.querySelector('#editor-textarea')
-  const warningLabel = container.querySelector('#editor-warning')
+  const snapV = container.querySelector('#snap-guide-v')
+  const snapH = container.querySelector('#snap-guide-h')
   const saveBtn = container.querySelector('#editor-save-btn')
   const closeBtn = container.querySelector('#editor-close-btn')
-
   const fontSizeInput = container.querySelector('#prop-font-size')
+  const autosizeCheckbox = container.querySelector('#prop-autosize')
   const colorInput = container.querySelector('#prop-color')
+  const bgColorInput = container.querySelector('#prop-bg-color')
   const alignInput = container.querySelector('#prop-align')
+  const valignInput = container.querySelector('#prop-valign')
+  const boldBtn = container.querySelector('#style-bold')
+  const italicBtn = container.querySelector('#style-italic')
+  const templateSelect = container.querySelector('#prop-template')
+  const slideTypeSelect = container.querySelector('#prop-slide-type')
   const rehearsalAudioInput = container.querySelector('#prop-rehearsal-audio')
+  const addBoxBtn = container.querySelector('#add-textbox-btn')
+  const dupBoxBtn = container.querySelector('#dup-textbox-btn')
+  const delBoxBtn = container.querySelector('#del-textbox-btn')
+  const boxProps = container.querySelector('#box-props')
+  const selectedBoxLabel = container.querySelector('#selected-box-label')
 
   let currentSlideIndex = -1
+  let elements = [] // TextElement instances for the current slide
+  let selectedId = null
+  let scale = 1
+  let editingId = null // box currently in inline text-edit mode
 
+  // ── Scaling ────────────────────────────────────────────────────────────────
   function updateScale() {
-    const containerWidth = canvas.parentElement.clientWidth - 40
-    const containerHeight = canvas.parentElement.clientHeight - 40
-    const scale = Math.min(containerWidth / 1920, containerHeight / 1080)
+    const w = canvasContainer.clientWidth - 40
+    const h = canvasContainer.clientHeight - 40
+    scale = Math.min(w / CANVAS_W, h / CANVAS_H)
     canvas.style.transform = `scale(${scale})`
+    canvas.style.left = `${(canvasContainer.clientWidth - CANVAS_W * scale) / 2}px`
+    canvas.style.top = `${(canvasContainer.clientHeight - CANVAS_H * scale) / 2}px`
   }
-
   window.addEventListener('resize', updateScale)
-  // small delay to ensure layout is done
   setTimeout(updateScale, 100)
 
-  // Sync props to textarea
-  const updateStyles = () => {
-    textarea.style.fontSize = `${fontSizeInput.value}px`
-    textarea.style.color = colorInput.value
-    textarea.style.textAlign = alignInput.value
-  }
+  // ── Autosize: largest font that fits the box ──────────────────────────────
+  const measurer = document.createElement('div')
+  measurer.style.cssText = 'position:absolute;visibility:hidden;white-space:pre-wrap;word-break:break-word;left:-99999px;top:0;line-height:1.35;'
+  document.body.appendChild(measurer)
 
-  const checkLineCount = () => {
-    const lines = textarea.value.split('\n').length
-    const maxLines = state.get('maxLinesPerSlide') || 4
-    warningLabel.textContent = `⚠️ Recommended: Max ${maxLines} lines for readability`
-    warningLabel.style.display = lines > maxLines ? 'block' : 'none'
-  }
-
-  textarea.addEventListener('input', () => {
-    updateStyles()
-    checkLineCount()
-  })
-
-  fontSizeInput.addEventListener('input', updateStyles)
-  colorInput.addEventListener('input', updateStyles)
-  alignInput.addEventListener('input', updateStyles)
-
-  state.on('activeSlideIndex', (idx) => {
-    const pres = state.get('selectedPresentation')
-    if (pres && pres.slides[idx]) {
-      currentSlideIndex = idx
-      textarea.value = pres.slides[idx].text || ''
-      rehearsalAudioInput.value = pres.linkedAudio || ''
-      checkLineCount()
-      // If we had individual slide styles, we'd load them here
+  function fitFontSize(el) {
+    if (!el.text.trim()) return el.fontSize
+    measurer.style.width = `${el.width}px`
+    measurer.style.fontFamily = el.fontFamily || 'Inter'
+    measurer.style.fontWeight = el.bold ? '700' : '400'
+    measurer.textContent = el.text
+    let lo = 12, hi = 300
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi + 1) / 2)
+      measurer.style.fontSize = `${mid}px`
+      if (measurer.scrollHeight <= el.height) lo = mid
+      else hi = mid - 1
     }
+    return Math.max(12, lo)
+  }
+
+  function applyAutosize(el) {
+    if (el.textScaling === 'scaleToFit') {
+      el.fontSize = fitFontSize(el)
+    }
+  }
+
+  // ── Rendering ──────────────────────────────────────────────────────────────
+  function boxNode(id) {
+    return canvas.querySelector(`[data-box-id="${id}"]`)
+  }
+
+  function renderBoxes() {
+    canvas.querySelectorAll('.editor-textbox').forEach((n) => n.remove())
+    elements.forEach((el) => {
+      const node = document.createElement('div')
+      node.className = 'editor-textbox'
+      node.dataset.boxId = el.id
+      node.style.cssText = `
+        position:absolute;
+        left:${el.x}px; top:${el.y}px; width:${el.width}px; height:${el.height}px;
+        display:flex; box-sizing:border-box; cursor:move;
+        border:2px ${el.id === selectedId ? 'solid #3b82f6' : 'dashed rgba(255,255,255,0.18)'};
+        align-items:${el.vAlign === 'top' ? 'flex-start' : el.vAlign === 'bottom' ? 'flex-end' : 'center'};
+      `
+      const textDiv = document.createElement('div')
+      textDiv.className = 'editor-textbox__text'
+      textDiv.style.cssText = `
+        width:100%; padding:8px; outline:none;
+        font-family:${el.fontFamily || 'Inter'}, sans-serif;
+        font-size:${el.fontSize}px; color:${el.color};
+        font-weight:${el.bold ? 700 : 400}; font-style:${el.italic ? 'italic' : 'normal'};
+        text-align:${el.hAlign}; line-height:${el.lineSpacing || 1.35};
+        white-space:pre-wrap; word-break:break-word; overflow:hidden;
+        ${el.hasShadow ? `text-shadow:${el.shadowOffsetX || 3}px ${el.shadowOffsetY || 3}px 6px ${el.shadowColor || 'rgba(0,0,0,0.6)'};` : ''}
+      `
+      textDiv.textContent = el.text
+      node.appendChild(textDiv)
+
+      // Resize handles (only on the selected box)
+      if (el.id === selectedId) {
+        const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']
+        handles.forEach((dir) => {
+          const h = document.createElement('div')
+          h.className = 'resize-handle'
+          h.dataset.dir = dir
+          const pos = {
+            nw: 'top:-7px;left:-7px;cursor:nwse-resize;',
+            n: 'top:-7px;left:calc(50% - 6px);cursor:ns-resize;',
+            ne: 'top:-7px;right:-7px;cursor:nesw-resize;',
+            e: 'top:calc(50% - 6px);right:-7px;cursor:ew-resize;',
+            se: 'bottom:-7px;right:-7px;cursor:nwse-resize;',
+            s: 'bottom:-7px;left:calc(50% - 6px);cursor:ns-resize;',
+            sw: 'bottom:-7px;left:-7px;cursor:nesw-resize;',
+            w: 'top:calc(50% - 6px);left:-7px;cursor:ew-resize;',
+          }[dir]
+          h.style.cssText = `position:absolute;width:12px;height:12px;background:#3b82f6;border:2px solid white;border-radius:50%;z-index:20;${pos}`
+          node.appendChild(h)
+        })
+      }
+
+      canvas.appendChild(node)
+    })
+  }
+
+  function syncPropsPanel() {
+    const el = elements.find((e) => e.id === selectedId)
+    const hasSel = !!el
+    boxProps.style.opacity = hasSel ? '1' : '0.4'
+    boxProps.style.pointerEvents = hasSel ? 'auto' : 'none'
+    dupBoxBtn.disabled = !hasSel
+    delBoxBtn.disabled = !hasSel
+    selectedBoxLabel.textContent = hasSel
+      ? `(${elements.indexOf(el) + 1} of ${elements.length})`
+      : '(none selected)'
+    if (!el) return
+    fontSizeInput.value = Math.round(el.fontSize)
+    autosizeCheckbox.checked = el.textScaling === 'scaleToFit'
+    colorInput.value = el.color
+    alignInput.value = el.hAlign
+    valignInput.value = el.vAlign
+    boldBtn.style.background = el.bold ? 'var(--accent-blue)' : ''
+    italicBtn.style.background = el.italic ? 'var(--accent-blue)' : ''
+  }
+
+  function selectBox(id) {
+    if (editingId && editingId !== id) stopInlineEdit()
+    selectedId = id
+    renderBoxes()
+    syncPropsPanel()
+  }
+
+  function getSelected() {
+    return elements.find((e) => e.id === selectedId)
+  }
+
+  // ── Inline text editing ────────────────────────────────────────────────────
+  function startInlineEdit(id) {
+    const el = elements.find((e) => e.id === id)
+    const node = boxNode(id)
+    if (!el || !node) return
+    editingId = id
+    const textDiv = node.querySelector('.editor-textbox__text')
+    textDiv.contentEditable = 'plaintext-only'
+    node.style.cursor = 'text'
+    textDiv.focus()
+    // place caret at end
+    const range = document.createRange()
+    range.selectNodeContents(textDiv)
+    range.collapse(false)
+    const sel = window.getSelection()
+    sel.removeAllRanges()
+    sel.addRange(range)
+
+    textDiv.onpaste = (ev) => {
+      ev.preventDefault()
+      const plain = ev.clipboardData.getData('text/plain')
+      document.execCommand('insertText', false, plain)
+    }
+    textDiv.oninput = () => {
+      el.text = textDiv.innerText
+      if (el.textScaling === 'scaleToFit') {
+        applyAutosize(el)
+        textDiv.style.fontSize = `${el.fontSize}px`
+        fontSizeInput.value = Math.round(el.fontSize)
+      }
+    }
+    textDiv.onblur = () => stopInlineEdit()
+  }
+
+  function stopInlineEdit() {
+    if (!editingId) return
+    const node = boxNode(editingId)
+    if (node) {
+      const textDiv = node.querySelector('.editor-textbox__text')
+      textDiv.contentEditable = 'false'
+      textDiv.oninput = null
+      textDiv.onblur = null
+      textDiv.onpaste = null
+      node.style.cursor = 'move'
+    }
+    editingId = null
+  }
+
+  // ── Drag & resize with snapping (rAF-throttled) ───────────────────────────
+  let drag = null // { mode:'move'|'resize', dir, id, startX, startY, orig:{x,y,w,h} }
+  let rafPending = false
+
+  function showSnap(axis, pos) {
+    if (axis === 'v') { snapV.style.left = `${pos}px`; snapV.style.display = 'block' }
+    else { snapH.style.top = `${pos}px`; snapH.style.display = 'block' }
+  }
+  function hideSnaps() {
+    snapV.style.display = 'none'
+    snapH.style.display = 'none'
+  }
+
+  function snapValue(value, targets, axis) {
+    for (const t of targets) {
+      if (Math.abs(value - t) < SNAP_THRESHOLD) {
+        showSnap(axis, t)
+        return t
+      }
+    }
+    return value
+  }
+
+  canvas.addEventListener('mousedown', (e) => {
+    if (editingId) return // let text editing receive clicks
+    const handle = e.target.closest('.resize-handle')
+    const box = e.target.closest('.editor-textbox')
+    if (!box) {
+      selectBox(null)
+      return
+    }
+    const id = box.dataset.boxId
+    if (id !== selectedId) selectBox(id)
+    const el = getSelected()
+    if (!el) return
+
+    e.preventDefault()
+    drag = {
+      mode: handle ? 'resize' : 'move',
+      dir: handle ? handle.dataset.dir : null,
+      id,
+      startX: e.clientX,
+      startY: e.clientY,
+      lastX: e.clientX,
+      lastY: e.clientY,
+      orig: { x: el.x, y: el.y, w: el.width, h: el.height },
+    }
+    document.body.style.userSelect = 'none'
   })
 
-  saveBtn.addEventListener('click', () => {
-    if (currentSlideIndex >= 0) {
-      const pres = state.get('selectedPresentation')
-      if (pres && pres.slides[currentSlideIndex]) {
-        pres.slides[currentSlideIndex].text = textarea.value
-        pres.linkedAudio = rehearsalAudioInput.value.trim()
+  function onDragMove(e) {
+    if (!drag) return
+    // Always record the latest pointer position, even between animation frames
+    drag.lastX = e.clientX
+    drag.lastY = e.clientY
+    if (rafPending) return
+    rafPending = true
+    requestAnimationFrame(() => {
+      rafPending = false
+      if (!drag) return
+      const el = elements.find((b) => b.id === drag.id)
+      const node = boxNode(drag.id)
+      if (!el || !node) return
 
-        state.set('selectedPresentation', { ...pres }) // force update
+      const dx = (drag.lastX - drag.startX) / scale
+      const dy = (drag.lastY - drag.startY) / scale
+      hideSnaps()
 
-        // Also update layers if this is the active slide
-        const layers = state.get('layers')
-        if (layers.slide.active && state.get('liveSlideIndex') === currentSlideIndex) {
-          layers.slide.content = pres.slides[currentSlideIndex]
-          state.set('layers', { ...layers })
+      if (drag.mode === 'move') {
+        let nx = drag.orig.x + dx
+        let ny = drag.orig.y + dy
+        // Snap: box center to canvas center, edges to canvas edges
+        const cx = nx + el.width / 2
+        const snappedCx = snapValue(cx, [CANVAS_W / 2], 'v')
+        nx += snappedCx - cx
+        nx = snapValue(nx, [0, 96], 'v')
+        const cy = ny + el.height / 2
+        const snappedCy = snapValue(cy, [CANVAS_H / 2], 'h')
+        ny += snappedCy - cy
+        // Clamp inside canvas (keep at least 40px visible)
+        nx = Math.max(-el.width + 40, Math.min(nx, CANVAS_W - 40))
+        ny = Math.max(-el.height + 40, Math.min(ny, CANVAS_H - 40))
+        el.x = Math.round(nx)
+        el.y = Math.round(ny)
+        node.style.left = `${el.x}px`
+        node.style.top = `${el.y}px`
+      } else {
+        // Resize relative to original rect
+        let { x, y, w, h } = { x: drag.orig.x, y: drag.orig.y, w: drag.orig.w, h: drag.orig.h }
+        const dir = drag.dir
+        if (dir.includes('e')) w = Math.max(80, drag.orig.w + dx)
+        if (dir.includes('s')) h = Math.max(50, drag.orig.h + dy)
+        if (dir.includes('w')) { w = Math.max(80, drag.orig.w - dx); x = drag.orig.x + (drag.orig.w - w) }
+        if (dir.includes('n')) { h = Math.max(50, drag.orig.h - dy); y = drag.orig.y + (drag.orig.h - h) }
+        el.x = Math.round(x); el.y = Math.round(y)
+        el.width = Math.round(w); el.height = Math.round(h)
+        node.style.left = `${el.x}px`
+        node.style.top = `${el.y}px`
+        node.style.width = `${el.width}px`
+        node.style.height = `${el.height}px`
+        if (el.textScaling === 'scaleToFit') {
+          applyAutosize(el)
+          const textDiv = node.querySelector('.editor-textbox__text')
+          textDiv.style.fontSize = `${el.fontSize}px`
+          fontSizeInput.value = Math.round(el.fontSize)
         }
       }
+    })
+  }
+
+  function onDragEnd() {
+    if (!drag) return
+    drag = null
+    hideSnaps()
+    document.body.style.userSelect = ''
+  }
+
+  document.addEventListener('mousemove', onDragMove)
+  document.addEventListener('mouseup', onDragEnd)
+
+  // Double-click → inline edit
+  canvas.addEventListener('dblclick', (e) => {
+    const box = e.target.closest('.editor-textbox')
+    if (!box) return
+    selectBox(box.dataset.boxId)
+    startInlineEdit(box.dataset.boxId)
+  })
+
+  // Keyboard: nudge / delete / escape
+  function onKeyDown(e) {
+    if (!state.get('isEditing')) return // editor hidden — don't intercept app shortcuts
+    if (editingId) {
+      if (e.key === 'Escape') { e.preventDefault(); stopInlineEdit() }
+      return
+    }
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return
+    const el = getSelected()
+    if (!el) return
+    const step = e.shiftKey ? 10 : 2
+    let handled = true
+    switch (e.key) {
+      case 'ArrowLeft': el.x -= step; break
+      case 'ArrowRight': el.x += step; break
+      case 'ArrowUp': el.y -= step; break
+      case 'ArrowDown': el.y += step; break
+      case 'Delete':
+      case 'Backspace':
+        elements = elements.filter((b) => b.id !== el.id)
+        selectBox(null)
+        return
+      case 'Escape': selectBox(null); return
+      default: handled = false
+    }
+    if (handled) {
+      e.preventDefault()
+      const node = boxNode(el.id)
+      if (node) { node.style.left = `${el.x}px`; node.style.top = `${el.y}px` }
+    }
+  }
+  document.addEventListener('keydown', onKeyDown)
+
+  // ── Property panel bindings ────────────────────────────────────────────────
+  function withSelected(fn) {
+    const el = getSelected()
+    if (!el) return
+    fn(el)
+    renderBoxes()
+    syncPropsPanel()
+  }
+
+  fontSizeInput.addEventListener('input', () => withSelected((el) => {
+    el.fontSize = parseInt(fontSizeInput.value, 10) || el.fontSize
+    el.textScaling = 'none'
+    autosizeCheckbox.checked = false
+  }))
+  autosizeCheckbox.addEventListener('change', () => withSelected((el) => {
+    el.textScaling = autosizeCheckbox.checked ? 'scaleToFit' : 'none'
+    if (autosizeCheckbox.checked) applyAutosize(el)
+  }))
+  colorInput.addEventListener('input', () => withSelected((el) => { el.color = colorInput.value }))
+  alignInput.addEventListener('change', () => withSelected((el) => { el.hAlign = alignInput.value }))
+  valignInput.addEventListener('change', () => withSelected((el) => { el.vAlign = valignInput.value }))
+  boldBtn.addEventListener('click', () => withSelected((el) => {
+    el.bold = !el.bold
+    if (el.textScaling === 'scaleToFit') applyAutosize(el)
+  }))
+  italicBtn.addEventListener('click', () => withSelected((el) => { el.italic = !el.italic }))
+  bgColorInput.addEventListener('input', () => { canvas.style.background = bgColorInput.value })
+
+  addBoxBtn.addEventListener('click', () => {
+    const el = new TextElement({
+      text: 'New text',
+      x: CANVAS_W / 2 - 400, y: CANVAS_H / 2 - 100,
+      width: 800, height: 200,
+      fontSize: 60,
+    })
+    elements.push(el)
+    selectBox(el.id)
+  })
+
+  dupBoxBtn.addEventListener('click', () => {
+    const el = getSelected()
+    if (!el) return
+    const copy = new TextElement({ ...el.toJSON(), id: undefined, x: el.x + 40, y: el.y + 40 })
+    elements.push(copy)
+    selectBox(copy.id)
+  })
+
+  delBoxBtn.addEventListener('click', () => {
+    const el = getSelected()
+    if (!el) return
+    elements = elements.filter((b) => b.id !== el.id)
+    selectBox(null)
+  })
+
+  // Template: stamps the layout onto the slide, preserving existing text where possible
+  templateSelect.addEventListener('change', () => {
+    const key = templateSelect.value
+    const t = TEMPLATES[key]
+    const layout = TEMPLATE_LAYOUTS[key]
+    if (!t || !layout) return
+    bgColorInput.value = t.bg
+    canvas.style.background = t.bg
+    const oldTexts = elements.map((e) => e.text).filter((s) => s.trim())
+    elements = layout.map((box, i) => new TextElement({
+      ...box,
+      color: box.color || t.color,
+      text: oldTexts[i] || box.role || 'Text',
+      textScaling: 'scaleToFit',
+    }))
+    elements.forEach(applyAutosize)
+    selectBox(elements[0]?.id || null)
+  })
+
+  // ── Load slide into editor ─────────────────────────────────────────────────
+  function loadSlide(idx) {
+    const pres = state.get('selectedPresentation')
+    if (!pres || !pres.slides[idx]) return
+    stopInlineEdit()
+    currentSlideIndex = idx
+    const slide = pres.slides[idx]
+    rehearsalAudioInput.value = pres.linkedAudio || ''
+    if (slide.type) slideTypeSelect.value = slide.type
+    if (slide.templateId && TEMPLATES[slide.templateId]) templateSelect.value = slide.templateId
+
+    const t = TEMPLATES[slide.templateId] || TEMPLATES[slide.type] || TEMPLATES.worship
+    const bg = (slide.background && slide.background.color) || t.bg
+    bgColorInput.value = bg
+    canvas.style.background = bg
+
+    if (Array.isArray(slide.elements) && slide.elements.length > 0) {
+      elements = slide.elements.map((e) => new TextElement(e))
+    } else {
+      // Legacy slide: single text field → one full-width box
+      elements = [
+        new TextElement({
+          text: slide.text || '',
+          x: 96, y: 190, width: CANVAS_W - 192, height: CANVAS_H - 380,
+          fontSize: t.fontSize, color: t.color, hAlign: t.align,
+          textScaling: 'scaleToFit',
+        }),
+      ]
+      elements.forEach(applyAutosize)
+    }
+    selectBox(elements[0]?.id || null)
+  }
+
+  state.on('activeSlideIndex', loadSlide)
+
+  // ── Save ───────────────────────────────────────────────────────────────────
+  saveBtn.addEventListener('click', () => {
+    stopInlineEdit()
+    if (currentSlideIndex < 0) return
+    const pres = state.get('selectedPresentation')
+    if (!pres || !pres.slides[currentSlideIndex]) return
+    const slide = pres.slides[currentSlideIndex]
+
+    slide.elements = elements.map((e) => e.toJSON())
+    // Keep plain text in sync so thumbnails, search, and stage display still work
+    slide.text = elements.map((e) => e.text).filter((s) => s.trim()).join('\n')
+    slide.type = slideTypeSelect.value
+    slide.templateId = templateSelect.value
+    slide.background = { ...(slide.background || {}), type: 'color', color: bgColorInput.value }
+    pres.linkedAudio = rehearsalAudioInput.value.trim()
+
+    state.set('selectedPresentation', { ...pres })
+
+    const layers = state.get('layers')
+    if (layers.slide.active && state.get('liveSlideIndex') === currentSlideIndex) {
+      layers.slide.content = slide
+      state.set('layers', { ...layers })
     }
   })
 
   closeBtn.addEventListener('click', () => {
+    stopInlineEdit()
     state.set('isEditing', false)
   })
 
   return {
-    resize: updateScale
+    resize: updateScale,
+    destroy() {
+      document.removeEventListener('mousemove', onDragMove)
+      document.removeEventListener('mouseup', onDragEnd)
+      document.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('resize', updateScale)
+      measurer.remove()
+    },
   }
 }

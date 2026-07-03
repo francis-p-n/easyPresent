@@ -34,7 +34,7 @@ export class StateManager {
       },
 
       // Show Controls
-      activeControlTab: 'timers', // 'timers' | 'messages' | 'props' | 'macros' | 'stage'
+      activeControlTab: 'timers', // 'timers' | 'messages' | 'props' | 'macros' | 'stage' | 'game' | 'scheduler'
       timers: [],
       messages: [],
       props: [],

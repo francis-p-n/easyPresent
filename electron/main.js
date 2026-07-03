@@ -1,7 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
+const fs = require('fs')
 const { parsePptx } = require('./pptx-parser')
 const { startServer } = require('./server')
+
+const libraryPath = () => path.join(app.getPath('userData'), 'library.json')
 
 let mainWindow
 let stageServer
@@ -52,16 +55,46 @@ app.whenReady().then(() => {
     }
   });
 
-  // Start Stage Server
-  stageServer = startServer(8080);
+  // Library persistence — atomic file write (temp + rename) so a crash
+  // mid-save can never corrupt the library
+  ipcMain.handle('save-library', async (event, json) => {
+    const target = libraryPath()
+    const tmp = target + '.tmp'
+    await fs.promises.writeFile(tmp, json, 'utf8')
+    await fs.promises.rename(tmp, target)
+    return true
+  });
+
+  ipcMain.handle('load-library', async () => {
+    try {
+      return await fs.promises.readFile(libraryPath(), 'utf8')
+    } catch {
+      return null // no file yet — renderer falls back to localStorage
+    }
+  });
+
+  // Stage server starts lazily — binding 0.0.0.0:8080 with open CORS at
+  // launch is wasted startup work and needless exposure on venue Wi-Fi
+  let pendingSlide = null
+
+  function ensureStageServer() {
+    if (!stageServer) {
+      stageServer = startServer(8080)
+      if (pendingSlide) stageServer.broadcastSlide(pendingSlide)
+    }
+    return stageServer
+  }
 
   ipcMain.on('broadcast-slide', (event, slideData) => {
     if (stageServer) {
       stageServer.broadcastSlide(slideData);
+    } else {
+      pendingSlide = slideData // replayed when the server starts
     }
   });
 
   ipcMain.on('create-stage-display', () => {
+    ensureStageServer()
     const stageWindow = new BrowserWindow({
       width: 1280,
       height: 720,

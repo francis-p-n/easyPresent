@@ -28,6 +28,18 @@ export class Slide {
 
     // Notes (for Stage Display)
     this.notes = options.notes || ''
+
+    // Slide type for camp-focused features
+    this.type = options.type || 'worship' // worship, announcement, game, camp, scripture, blank
+
+    // Template preset identifier
+    this.templateId = options.templateId || null
+
+    // For game slides: team scores, trivia data
+    this.gameData = options.gameData || null
+
+    // For announcement slides: quick-editable structured fields
+    this.announcementData = options.announcementData || { headline: '', body: '', time: '', location: '' }
   }
 
   addTextElement(options = {}) {
@@ -54,7 +66,11 @@ export class Slide {
       background: this.background,
       transition: this.transition,
       actions: this.actions,
-      notes: this.notes
+      notes: this.notes,
+      type: this.type,
+      templateId: this.templateId,
+      gameData: this.gameData,
+      announcementData: this.announcementData,
     }
   }
 }

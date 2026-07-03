@@ -1,0 +1,176 @@
+/* ===== MOBILE / IPAD RESPONSIVE STYLES ===== */
+
+/* Tablet layout: stack panels vertically */
+@media (max-width: 1024px) {
+  .app-main {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .panel-left {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: unset !important;
+    height: 200px;
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+
+  .library-panel {
+    flex: 1;
+    border-right: 1px solid var(--border-color);
+    border-bottom: none;
+  }
+
+  .playlist-panel {
+    flex: 1;
+    border-bottom: none;
+  }
+
+  .panel-center {
+    min-width: unset;
+    height: 50vh;
+    flex-shrink: 0;
+  }
+
+  .panel-right {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: unset !important;
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+    flex-direction: row;
+    flex-shrink: 0;
+    height: 280px;
+  }
+
+  .preview-panel {
+    flex: 1;
+    height: 100%;
+    border-bottom: none;
+    border-right: 1px solid var(--border-color);
+  }
+
+  .show-controls {
+    flex: 1;
+  }
+
+  .panel-resizer {
+    display: none !important;
+  }
+}
+
+/* Phone layout */
+@media (max-width: 640px) {
+  .panel-left {
+    height: 160px;
+    flex-direction: column;
+  }
+
+  .library-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    flex: none;
+    height: 80px;
+  }
+
+  .panel-right {
+    flex-direction: column;
+    height: 320px;
+  }
+
+  .preview-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    height: 150px;
+    flex: none;
+  }
+}
+
+/* Touch-friendly interactive targets */
+@media (pointer: coarse) {
+  .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .tab {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  .slide-thumbnail {
+    min-height: 100px;
+  }
+
+  .panel-content,
+  .slide-grid,
+  .playlist-list {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Active state instead of hover */
+  .btn:active {
+    opacity: 0.7;
+    transform: scale(0.97);
+  }
+
+  .slide-thumbnail:active {
+    opacity: 0.8;
+  }
+}
+
+/* Toolbar compaction on small screens */
+@media (max-width: 768px) {
+  .app-toolbar {
+    padding: 0 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--toolbar-height);
+  }
+
+  .toolbar-section--clear {
+    display: none;
+  }
+}
+
+/* Camp fullscreen presentation mode */
+.camp-fullscreen-slide {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.camp-fullscreen-slide .slide-content-text {
+  color: white;
+  font-size: clamp(24px, 5vw, 80px);
+  text-align: center;
+  padding: 40px;
+  max-width: 90vw;
+  line-height: 1.3;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.camp-fullscreen-exit {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}

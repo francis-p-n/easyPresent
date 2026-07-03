@@ -261,6 +261,13 @@
   opacity: 1;
 }
 
+/* Toolbar sits at the top of the window — flip its tooltips downward
+   so they aren't clipped by the window edge */
+.app-toolbar .tooltip::after {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+
 /* ===== MODAL ===== */
 .modal-overlay {
   position: fixed;

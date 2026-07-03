@@ -211,8 +211,6 @@ class App {
       // Don't handle while the slide editor is open (it has its own key handling)
       if (state.get('isEditing')) return
 
-      const pres = state.get('selectedPresentation')
-
       switch (e.key) {
         case 'F1':
           e.preventDefault()

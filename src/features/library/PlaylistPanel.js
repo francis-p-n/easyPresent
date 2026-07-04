@@ -77,12 +77,7 @@ export class PlaylistPanel {
       this.container.querySelector('#add-header-btn')?.addEventListener('click', () => {
         dropdown.style.display = 'none'
         this._showTextPrompt('Add Header', 'Header text', (text) => {
-          const playlist = state.get('activePlaylist')
-          if (playlist) {
-            playlist.items.push({ type: 'header', text })
-            state.set('activePlaylist', playlist)
-            this._renderItems()
-          }
+          this._addPlaylistItem({ type: 'header', text })
         })
       })
 
@@ -90,17 +85,33 @@ export class PlaylistPanel {
       this.container.querySelector('#add-note-btn')?.addEventListener('click', () => {
         dropdown.style.display = 'none'
         this._showTextPrompt('Add Note', 'Note text', (text) => {
-          const playlist = state.get('activePlaylist')
-          if (playlist) {
-            playlist.items.push({ type: 'note', text })
-            state.set('activePlaylist', playlist)
-            this._renderItems()
-          }
+          this._addPlaylistItem({ type: 'note', text })
         })
       })
     }
 
     this._renderItems()
+  }
+
+  // Copy-on-write playlist update — never mutate objects already in state
+  _addPlaylistItem(item) {
+    const playlist = state.get('activePlaylist')
+    if (!playlist) return
+    const updated = { ...playlist, items: [...(playlist.items || []), item] }
+    state.set(
+      'playlists',
+      state.get('playlists').map((p) => (p.id === updated.id ? updated : p))
+    )
+    state.set('activePlaylist', updated)
+    this._renderItems()
+
+    // New items append at the end — scroll them into view so the add is visible
+    const list = this.container.querySelector('#playlist-items')
+    if (list) {
+      requestAnimationFrame(() => {
+        list.scrollTop = list.scrollHeight
+      })
+    }
   }
 
   // Minimal input dialog — window.prompt does not work in Electron renderers
@@ -246,7 +257,6 @@ export class PlaylistPanel {
         const pres = state.get('presentations').find((p) => p.id === id)
         if (pres) {
           state.set('selectedPresentation', pres)
-          state.set('slides', pres.slides)
           state.set('activeSlideIndex', -1)
           this._renderItems()
         }

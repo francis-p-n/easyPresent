@@ -1,16 +1,25 @@
 # Roadmap & Backlog
 
 ## Completed
-- `[x]` Implement Church Presentation Best Practices
-  - `[x]` Configurable max line limit in Song Importer (1-4 lines)
-  - `[x]` Real-time visual readability warnings in Slide Editor
-  - `[x]` Pre-configured default themes (Worship, Sermon, Announcements)
+- `[x]` Church presentation best practices (max lines, readability warnings, default themes)
+- `[x]` Camp feature set: template sets, game tab (scores/trivia/countdown), team scheduler tab
+- `[x]` Announcement slides with double-click quick-edit overlay
+- `[x]` Multi-text-box slide editor (drag/resize, snap guides, per-box autosize, inline editing)
+- `[x]` Mobile/iPad responsive layout + touch swipe navigation
+- `[x]` PPTX import preserves design background images (Canva-style templates)
+- `[x]` Performance: thumbnail LRU cache, debounced saves, search worker index, preview/broadcast dedup
+- `[x]` Architecture: single `goLive()` navigation action, lazy PIXI init, file-based persistence (userData/library.json), copy-on-write presentation/playlist updates
+- `[x]` UI/UX pass from `improvements.md` (palette, contrast, focus rings, hover lift, live pulse, resizer hit areas, context menu motion)
+- `[x]` Destructive-action confirmation (delete presentation)
+- `[x]` Virtualized playlist rendering (VirtualScroller)
 
 ## Active Development
-- `[ ]` Review and implement design pointers from `improvements.md`
-- `[ ]` Transition to unidirectional state management
-- `[ ]` Implement Virtualization for large playlists
+- `[ ]` Store imported media as files on disk instead of inline data URLs (library size)
+- `[ ]` Rasterize SVG-based PPTX slides (shape-heavy templates import text-only)
+- `[ ]` App icon + code signing for distribution builds
 
 ## Future Ideas
-- `[ ]` Hardware Acceleration for Slide Rendering (WebGL/PixiJS)
-- `[ ]` Async Worker processing for C++ Native Addons
+- `[ ]` Remote-control web page served by the stage server (operate from phone/iPad on venue Wi-Fi)
+- `[ ]` Wire the C++ DirectX addon path into the render pipeline (video backgrounds)
+- `[ ]` Undo/redo for slide editing
+- `[ ]` Multi-text-box rendering on stage display and audience output (currently plain text)

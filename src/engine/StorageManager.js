@@ -26,7 +26,14 @@ class StorageManager {
 
   _applyData(data) {
     if (data.presentations) state.set('presentations', data.presentations)
-    if (data.playlists) state.set('playlists', data.playlists)
+    if (data.playlists) {
+      state.set('playlists', data.playlists)
+      // Re-point activePlaylist at the loaded object — otherwise it keeps
+      // referencing the pre-load sample and saved changes never show
+      const currentId = state.get('activePlaylist')?.id
+      const match = data.playlists.find((p) => p.id === currentId) || data.playlists[0] || null
+      state.set('activePlaylist', match)
+    }
     if (data.themes) state.set('themes', data.themes)
   }
 
@@ -72,7 +79,6 @@ class StorageManager {
         const json = await window.electronAPI.loadLibrary()
         if (json) {
           this._applyData(JSON.parse(json))
-          console.log('Loaded library from file')
           return
         }
         // No file yet — migrate from localStorage if present
@@ -80,7 +86,6 @@ class StorageManager {
         if (legacy) {
           this._applyData(JSON.parse(legacy))
           window.electronAPI.saveLibrary(legacy).catch(() => {})
-          console.log('Migrated library from localStorage to file')
           return
         }
         return
@@ -94,7 +99,6 @@ class StorageManager {
       const str = localStorage.getItem(this.SAVE_KEY)
       if (str) {
         this._applyData(JSON.parse(str))
-        console.log('Loaded data from local storage')
       }
     } catch (e) {
       console.error('Failed to load data', e)

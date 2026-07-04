@@ -64,8 +64,10 @@
 
 /* Phone layout */
 @media (max-width: 640px) {
+  /* Stacked sections need real height each — the page scrolls vertically,
+     so a taller left panel is fine on phones */
   .panel-left {
-    height: 160px;
+    height: auto;
     flex-direction: column;
   }
 
@@ -73,7 +75,12 @@
     border-right: none;
     border-bottom: 1px solid var(--border-color);
     flex: none;
-    height: 80px;
+    height: 200px;
+  }
+
+  .playlist-panel {
+    flex: none;
+    height: 220px;
   }
 
   .panel-right {

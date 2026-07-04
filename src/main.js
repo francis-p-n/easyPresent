@@ -76,7 +76,6 @@ class App {
       })
     }
 
-    console.log('EasyPresent initialized')
   }
 
   async _updateView(view) {

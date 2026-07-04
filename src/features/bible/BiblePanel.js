@@ -1,5 +1,5 @@
 import { state } from '../../engine/StateManager.js'
-import { icon } from '../../components/common/Icons.js'
+
 
 export function createBiblePanel(container) {
   container.className = 'bible-panel'
@@ -48,7 +48,6 @@ export function createBiblePanel(container) {
     const verse = match[3] || '1'
 
     try {
-      // eslint-disable-next-line no-undef
       const dataModule = await import(`../../data/bible-${translation}.json`, {
         assert: { type: 'json' }
       })

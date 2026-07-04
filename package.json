@@ -1,7 +1,8 @@
 {
   "name": "propresenter-dupe",
   "version": "1.0.0",
-  "description": "ProPresenter Clone",
+  "description": "EasyPresent — camp and church presentation software",
+  "author": "francis-p-n",
   "main": "dist-electron/main.js",
   "type": "commonjs",
   "scripts": {

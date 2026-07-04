@@ -190,7 +190,6 @@ export class LibraryPanel {
               const presentations = [...state.get('presentations'), newPres]
               state.set('presentations', presentations)
               state.set('selectedPresentation', newPres)
-              state.set('slides', newPres.slides)
               state.set('activeSlideIndex', 0)
               this._renderList()
               showToast('Successfully imported PPTX!', 'success')
@@ -216,7 +215,6 @@ export class LibraryPanel {
         const presentations = [...state.get('presentations'), newPres]
         state.set('presentations', presentations)
         state.set('selectedPresentation', newPres)
-        state.set('slides', newPres.slides)
         state.set('activeSlideIndex', 0)
         this._renderList()
         showToast('Song imported successfully!', 'success')
@@ -248,7 +246,6 @@ export class LibraryPanel {
         const pres = state.get('presentations').find((p) => p.id === id)
         if (pres) {
           state.set('selectedPresentation', pres)
-          state.set('slides', pres.slides)
           state.set('activeSlideIndex', -1)
           this._renderList()
         }
@@ -318,7 +315,6 @@ export class LibraryPanel {
         const presentations = [...state.get('presentations'), newPres]
         state.set('presentations', presentations)
         state.set('selectedPresentation', newPres)
-        state.set('slides', newPres.slides)
         state.set('activeSlideIndex', 0)
         this._renderList()
         overlay.remove()
@@ -357,13 +353,15 @@ export class LibraryPanel {
 
       switch (action) {
         case 'delete': {
-          state.set('presentations', presentations.filter((p) => p.id !== presId))
-          if (state.get('selectedPresentation')?.id === presId) {
-            state.set('selectedPresentation', null)
-            state.set('slides', [])
-          }
-          this._renderList()
-          showToast(`Deleted "${pres.name}"`, 'success')
+          // Deleting is irreversible — confirm before removing
+          this._showConfirmDialog(`Delete "${pres.name}"?`, 'This cannot be undone.', () => {
+            state.set('presentations', state.get('presentations').filter((p) => p.id !== presId))
+            if (state.get('selectedPresentation')?.id === presId) {
+              state.set('selectedPresentation', null)
+            }
+            this._renderList()
+            showToast(`Deleted "${pres.name}"`, 'success')
+          })
           break
         }
         case 'duplicate': {
@@ -388,10 +386,13 @@ export class LibraryPanel {
             showToast('No active playlist', 'error')
             break
           }
-          playlist.items = [...(playlist.items || []), { type: 'presentation', id: presId }]
-          state.set('playlists', [...state.get('playlists')])
-          state.set('activePlaylist', playlist)
-          showToast(`Added "${pres.name}" to ${playlist.name}`, 'success')
+          const updated = { ...playlist, items: [...(playlist.items || []), { type: 'presentation', id: presId }] }
+          state.set(
+            'playlists',
+            state.get('playlists').map((p) => (p.id === updated.id ? updated : p))
+          )
+          state.set('activePlaylist', updated)
+          showToast(`Added "${pres.name}" to ${updated.name}`, 'success')
           break
         }
       }
@@ -403,6 +404,43 @@ export class LibraryPanel {
       document.removeEventListener('click', close)
     }
     setTimeout(() => document.addEventListener('click', close), 0)
+  }
+
+  _showConfirmDialog(title, message, onConfirm) {
+    document.getElementById('confirm-dialog-overlay')?.remove()
+
+    const overlay = document.createElement('div')
+    overlay.id = 'confirm-dialog-overlay'
+    overlay.style.cssText =
+      'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;'
+    overlay.innerHTML = `
+      <div style="background:var(--bg-panel);border-radius:10px;padding:20px;width:360px;max-width:90vw;border:1px solid var(--border-color);display:flex;flex-direction:column;gap:10px;">
+        <h3 style="margin:0;font-size:14px;color:var(--text-primary);">${title}</h3>
+        <p style="margin:0;font-size:12px;color:var(--text-secondary);">${message}</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px;">
+          <button class="btn" id="confirm-cancel">Cancel</button>
+          <button class="btn" id="confirm-ok" style="background:var(--accent-red);border-color:var(--accent-red);color:#fff;">Delete</button>
+        </div>
+      </div>
+    `
+    document.body.appendChild(overlay)
+
+    const onEsc = (e) => {
+      if (e.key === 'Escape') close()
+    }
+    const close = () => {
+      overlay.remove()
+      document.removeEventListener('keydown', onEsc)
+    }
+    overlay.querySelector('#confirm-cancel').addEventListener('click', close)
+    overlay.querySelector('#confirm-ok').addEventListener('click', () => {
+      onConfirm()
+      close()
+    })
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close()
+    })
+    document.addEventListener('keydown', onEsc)
   }
 
   // window.prompt is unavailable in Electron renderers, so rename uses a tiny modal

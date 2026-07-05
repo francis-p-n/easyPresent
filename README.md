@@ -24,8 +24,8 @@ The application is built in three distinct layers:
    - *Note: If the C++ native addon cannot be compiled or loaded, the application elegantly falls back to HTML5 Canvas for rendering!*
 
 3. **Presentation Import (Electron Main Process)**
-   - **Frameworks:** Node.js, `adm-zip`, `xml2js`.
-   - **Role:** Parses PPTX files directly within the Electron Main process for easy integration into the frontend UI.
+   - **Frameworks:** Node.js, `adm-zip`.
+   - **Role:** Parses PPTX files directly within the Electron Main process for easy integration into the frontend UI, extracting each slide's text, background image, and source formatting (font size, weight, color, family, alignment) so imported slides keep their original look.
 
 ---
 

@@ -13,7 +13,7 @@ class FakeSearchWorker {
   postMessage({ query, items }) {
     const q = (query || '').toLowerCase()
     const ids = items.filter((i) => !q || i.searchText.includes(q)).map((i) => i.id)
-    queueMicrotask(() => this.onmessage?.({ data: { ids } }))
+    Promise.resolve().then(() => this.onmessage?.({ data: { ids } }))
   }
   terminate() {}
 }

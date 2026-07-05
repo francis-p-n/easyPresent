@@ -15,6 +15,8 @@
 - `[x]` Destructive-action confirmation (delete presentation)
 - `[x]` Virtualized playlist rendering (VirtualScroller)
 - `[x]` Bug hunt (Jul 2026): slim stage broadcast payload (was shipping multi-MB base64 backgrounds per slide advance), messages now render in Output Preview (was a dead canvas-context path), per-slide style included in preview repaint signature, imported lineSpacing honored, invalid canvas textAlign no longer leaks between thumbnails
+- `[x]` Test suite: 119 tests across 16 files — SongImporter parsing, pptx-parser (fixture-built decks + real session-slides integration), navigation/state, TimerEngine, StorageManager (file + localStorage + migration), SearchWorker (real module), NativeRender thumbnails (mock canvas), PreviewPanel (dedup/message regressions), LibraryPanel import flow, ChordSheet, VirtualScroller, ToastManager, Icons, models, stage-display chord transposition (VM sandbox)
+- `[x]` Fixed TextElement.hasShadow — `options.hasShadow || true` made shadows impossible to disable
 
 ## Active Development
 - `[ ]` Store imported media as files on disk instead of inline data URLs (library size)

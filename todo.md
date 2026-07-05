@@ -14,6 +14,7 @@
 - `[x]` UI/UX pass from `improvements.md` (palette, contrast, focus rings, hover lift, live pulse, resizer hit areas, context menu motion)
 - `[x]` Destructive-action confirmation (delete presentation)
 - `[x]` Virtualized playlist rendering (VirtualScroller)
+- `[x]` Bug hunt (Jul 2026): slim stage broadcast payload (was shipping multi-MB base64 backgrounds per slide advance), messages now render in Output Preview (was a dead canvas-context path), per-slide style included in preview repaint signature, imported lineSpacing honored, invalid canvas textAlign no longer leaks between thumbnails
 
 ## Active Development
 - `[ ]` Store imported media as files on disk instead of inline data URLs (library size)

@@ -24,7 +24,7 @@ export class TextElement {
     this.textScaling = options.textScaling || 'none' // none, scaleDown, scaleToFit
 
     // Effects
-    this.hasShadow = options.hasShadow || true
+    this.hasShadow = options.hasShadow !== undefined ? options.hasShadow : true
     this.shadowColor = options.shadowColor || 'rgba(0, 0, 0, 0.6)'
     this.shadowOffsetX = options.shadowOffsetX !== undefined ? options.shadowOffsetX : 3
     this.shadowOffsetY = options.shadowOffsetY !== undefined ? options.shadowOffsetY : 3

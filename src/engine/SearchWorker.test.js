@@ -1,36 +1,51 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-describe('SearchWorker logic', () => {
-  it('should filter presentations correctly when given a query', () => {
-    // Since it's a web worker, we mock the basic structure of the worker
-    // Web Workers have self.onmessage which is assigned.
-    const presentations = [
-      { name: 'Sunday Service', tags: ['sunday'], slides: [{ text: 'Welcome' }] },
-      { name: 'Youth Group', tags: ['youth'], slides: [{ text: 'Games' }] }
-    ]
+/**
+ * Tests the REAL worker module. In jsdom, `self` is the window, so importing
+ * SearchWorker.js installs its onmessage handler on the global — we stub
+ * postMessage to capture replies and invoke onmessage directly.
+ */
 
-    const workerLogic = (query, data) => {
-      const q = query.toLowerCase()
-      return data.filter((pres) => {
-        if (pres.name && pres.name.toLowerCase().includes(q)) return true
-        if (pres.tags && pres.tags.some((tag) => tag.toLowerCase().includes(q))) return true
-        if (pres.slides) {
-          return pres.slides.some((slide) => {
-            if (slide.label && slide.label.toLowerCase().includes(q)) return true
-            if (slide.text && slide.text.toLowerCase().includes(q)) return true
-            return false
-          })
-        }
-        return false
-      })
-    }
+let replies
 
-    const results = workerLogic('welcome', presentations)
-    expect(results.length).toBe(1)
-    expect(results[0].name).toBe('Sunday Service')
+beforeEach(async () => {
+  replies = []
+  vi.resetModules()
+  self.postMessage = (msg) => replies.push(msg)
+  await import('./SearchWorker.js')
+})
 
-    const youthResults = workerLogic('youth', presentations)
-    expect(youthResults.length).toBe(1)
-    expect(youthResults[0].name).toBe('Youth Group')
+const send = (query, items) => self.onmessage({ data: { query, items } })
+
+const INDEX = [
+  { id: 'p1', searchText: 'sunday service\nwelcome to church' },
+  { id: 'p2', searchText: 'youth group\ngames night' },
+  { id: 'p3', searchText: 'amazing grace\nhow sweet the sound' }
+]
+
+describe('SearchWorker (real module)', () => {
+  it('returns all ids for an empty query', () => {
+    send('', INDEX)
+    expect(replies[0].ids).toEqual(['p1', 'p2', 'p3'])
+  })
+
+  it('matches case-insensitively against the flat index', () => {
+    send('WELCOME', INDEX)
+    expect(replies[0].ids).toEqual(['p1'])
+  })
+
+  it('matches slide text, not just names', () => {
+    send('sweet the sound', INDEX)
+    expect(replies[0].ids).toEqual(['p3'])
+  })
+
+  it('returns an empty list when nothing matches', () => {
+    send('zzz-no-match', INDEX)
+    expect(replies[0].ids).toEqual([])
+  })
+
+  it('handles an empty library', () => {
+    send('anything', [])
+    expect(replies[0].ids).toEqual([])
   })
 })

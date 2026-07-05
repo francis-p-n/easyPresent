@@ -17,12 +17,15 @@
 - `[x]` Bug hunt (Jul 2026): slim stage broadcast payload (was shipping multi-MB base64 backgrounds per slide advance), messages now render in Output Preview (was a dead canvas-context path), per-slide style included in preview repaint signature, imported lineSpacing honored, invalid canvas textAlign no longer leaks between thumbnails
 - `[x]` Test suite: 119 tests across 16 files — SongImporter parsing, pptx-parser (fixture-built decks + real session-slides integration), navigation/state, TimerEngine, StorageManager (file + localStorage + migration), SearchWorker (real module), NativeRender thumbnails (mock canvas), PreviewPanel (dedup/message regressions), LibraryPanel import flow, ChordSheet, VirtualScroller, ToastManager, Icons, models, stage-display chord transposition (VM sandbox)
 - `[x]` Fixed TextElement.hasShadow — `options.hasShadow || true` made shadows impossible to disable
+- `[x]` Live E2E run (Playwright driving the real Electron app, scratchpad/e2e.mjs pattern): launch, import of real session decks, go-live/keyboard nav, message overlay, stage server + socket broadcast, persistence across restart — 14/14
+- `[x]` Fixed stage display window: loaded non-existent dist/src/output/stage.html (chrome-error in every environment); now loads the stage server at localhost:8080. Vendored socket.io client into public/stage because the bundled main process can't serve /socket.io/socket.io.js from disk
 
 ## Active Development
 - `[ ]` Store imported media as files on disk instead of inline data URLs (library size)
 - `[ ]` Rasterize SVG-based PPTX slides (shape-heavy templates import text-only)
 - `[ ]` PPTX-imported custom/decorative fonts (e.g. Canva typefaces) aren't embedded — imported `fontFamily` only renders correctly if that font happens to be installed locally
 - `[ ]` PPTX import doesn't yet read gradient fills, underline, or per-run color/size variation within a single text box (only a representative style per slide is extracted)
+- `[ ]` Stage display layout: long chord-free lyric lines render one word per row with large chord-space gaps (public/stage CSS) — needs a no-chords compact mode
 - `[ ]` App icon + code signing for distribution builds
 
 ## Future Ideas

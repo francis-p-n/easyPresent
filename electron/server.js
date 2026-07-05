@@ -13,8 +13,11 @@ function startServer(port = 8080) {
     cors: { origin: '*' }
   });
 
-  // Serve static files for the stage display
+  // Serve static files for the stage display. public/stage is the source of
+  // truth in the repo; packaged builds only ship dist/ (vite copies public/*
+  // into it), so fall through to dist/stage when public/ isn't present.
   app.use(express.static(path.join(__dirname, '../public/stage')));
+  app.use(express.static(path.join(__dirname, '../dist/stage')));
 
   io.on('connection', (socket) => {
     console.log('Stage display connected');

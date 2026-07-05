@@ -100,7 +100,10 @@
     <button onclick="changeTransposition(1)">+</button>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- Vendored socket.io client: the server's built-in /socket.io/socket.io.js
+       endpoint breaks once the main process is bundled (vite inlines socket.io,
+       so its on-disk client-file lookup fails at runtime) -->
+  <script src="socket.io.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

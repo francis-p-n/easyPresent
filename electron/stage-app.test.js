@@ -10,7 +10,7 @@ import vm from 'node:vm'
 let sandbox
 
 beforeAll(() => {
-  const src = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8')
+  const src = fs.readFileSync(path.join(__dirname, '../public/stage/app.js'), 'utf8')
 
   const stubEl = () => ({
     appendChild() {},
@@ -73,7 +73,7 @@ describe('stage display — transposeChord', () => {
 describe('stage display — renderSlide protocol', () => {
   it('registers a slide-update socket handler on load', () => {
     // Re-run with a recording io stub
-    const src = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8')
+    const src = fs.readFileSync(path.join(__dirname, '../public/stage/app.js'), 'utf8')
     const handlers = {}
     const ctx = {
       io: () => ({ on: (evt, cb) => (handlers[evt] = cb) }),

@@ -100,18 +100,16 @@ app.whenReady().then(() => {
       height: 720,
       title: 'Stage Display',
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false
+        nodeIntegration: false,
+        contextIsolation: true
       }
     })
-    
-    // In dev, load localhost:5173/stage.html or similar, but for now we'll just load the stage HTML directly or through dev server
-    // Assuming stage.html exists in project root or we can just load a specific route
-    if (process.env.NODE_ENV === 'development') {
-      stageWindow.loadURL('http://localhost:5173/src/output/stage.html')
-    } else {
-      stageWindow.loadFile(path.join(__dirname, '../dist/src/output/stage.html'))
-    }
+
+    // The stage server already serves the full stage display (lyrics,
+    // chords, transposition) from public/stage — the window is just a local
+    // client of it, same as a phone or laptop on the venue Wi-Fi. The old
+    // dist/src/output/stage.html path never existed in builds.
+    stageWindow.loadURL('http://localhost:8080')
   })
 
   createWindow()

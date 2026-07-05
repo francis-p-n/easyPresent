@@ -228,7 +228,7 @@ export function createSongImporter(onImport) {
   document.body.appendChild(overlay)
 }
 
-function parseChordProToSlides(text, maxLines = 4) {
+export function parseChordProToSlides(text, maxLines = 4) {
   // Split text into blocks by blank lines or bracket headers like [Verse 1]
   const lines = text.split(/\r?\n/)
   const slides = []

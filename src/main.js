@@ -48,8 +48,12 @@ class App {
     // 'liveSlideIndex' and 'layers', but the stage only needs one message)
     const broadcast = (slide) => {
       if (!window.electronAPI || !window.electronAPI.broadcastSlide) return
-      const payload = slide || { text: '' }
-      const sig = JSON.stringify(payload)
+      // Send only what the stage display consumes (text with chord markup).
+      // Slides can carry multi-MB base64 background data URLs — stringifying
+      // and shipping those over IPC + Wi-Fi on every slide advance froze
+      // navigation with imported PPTX decks.
+      const payload = { text: (slide && slide.text) || '' }
+      const sig = payload.text
       if (sig === this._lastBroadcast) return
       this._lastBroadcast = sig
       window.electronAPI.broadcastSlide(payload)

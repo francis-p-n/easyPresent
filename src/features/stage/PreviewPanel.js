@@ -66,6 +66,7 @@ export class PreviewPanel {
     const signature = JSON.stringify([
       slideLayer.active,
       slideLayer.content?.text || '',
+      slideLayer.content?.style || null, // per-slide style (e.g. PPTX import) changes the render even when text doesn't
       bgMarker,
       layers.message?.active,
       layers.message?.content,
@@ -130,34 +131,14 @@ export class PreviewPanel {
       // Message Layer - rendered on top of everything
       const messageLayer = layers.message
       if (messageLayer && messageLayer.active && messageLayer.content) {
-        // We'll draw the message directly to the preview canvas or ask NativeRender to do it
-        const ctx = NativeRender.previewCtx || NativeRender.ctx
-        if (ctx) {
-          let msg = messageLayer.content
-          // Replace {timer} token with actual timer value
-          if (msg.includes('{timer}')) {
-            msg = msg.replace('{timer}', state.get('timer_main') || '00:00')
-          }
-
-          ctx.save()
-          ctx.font = 'bold 32px Inter, sans-serif'
-          ctx.fillStyle = '#000000'
-          const padding = 10
-          const textMetrics = ctx.measureText(msg)
-          const width = textMetrics.width + padding * 2
-          const height = 40 + padding * 2
-          const x = (ctx.canvas.width - width) / 2
-          const y = ctx.canvas.height - height - 40
-
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
-          ctx.fillRect(x, y, width, height)
-
-          ctx.fillStyle = '#ffffff'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(msg, ctx.canvas.width / 2, y + height / 2)
-          ctx.restore()
+        let msg = messageLayer.content
+        // Replace {timer} token with actual timer value
+        if (msg.includes('{timer}')) {
+          msg = msg.replace('{timer}', state.get('timer_main') || '00:00')
         }
+        NativeRender.renderMessage(msg)
+      } else {
+        NativeRender.renderMessage(null)
       }
 
       status.textContent = 'LIVE'
@@ -166,6 +147,20 @@ export class PreviewPanel {
     } else {
       // Clear the slide layer and re-composite
       NativeRender.clearLayer(1)
+
+      // Messages are independent of the slide layer — keep them visible
+      // (and cleared) even when no slide is live
+      const messageLayer = layers.message
+      if (messageLayer && messageLayer.active && messageLayer.content) {
+        let msg = messageLayer.content
+        if (msg.includes('{timer}')) {
+          msg = msg.replace('{timer}', state.get('timer_main') || '00:00')
+        }
+        NativeRender.renderMessage(msg)
+      } else {
+        NativeRender.renderMessage(null)
+      }
+
       NativeRender.compositeLayers()
 
       status.textContent = 'IDLE'

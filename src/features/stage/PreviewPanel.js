@@ -117,6 +117,10 @@ export class PreviewPanel {
         }
       }
 
+      // Formatting captured from the slide's own source (e.g. PPTX import)
+      // takes precedence over the generic theme defaults above
+      if (slideLayer.content.style) Object.assign(styleOpts, slideLayer.content.style)
+
       // Use the Render Engine to draw typography layout onto slide layer (index 1)
       NativeRender.renderSlideText(slideLayer.content.text || '', styleOpts)
 

@@ -182,6 +182,7 @@ export class LibraryPanel {
                   label: `Slide ${i + 1}`,
                   text: s.text,
                   type: 'worship',
+                  style: s.style && Object.keys(s.style).length ? s.style : undefined,
                   background: s.bgImage
                     ? { type: 'media', color: '#000000', mediaPath: s.bgImage }
                     : { type: 'color', color: '#000000', mediaPath: null }

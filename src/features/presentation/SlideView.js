@@ -185,6 +185,10 @@ export class SlideView {
         }
       }
 
+      // Formatting captured from the slide's own source (e.g. PPTX import)
+      // takes precedence over the generic theme defaults above
+      if (slide.style) Object.assign(styleOpts, slide.style)
+
       // Slides with an image background (e.g. imported PPTX designs) get a
       // transparent text layer composited over the image via layered CSS
       const bgMedia =

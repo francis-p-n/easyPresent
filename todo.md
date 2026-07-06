@@ -20,9 +20,11 @@
 - `[x]` Live E2E run (Playwright driving the real Electron app, scratchpad/e2e.mjs pattern): launch, import of real session decks, go-live/keyboard nav, message overlay, stage server + socket broadcast, persistence across restart — 14/14
 - `[x]` Fixed stage display window: loaded non-existent dist/src/output/stage.html (chrome-error in every environment); now loads the stage server at localhost:8080. Vendored socket.io client into public/stage because the bundled main process can't serve /socket.io/socket.io.js from disk
 - `[x]` Audience output window: the core ProPresenter gap — a real fullscreen projection window (auto-targets the external display when one is connected, `Screens` toolbar button toggles it), synced from operator state (`src/engine/outputSync.js`) over IPC (`toggle-audience-output`/`update-audience-output`), rendered by a dependency-free script (`public/output/audience-render.js`) so it never needs a bundler. Shows live slide text/style/background, the message overlay independent of slide state, and honors imported per-slide style + theme fallback. 21 new tests (outputSync, audience-render via VM sandbox, main.js IPC handlers — the latter needed patching Node's `Module._load` directly since vitest's mock/doMock don't intercept `require('electron')` from CJS)
+- `[x]` Arrangements (ProPresenter parity gap): named, ordered slide sequences that can repeat a slide (Verse 1, Chorus, Verse 1, Chorus, Bridge) without duplicating slide data (`src/engine/arrangement.js`; the model shape — `arrangements`/`activeArrangementId`/`sequence` of ids — already existed on the unused `Presentation` class and is now wired to the real plain-object presentations everywhere: `goLive`/`goLiveNext`/`goLivePrev`, `SlideView`'s grid + slide count, the stage broadcast, and the audience output sync). New `ArrangementEditor` modal (toolbar: layers icon in the slide view header) to build/rename/delete arrangements and reorder/add/remove sequence entries. Fixed two latent identity bugs this surfaced: `AnnouncementEditor` and `SlideEditor` compared `liveSlideIndex === editorIndex` to decide whether to push a live update, which breaks once a slide's arrangement position can differ from its master index — both now compare slide id instead. 67 new tests; verified live in the real Electron app (Playwright) building a repeating V-C-V-C-B arrangement and confirming keyboard navigation lands on the correct repeated occurrence.
 
 ## Active Development
 - `[ ]` Audience output currently renders plain text only (no multi-text-box layout, no video backgrounds, no transitions) — see Future Ideas
+- `[ ]` Arrangement editor has no drag-and-drop reordering (up/down buttons only) and Master's own slide order can't be edited from within it
 - `[ ]` Store imported media as files on disk instead of inline data URLs (library size)
 - `[ ]` Rasterize SVG-based PPTX slides (shape-heavy templates import text-only)
 - `[ ]` PPTX-imported custom/decorative fonts (e.g. Canva typefaces) aren't embedded — imported `fontFamily` only renders correctly if that font happens to be installed locally
@@ -35,6 +37,5 @@
 - `[ ]` Wire the C++ DirectX addon path into the render pipeline (video backgrounds)
 - `[ ]` Undo/redo for slide editing
 - `[ ]` Multi-text-box rendering on stage display and audience output (currently plain text)
-- `[ ]` Arrangements: reorder Verse/Chorus/Bridge groups per playlist item without duplicating slides (ProPresenter parity gap)
 - `[ ]` Transitions (dissolve/cut/wipe) between live slides on the audience output, with per-slide override
 - `[ ]` Looks: per-output layer visibility (e.g. hide lyrics on audience during sermon, keep visible on stage/confidence monitor)

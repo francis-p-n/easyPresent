@@ -13,17 +13,21 @@ body {
   overflow: hidden;
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
   color: var(--text-primary);
   background: var(--bg-app);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   user-select: none;
+  /* Feature settings tune Inter's default look — turn on tabular numerals so
+   * timers/counters don't jitter, and cv11 gives a taller, calmer lowercase */
+  font-feature-settings: 'cv11', 'ss01', 'tnum' 1;
 }
 
 /* ===== SCROLLBAR THEMING ===== */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -31,12 +35,21 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: var(--radius-md);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*:hover::-webkit-scrollbar-thumb {
   background: var(--border-color);
-  border-radius: 4px;
+  background-clip: padding-box;
+  border: 2px solid transparent;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-light);
+  background: var(--border-light) !important;
+  background-clip: padding-box !important;
 }
 
 ::-webkit-scrollbar-corner {
@@ -44,9 +57,14 @@ body {
 }
 
 /* ===== FOCUS STYLES ===== */
+/* Outer-offset ring lets it breathe around the element instead of clipping
+ * against a busy background; the soft-tint halo softens the crash for
+ * keyboard users without losing legibility. */
 :focus-visible {
   outline: 2px solid var(--accent-blue);
-  outline-offset: -2px;
+  outline-offset: 2px;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
 }
 
 /* ===== SELECTION ===== */

@@ -4,56 +4,66 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: 0 var(--spacing-sm);
+  padding: 0 var(--spacing-sm) 0 var(--spacing-xs);
 }
 
 .toolbar-logo__icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #007acc, #00b4d8);
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, var(--accent-blue), #7f6bff);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
   color: #fff;
   letter-spacing: -0.5px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    var(--shadow-sm);
 }
 
 .toolbar-logo__text {
   font-size: var(--font-size-md);
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   color: var(--text-highlight);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.4px;
 }
 
 .toolbar-separator {
   width: 1px;
-  height: 28px;
+  height: 22px;
   background: var(--border-color);
   flex-shrink: 0;
+  margin: 0 var(--spacing-2xs);
 }
 
 .toolbar-views {
   display: flex;
   gap: 2px;
+  background: var(--bg-elevated);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
 }
 
 .toolbar-view-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 5px 10px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   font-family: var(--font-family);
   font-size: var(--font-size-xs);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
 .toolbar-view-btn:hover {
@@ -64,6 +74,7 @@
 .toolbar-view-btn.active {
   background: var(--accent-blue);
   color: #fff;
+  box-shadow: var(--shadow-sm);
 }
 
 .toolbar-search {
@@ -131,35 +142,45 @@
 
 .library-categories {
   display: flex;
-  padding: 4px var(--spacing-sm);
-  gap: 4px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  gap: var(--spacing-xs);
   overflow-x: auto;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-panel);
+  scrollbar-width: none;
+}
+.library-categories::-webkit-scrollbar {
+  display: none;
 }
 
 .library-cat-btn {
   padding: 4px 10px;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
   color: var(--text-secondary);
   font-family: var(--font-family);
   font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
   white-space: nowrap;
 }
 
 .library-cat-btn:hover {
   background: var(--bg-hover);
-  color: var(--text-primary);
+  color: var(--text-highlight);
+  border-color: var(--border-color);
 }
 
 .library-cat-btn.active {
   background: var(--accent-blue);
   border-color: var(--accent-blue);
   color: #fff;
+  box-shadow: var(--shadow-sm);
 }
 
 /* ===== PLAYLIST SPECIFIC ===== */
@@ -169,22 +190,24 @@
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--bg-active);
+  background: var(--bg-elevated);
   border-bottom: 1px solid var(--border-color);
   font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-highlight);
 }
 
+/* Playlist sub-section headers ("Pre-Service", "Worship", etc.). Small caps
+ * still make sense here — these are recurring category labels, not primary
+ * panel titles. */
 .playlist-header-item {
-  padding: 8px var(--spacing-sm);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
+  padding: 10px var(--spacing-sm) 4px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-color);
-  margin-top: var(--spacing-sm);
+  letter-spacing: 0.7px;
+  color: var(--text-muted);
+  margin-top: var(--spacing-xs);
 }
 
 .playlist-header-item:first-child {
@@ -207,36 +230,57 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   grid-auto-rows: min-content;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
   padding: var(--spacing-md);
   overflow-y: auto;
   align-content: start;
   align-items: start;
 }
 
-/* Section headers that group PPTX-imported slides */
+/* PPTX section headers. Full-row span with a subtle side-line so a section
+ * reads as a visual group rather than free-floating text. */
 .slide-grid__section {
   grid-column: 1 / -1;
-  padding: 12px 4px 4px;
-  font-size: 11px;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) 2px var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.6px;
-  border-bottom: 1px solid var(--border-color);
-  margin-top: 4px;
+  letter-spacing: 0.8px;
+  margin-top: var(--spacing-xs);
 }
 .slide-grid__section:first-child {
   margin-top: 0;
+  padding-top: var(--spacing-2xs);
+}
+.slide-grid__section::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    var(--border-color),
+    transparent 90%
+  );
 }
 
 .slide-thumbnail__number {
   position: absolute;
-  bottom: 4px;
-  right: 6px;
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.4);
-  font-weight: 600;
+  bottom: 5px;
+  right: 7px;
+  font-size: var(--font-size-2xs);
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: var(--font-weight-semibold);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  letter-spacing: 0.3px;
+  font-variant-numeric: tabular-nums;
 }
 
 .slide-view-header {

@@ -6,84 +6,126 @@
   gap: var(--spacing-xs);
   padding: 6px 12px;
   border: 1px solid var(--btn-border);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--btn-bg);
   color: var(--text-primary);
   font-family: var(--font-family);
   font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
   white-space: nowrap;
 }
 
 .btn:hover {
   background: var(--btn-hover);
   color: var(--text-highlight);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border-color: var(--border-light);
 }
 
 .btn:active {
-  transform: scale(0.97);
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .btn--primary {
   background: var(--accent-blue);
   border-color: var(--accent-blue);
   color: #fff;
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn--primary:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+  color: #fff;
+  box-shadow: var(--shadow-md);
 }
 
 .btn--danger {
   background: var(--accent-red);
   border-color: var(--accent-red);
   color: #fff;
+  font-weight: var(--font-weight-semibold);
+}
+
+.btn--danger:hover {
+  background: var(--accent-red-hover);
+  border-color: var(--accent-red-hover);
+  color: #fff;
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+.btn--ghost:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-color);
 }
 
 .btn--icon {
   padding: 6px;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--text-secondary);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .btn--icon:hover {
   background: var(--bg-hover);
   color: var(--text-highlight);
+  border-color: transparent;
 }
 
 .btn--icon.active {
   color: var(--accent-blue);
-  background: rgba(0, 122, 204, 0.15);
+  background: var(--accent-blue-soft);
 }
 
-/* ===== CLEAR BUTTONS ===== */
+/* ===== CLEAR BUTTONS ===========================================================
+ * The Clear buttons are muscle-memory targets during a live service. Design
+ * goals: 1) "Clear All" is the panic button — big, red, unmistakable; 2) the
+ * per-layer clears are quiet by default and light up only when their layer is
+ * live; 3) the shortcut (F2 etc.) is always visible so operators can build
+ * that muscle memory. */
 .clear-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1px;
-  min-width: 46px;
+  min-width: 52px;
   width: auto;
-  padding: 0 6px;
-  height: 36px;
+  padding: 4px 8px;
+  height: 40px;
   flex-shrink: 0;
   white-space: nowrap;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: var(--bg-panel);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
   color: var(--text-secondary);
-  font-size: 9px;
-  font-weight: 600;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.15s ease;
-  letter-spacing: 0.3px;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+  letter-spacing: 0.4px;
 }
 
 .clear-btn svg {
@@ -97,50 +139,88 @@
   border-color: var(--border-light);
 }
 
+.clear-btn:active {
+  transform: translateY(1px);
+}
+
+/* Layer is currently live — highlight the button that will clear it so the
+ * operator can see at a glance which layers are on. */
 .clear-btn.active {
   border-color: var(--accent-blue);
   color: var(--accent-blue);
-  background: rgba(0, 122, 204, 0.1);
+  background: var(--accent-blue-soft);
 }
 
+/* Clear All: the emergency stop. Bigger visual weight, subtle inner glow to
+ * distinguish it from the row of quieter per-layer clears next to it. */
 .clear-btn--all {
   background: var(--accent-red);
   border-color: var(--accent-red);
   color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    var(--shadow-sm);
 }
 
 .clear-btn--all:hover {
-  background: #e63b3f;
+  background: var(--accent-red-hover);
+  border-color: var(--accent-red-hover);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    var(--shadow-md);
+}
+
+.clear-btn__shortcut {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  opacity: 0.55;
+  letter-spacing: 0.2px;
+}
+.clear-btn--all .clear-btn__shortcut {
+  opacity: 0.85;
 }
 
 /* ===== INPUTS ===== */
 .input {
   width: 100%;
-  padding: 6px 10px;
+  padding: 7px 10px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   background: var(--bg-app);
   color: var(--text-primary);
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
-  transition: border-color 0.15s ease;
+  line-height: var(--line-height-tight);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+
+.input:hover {
+  border-color: var(--border-light);
 }
 
 .input:focus {
   outline: none;
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.2);
+  box-shadow: var(--shadow-focus);
+  background: var(--bg-panel);
 }
 
 .input::placeholder {
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .input--search {
   padding-left: 30px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7079' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: 8px center;
+  background-position: 10px center;
+}
+.input--search:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%234f7cff' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
 }
 
 /* ===== TABS ===== */
@@ -374,61 +454,90 @@
   border-top: 1px solid var(--border-color);
 }
 
-/* ===== SLIDE THUMBNAILS ===== */
+/* ===== SLIDE THUMBNAILS ===============================================
+ * Each tile is a scaled model of the actual output. Keep chrome minimal —
+ * the artwork inside carries the meaning — but reserve strong visual state
+ * for LIVE (this slide is on-air right now) and active (this slide is
+ * selected for review/preview but not broadcast). */
 .slide-thumbnail {
   position: relative;
   aspect-ratio: 16 / 9;
   background: #000;
-  border: 2px solid var(--border-color);
-  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.15s ease;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .slide-thumbnail:hover {
   border-color: var(--border-light);
-  transform: scale(1.02);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .slide-thumbnail.active {
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 1px var(--accent-blue);
+  box-shadow:
+    0 0 0 2px var(--accent-blue-soft),
+    var(--shadow-md);
 }
 
 .slide-thumbnail.live {
   border-color: var(--accent-red);
   box-shadow:
-    0 0 0 1px var(--accent-red),
-    0 0 12px rgba(209, 52, 56, 0.3);
+    0 0 0 2px var(--accent-red-soft),
+    0 0 24px rgba(226, 70, 75, 0.28),
+    var(--shadow-md);
 }
 
 .slide-thumbnail.live::before {
   content: 'LIVE';
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 6px;
+  right: 6px;
   background: var(--accent-red);
   color: white;
-  font-size: 8px;
-  font-weight: bold;
-  padding: 2px 4px;
-  border-radius: 3px;
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
   z-index: 10;
-  letter-spacing: 0.5px;
-  animation: pulseLive 1.5s infinite;
+  letter-spacing: 0.8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 2px 8px rgba(226, 70, 75, 0.4);
 }
 
-@keyframes pulseLive {
+.slide-thumbnail.live::after {
+  /* A single soft ring instead of the old aggressive triple pulse. It reads
+   * as "on-air" without becoming visual noise during a long service. */
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.9);
+  animation: livePulse 2s var(--ease-out) infinite;
+  z-index: 11;
+}
+
+@keyframes livePulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(209, 52, 56, 0.7);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
   }
   70% {
-    box-shadow: 0 0 0 6px rgba(209, 52, 56, 0);
+    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(209, 52, 56, 0);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
   }
 }
 
@@ -531,17 +640,24 @@
   overflow: hidden;
 }
 
+/* Lyric-section chip — sits over the top-left corner of the thumbnail.
+ * A slight backdrop-blur and translucent fill keeps it legible even against
+ * bright background images imported from PPTX. */
 .slide-thumbnail__label {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  padding: 2px 6px;
-  font-size: 9px;
-  font-weight: 600;
+  top: 6px;
+  left: 6px;
+  padding: 2px 7px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
   color: #fff;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  z-index: 5;
 }
 
 .slide-thumbnail__label--verse {
@@ -574,20 +690,37 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: 6px var(--spacing-sm);
-  border-radius: 4px;
+  padding: 7px var(--spacing-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.1s ease;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
   font-size: var(--font-size-sm);
+  position: relative;
 }
 
 .list-item:hover {
   background: var(--bg-hover);
+  color: var(--text-highlight);
 }
 
+/* Active list item — subtle tint + inset accent bar rather than a solid blue
+ * block. Keeps the row legible against the panel and doesn't visually
+ * dominate the sidebar. */
 .list-item.active {
+  background: var(--accent-blue-soft);
+  color: var(--text-highlight);
+}
+.list-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   background: var(--accent-blue);
-  color: #fff;
 }
 
 .list-item__icon {
@@ -595,10 +728,12 @@
   height: 16px;
   color: var(--text-secondary);
   flex-shrink: 0;
+  transition: color var(--duration-fast) var(--ease-out);
 }
 
+.list-item:hover .list-item__icon,
 .list-item.active .list-item__icon {
-  color: #fff;
+  color: var(--accent-blue);
 }
 
 /* ===== EMPTY STATE ===== */
@@ -629,14 +764,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
+  min-width: 20px;
   height: 18px;
-  padding: 0 10px;
-  border-radius: 12px;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-blue-soft);
+  color: var(--accent-blue);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+.list-item.active .badge {
   background: var(--accent-blue);
   color: #fff;
-  font-size: 10px;
-  font-weight: 600;
 }
 
 /* ===== TOGGLE ===== */

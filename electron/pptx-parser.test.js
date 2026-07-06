@@ -127,6 +127,22 @@ describe('parsePptx — text extraction', () => {
     expect(slides[0].style).toEqual({})
   })
 
+  it('drops decorative empty paragraphs so lyrics don’t render with awkward blank-line gaps', async () => {
+    // A worship slide authored with blank <a:p/> elements between visible
+    // paragraphs — the classic "just press Enter for breathing room" pattern.
+    const inner = sld(`<p:sp><p:txBody>
+      <a:p><a:r><a:t>Amazing grace how sweet the sound</a:t></a:r></a:p>
+      <a:p></a:p>
+      <a:p></a:p>
+      <a:p><a:r><a:t>That saved a wretch like me</a:t></a:r></a:p>
+    </p:txBody></p:sp>`)
+    const file = buildPptx(path.join(tmpDir, 'blanks.pptx'), { slides: { 'slide1.xml': inner } })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].text).toBe(
+      'Amazing grace how sweet the sound\nThat saved a wretch like me'
+    )
+  })
+
   it('orders slides numerically, not lexicographically', async () => {
     const file = buildPptx(path.join(tmpDir, 'order.pptx'), {
       slides: {

@@ -648,7 +648,21 @@ export function createSlideEditor(container) {
         : 'freeform'
     const bg = (slide.background && slide.background.color) || t.bg || '#000000'
     bgColorInput.value = bg
-    canvas.style.background = bg
+    // Show the imported background media (usually a PPTX design image) in
+    // the editor canvas so the operator can see what they're editing over.
+    // Without this the canvas showed only the fill color and imported
+    // backgrounds looked "lost" the moment the slide was opened for editing.
+    const bgMediaPath =
+      slide.background &&
+      slide.background.type === 'media' &&
+      slide.background.mediaPath
+        ? slide.background.mediaPath
+        : null
+    if (bgMediaPath) {
+      canvas.style.background = `${bg} url(${bgMediaPath}) center / cover no-repeat`
+    } else {
+      canvas.style.background = bg
+    }
 
     if (Array.isArray(slide.elements) && slide.elements.length > 0) {
       elements = slide.elements.map((e) => new TextElement(e))
@@ -694,7 +708,17 @@ export function createSlideEditor(container) {
       slide.text = elements.map((e) => e.text).filter((s) => s.trim()).join('\n')
       slide.type = slideTypeSelect.value
       slide.templateId = templateSelect.value
-      slide.background = { ...(slide.background || {}), type: 'color', color: bgColorInput.value }
+      // Preserve the existing background type + mediaPath (e.g. an imported
+      // PPTX background image). Previously this forced type: 'color', which
+      // silently dropped the imported bg image the first time the operator
+      // saved an edit — the slide would go from a themed design to a plain
+      // color background with no warning.
+      const prevBg = slide.background || {}
+      slide.background = {
+        ...prevBg,
+        type: prevBg.mediaPath ? 'media' : 'color',
+        color: bgColorInput.value
+      }
       p.linkedAudio = rehearsalAudioInput.value.trim()
     })
 

@@ -44,27 +44,41 @@ function decodeXmlEntities(str) {
  * while explicit <a:br/> elements and paragraph (a:p) boundaries become
  * newlines. Naively joining every <a:t> run with '\n' (the previous approach)
  * shattered words like "searing" into "sear-\ning" whenever they spanned runs.
+ *
+ * A paragraph that produces no visible text is treated as spacing decoration
+ * and dropped — PowerPoint authors routinely use empty <a:p> elements as
+ * inter-line breathing room, and preserving them here made imported lyrics
+ * render with big awkward gaps ("word / blank / word / blank / …"). We
+ * still preserve intra-paragraph <a:br/> line breaks and any consecutive
+ * blank lines the author put inside a single paragraph.
  */
 function extractSlideText(xmlData) {
   const paraRegex = /<a:p(?:\s[^>]*)?>([\s\S]*?)<\/a:p>/g;
-  const lines = [];
+  const paragraphs = [];
   let paraMatch;
   while ((paraMatch = paraRegex.exec(xmlData)) !== null) {
     const paraContent = paraMatch[1];
     const partRegex = /<a:t>([\s\S]*?)<\/a:t>|<a:br(?:\s[^>]*)?\/>|<a:br(?:\s[^>]*)?>[\s\S]*?<\/a:br>/g;
+    const paraLines = [];
     let line = '';
     let partMatch;
+    let hasVisibleText = false;
     while ((partMatch = partRegex.exec(paraContent)) !== null) {
       if (partMatch[1] !== undefined) {
-        line += decodeXmlEntities(partMatch[1]);
+        const decoded = decodeXmlEntities(partMatch[1]);
+        line += decoded;
+        if (decoded.trim()) hasVisibleText = true;
       } else {
-        lines.push(line);
+        paraLines.push(line);
         line = '';
       }
     }
-    lines.push(line);
+    paraLines.push(line);
+    // Drop fully-empty paragraphs — otherwise decorative <a:p/> elements
+    // (spacing between real paragraphs) render as visible blank lines.
+    if (hasVisibleText) paragraphs.push(paraLines.join('\n'));
   }
-  return lines.join('\n').trim();
+  return paragraphs.join('\n').trim();
 }
 
 /** Parses ppt/theme/theme1.xml for the color scheme and major/minor Latin fonts. */

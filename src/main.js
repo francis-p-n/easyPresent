@@ -172,9 +172,16 @@ class App {
   }
 
   async _updateEditMode(editing) {
+    const appRoot = document.getElementById('app')
     const centerPanel = document.getElementById('panel-center')
     const slideView = document.getElementById('slide-view')
     let slideEditor = document.getElementById('slide-editor-container')
+
+    // Edit is a distinct app mode, not an inline center-panel takeover — the
+    // class flip drives the layout (library/playlist/preview/clear buttons
+    // all hide via layout.css) so nothing in the presenter view is reachable
+    // while the operator is editing a slide.
+    appRoot?.classList.toggle('app-layout--editing', editing)
 
     if (editing) {
       if (!slideEditor) {

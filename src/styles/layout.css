@@ -7,6 +7,42 @@
   overflow: hidden;
 }
 
+/* ===== EDIT MODE ===== */
+/* The Slide Editor is its own app mode, not an inline center-panel takeover.
+ * When editing, everything that only makes sense while presenting (library,
+ * playlist, preview, show controls, live-clear buttons, screens/search) is
+ * hidden so the operator can't accidentally advance a live slide or clear a
+ * layer while they're mid-edit. Only edit-mode-safe controls stay visible. */
+.app-layout--editing .panel-left,
+.app-layout--editing .panel-right,
+.app-layout--editing #resizer-left,
+.app-layout--editing #resizer-right,
+.app-layout--editing #bottom-view,
+.app-layout--editing #resizer-bottom {
+  display: none !important;
+}
+
+.app-layout--editing .panel-center {
+  min-width: 0;
+}
+
+/* Hide presenter-only toolbar chunks in edit mode. Buttons/groups that should
+ * stay (Edit toggle, Themes) don't carry this class. */
+.app-layout--editing .toolbar-presenter-only {
+  display: none !important;
+}
+
+/* Distinct visual cue that the app is in edit mode — nobody should mistake
+ * this for the presenter view */
+.app-layout--editing .app-toolbar {
+  background: var(--bg-active, #23272e);
+  box-shadow: inset 0 -2px 0 var(--accent-blue, #3b82f6);
+}
+.app-layout--editing #toolbar-edit-btn {
+  background: var(--accent-blue, #3b82f6);
+  color: #fff;
+}
+
 /* ===== TOOLBAR ===== */
 .app-toolbar {
   height: var(--toolbar-height);

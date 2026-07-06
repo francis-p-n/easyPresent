@@ -28,7 +28,7 @@ export class Toolbar {
 
     // View Tabs
     const viewTabs = document.createElement('div')
-    viewTabs.className = 'toolbar-views'
+    viewTabs.className = 'toolbar-views toolbar-presenter-only'
     viewTabs.id = 'toolbar-views'
 
     const views = [
@@ -58,7 +58,7 @@ export class Toolbar {
 
     // Search Bar
     const searchWrap = document.createElement('div')
-    searchWrap.className = 'toolbar-search'
+    searchWrap.className = 'toolbar-search toolbar-presenter-only'
     searchWrap.innerHTML = `<input type="text" class="input input--search" placeholder="Search..." id="toolbar-search-input" />`
     this.container.appendChild(searchWrap)
 
@@ -85,18 +85,20 @@ export class Toolbar {
 
     // Screens Button
     const screensBtn = document.createElement('button')
-    screensBtn.className = 'btn tooltip'
+    screensBtn.className = 'btn tooltip toolbar-presenter-only'
     screensBtn.id = 'toolbar-screens-btn'
     screensBtn.dataset.tooltip = 'Screen Configuration'
     screensBtn.innerHTML = `${icon('monitor', 16).outerHTML}<span class="toolbar-btn-label">Screens</span>`
     this.container.appendChild(screensBtn)
 
-    // Separator
-    this.container.appendChild(this._sep())
+    // Separator (presenter-only — hidden alongside the clear group in edit mode)
+    const sepBeforeClears = this._sep()
+    sepBeforeClears.classList.add('toolbar-presenter-only')
+    this.container.appendChild(sepBeforeClears)
 
     // Clear Buttons
     const clearGroup = document.createElement('div')
-    clearGroup.className = 'toolbar-clear-group'
+    clearGroup.className = 'toolbar-clear-group toolbar-presenter-only'
     clearGroup.id = 'toolbar-clear-group'
 
     const clears = [
@@ -171,12 +173,22 @@ export class Toolbar {
       state.set('searchQuery', e.target.value)
     })
 
-    // Edit toggle
-    this.container.querySelector('#toolbar-edit-btn')?.addEventListener('click', () => {
-      const editing = !state.get('isEditing')
-      state.set('isEditing', editing)
-      this.container.querySelector('#toolbar-edit-btn')?.classList.toggle('active', editing)
+    // Edit toggle — updates label + active state, and stays in sync if
+    // `isEditing` is flipped from elsewhere (e.g. switching to Bible view
+    // auto-exits editing in main.js)
+    const editBtn = this.container.querySelector('#toolbar-edit-btn')
+    const syncEditBtn = (editing) => {
+      if (!editBtn) return
+      editBtn.classList.toggle('active', editing)
+      editBtn.dataset.tooltip = editing ? 'Exit Editor' : 'Edit Mode'
+      const label = editBtn.querySelector('.toolbar-btn-label')
+      if (label) label.textContent = editing ? 'Exit Editor' : 'Edit'
+    }
+    editBtn?.addEventListener('click', () => {
+      state.set('isEditing', !state.get('isEditing'))
     })
+    state.on('isEditing', syncEditBtn)
+    syncEditBtn(state.get('isEditing'))
 
     // Theme editor
     this.container.querySelector('#toolbar-theme-btn')?.addEventListener('click', async () => {

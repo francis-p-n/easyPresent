@@ -162,19 +162,36 @@ export class SlideView {
 
     const liveIdx = state.get('liveSlideIndex')
     const activeIdx = state.get('activeSlideIndex')
+    // The live slide belongs to whatever presentation was live when broadcast.
+    // When the operator navigates to a DIFFERENT presentation in the library,
+    // `liveSlideIndex` still holds the position from the last one — without
+    // this identity check, we'd slap the "LIVE" badge on whatever slide
+    // happens to sit at that position in the newly-viewed presentation.
+    const liveContentId = state.get('layers')?.slide?.content?.id
     const fragment = document.createDocumentFragment()
 
     // Renders the active arrangement's sequence, not necessarily pres.slides —
     // a custom arrangement can reference the same slide more than once (e.g.
     // a repeated chorus), so `index` here is a position in that sequence,
     // matching what goLive()/goLiveNext() navigate over.
+    let lastSection = null
     getActiveSequence(pres).forEach((slide, index) => {
+      // Insert a section header when the PPTX section changes between slides
+      if (slide.section && slide.section !== lastSection) {
+        const sectionHeader = document.createElement('div')
+        sectionHeader.className = 'slide-grid__section'
+        sectionHeader.textContent = slide.section
+        fragment.appendChild(sectionHeader)
+        lastSection = slide.section
+      }
+
       const thumb = document.createElement('div')
       thumb.className = 'slide-thumbnail'
       thumb.dataset.index = index
       thumb.id = `slide-thumb-${index}`
 
-      if (index === liveIdx) thumb.classList.add('live')
+      const isLive = index === liveIdx && liveContentId && slide.id === liveContentId
+      if (isLive) thumb.classList.add('live')
       else if (index === activeIdx) thumb.classList.add('active')
 
       // Group label
@@ -234,7 +251,14 @@ export class SlideView {
       }
       content.style.backgroundPosition = 'center'
       content.style.backgroundRepeat = 'no-repeat'
-      content.style.backgroundColor = styleOpts.backgroundColor || '#000000'
+      // Prefer the slide's own background color (e.g. from a PPTX import) so
+      // solid-color slides don't all fall back to black
+      const slideBgColor =
+        slide.background && slide.background.type === 'color' && slide.background.color
+          ? slide.background.color
+          : null
+      content.style.backgroundColor =
+        slideBgColor || styleOpts.backgroundColor || '#000000'
 
       thumb.appendChild(content)
 
@@ -260,8 +284,15 @@ export class SlideView {
 
   _updateLiveState() {
     const liveIdx = state.get('liveSlideIndex')
+    const liveContentId = state.get('layers')?.slide?.content?.id
+    const pres = state.get('selectedPresentation')
+    const sequence = pres ? getActiveSequence(pres) : []
     this.container.querySelectorAll('.slide-thumbnail').forEach((thumb, i) => {
-      thumb.classList.toggle('live', i === liveIdx)
+      // Match by identity too, so the LIVE badge doesn't stick to whatever
+      // slide happens to sit at the previous presentation's live index.
+      const isLive =
+        i === liveIdx && liveContentId && sequence[i]?.id === liveContentId
+      thumb.classList.toggle('live', isLive)
     })
   }
 

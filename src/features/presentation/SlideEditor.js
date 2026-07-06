@@ -6,7 +6,11 @@ const CANVAS_W = 1920
 const CANVAS_H = 1080
 const SNAP_THRESHOLD = 12 // canvas px
 
+// 'freeform' is the escape hatch: no preset overrides, keep the slide's own
+// captured font/size/color as-is. Imported PPTX slides default to this so
+// their original design isn't stomped by a template.
 const TEMPLATES = {
+  freeform: { label: 'Freeform (no template)', fontSize: null, align: null, color: null, bg: null, maxLines: null },
   worship: { label: 'Worship', fontSize: 80, align: 'center', color: '#ffffff', bg: '#000000', maxLines: 4 },
   worship_title: { label: 'Worship — Title', fontSize: 96, align: 'center', color: '#ffffff', bg: '#000000', maxLines: 1 },
   announcement: { label: 'Announcement', fontSize: 56, align: 'left', color: '#ffffff', bg: '#1a1a2e', maxLines: 6 },
@@ -595,8 +599,13 @@ export function createSlideEditor(container) {
   templateSelect.addEventListener('change', () => {
     const key = templateSelect.value
     const t = TEMPLATES[key]
+    if (!t) return
+    // Freeform is the "no-op" template — persist the choice via save() but
+    // don't touch the slide's existing boxes, colors, or fonts. This is the
+    // whole point of Freeform, so silently doing nothing would feel broken.
+    if (key === 'freeform') return
     const layout = TEMPLATE_LAYOUTS[key]
-    if (!t || !layout) return
+    if (!layout) return
     bgColorInput.value = t.bg
     canvas.style.background = t.bg
     const oldTexts = elements.map((e) => e.text).filter((s) => s.trim())
@@ -623,11 +632,21 @@ export function createSlideEditor(container) {
     currentSlideIndex = idx
     const slide = pres.slides[idx]
     rehearsalAudioInput.value = pres.linkedAudio || ''
-    if (slide.type) slideTypeSelect.value = slide.type
-    if (slide.templateId && TEMPLATES[slide.templateId]) templateSelect.value = slide.templateId
+    if (slide.type && [...slideTypeSelect.options].some((o) => o.value === slide.type)) {
+      slideTypeSelect.value = slide.type
+    }
 
-    const t = TEMPLATES[slide.templateId] || TEMPLATES[slide.type] || TEMPLATES.worship
-    const bg = (slide.background && slide.background.color) || t.bg
+    // Prefer explicit templateId, then a template matching the slide's type,
+    // then Freeform (no overrides). Imported slides land here as 'imported' —
+    // Freeform keeps their captured font/color/bg instead of resetting them.
+    const t =
+      TEMPLATES[slide.templateId] || TEMPLATES[slide.type] || TEMPLATES.freeform
+    templateSelect.value = TEMPLATES[slide.templateId]
+      ? slide.templateId
+      : TEMPLATES[slide.type]
+        ? slide.type
+        : 'freeform'
+    const bg = (slide.background && slide.background.color) || t.bg || '#000000'
     bgColorInput.value = bg
     canvas.style.background = bg
 
@@ -643,10 +662,10 @@ export function createSlideEditor(container) {
         new TextElement({
           text: slide.text || '',
           x: 96, y: 190, width: CANVAS_W - 192, height: CANVAS_H - 380,
-          fontSize: importedStyle.fontSize || t.fontSize,
+          fontSize: importedStyle.fontSize || t.fontSize || 80,
           fontFamily: importedStyle.fontFamily,
-          color: importedStyle.color || t.color,
-          hAlign: importedStyle.hAlign || t.align,
+          color: importedStyle.color || t.color || '#ffffff',
+          hAlign: importedStyle.hAlign || t.align || 'center',
           vAlign: importedStyle.vAlign,
           bold: importedStyle.bold,
           italic: importedStyle.italic,

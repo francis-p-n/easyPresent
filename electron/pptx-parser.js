@@ -99,6 +99,96 @@ function resolveSchemeColor(name, theme) {
   return theme.colors[resolved] || null;
 }
 
+/**
+ * Extracts the slide's background color from <p:bg>. PPTX slides declare
+ * their background as either a solid fill or a scheme reference. Returns
+ * a hex color like '#1a1a1a' or null if no color background (image or none).
+ */
+function extractSlideBgColor(xmlData, theme) {
+  const bgMatch = xmlData.match(/<p:bg\b[^>]*>([\s\S]*?)<\/p:bg>/);
+  if (!bgMatch) return null;
+  const bg = bgMatch[1];
+  // Ignore backgrounds that are picture-fills — those are handled as bgImage
+  if (/<a:blipFill\b/.test(bg)) return null;
+  const solid = bg.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
+  if (solid) return resolveFillColor(solid[1], theme);
+  // Fall back to <p:bgRef> which references a theme fill by index
+  const bgRef = bg.match(/<p:bgRef\b[^>]*>([\s\S]*?)<\/p:bgRef>/);
+  if (bgRef) {
+    const scheme = bgRef[1].match(/<a:schemeClr val="(\w+)"/);
+    if (scheme) return resolveSchemeColor(scheme[1], theme);
+  }
+  return null;
+}
+
+/**
+ * Extracts sections from ppt/presentation.xml (PowerPoint 2010+ feature under
+ * the p14 extension namespace). Returns a Map<slideRelId, sectionName> that
+ * lets the caller label each slide with the section it belongs to. If the
+ * presentation has no sections, returns an empty Map.
+ */
+function extractSections(zipEntries) {
+  const sectionByRid = new Map();
+  const presEntry = zipEntries.find(e => e.entryName === 'ppt/presentation.xml');
+  if (!presEntry) return sectionByRid;
+
+  const xml = presEntry.getData().toString('utf8');
+  const sectionsMatch = xml.match(/<p14:sectionLst\b[^>]*>([\s\S]*?)<\/p14:sectionLst>/);
+  if (!sectionsMatch) return sectionByRid;
+
+  const sectionRegex = /<p14:section\b([^>]*?)>([\s\S]*?)<\/p14:section>/g;
+  let m;
+  while ((m = sectionRegex.exec(sectionsMatch[1])) !== null) {
+    const nameMatch = m[1].match(/\bname="([^"]*)"/);
+    const name = nameMatch ? decodeXmlEntities(nameMatch[1]) : 'Section';
+    const rids = [...m[2].matchAll(/<p14:sldId\b[^>]*\bid="([^"]+)"/g)].map(x => x[1]);
+    rids.forEach(rid => sectionByRid.set(rid, name));
+  }
+
+  return sectionByRid;
+}
+
+/**
+ * Builds a map from ppt/slides/slideN.xml → slide id (the string used by
+ * p14:sldId to reference each slide). Sections identify their member slides
+ * by these ids, so we need this to correlate a section back to a slide file.
+ */
+function buildSlideIdMap(zipEntries) {
+  const idByEntry = new Map();
+  const presEntry = zipEntries.find(e => e.entryName === 'ppt/presentation.xml');
+  const relsEntry = zipEntries.find(e => e.entryName === 'ppt/_rels/presentation.xml.rels');
+  if (!presEntry || !relsEntry) return idByEntry;
+
+  const presXml = presEntry.getData().toString('utf8');
+  const relsXml = relsEntry.getData().toString('utf8');
+
+  const relTargets = new Map();
+  const relRegex = /<Relationship\b[^>]*\bId="([^"]+)"[^>]*\bTarget="([^"]+)"/g;
+  let rm;
+  while ((rm = relRegex.exec(relsXml)) !== null) {
+    relTargets.set(rm[1], rm[2]);
+  }
+
+  // XML attribute order is arbitrary — parse each <p:sldId> tag then pull
+  // `id` and `r:id` independently, otherwise presentations authored by tools
+  // that write `r:id` first would have all their section labels drop out.
+  const sldIdTagRegex = /<p:sldId\b([^>]*?)\/?>/g;
+  let sm;
+  while ((sm = sldIdTagRegex.exec(presXml)) !== null) {
+    const attrs = sm[1];
+    const idMatch = attrs.match(/\bid="([^"]+)"/);
+    const ridMatch = attrs.match(/\br:id="([^"]+)"/);
+    if (!idMatch || !ridMatch) continue;
+    const target = relTargets.get(ridMatch[1]);
+    if (!target) continue;
+    // Targets look like "slides/slide1.xml"; normalize to full zip path
+    const fullPath = target.startsWith('/') ? target.slice(1) : `ppt/${target}`;
+    idByEntry.set(fullPath, idMatch[1]);
+  }
+
+  return idByEntry;
+}
+
 /** Resolves an <a:solidFill> block's inner XML to a hex color, or null. */
 function resolveFillColor(fillInner, theme) {
   if (!fillInner) return null;
@@ -298,13 +388,18 @@ async function parsePptx(filePath) {
 
       const theme = extractTheme(zipEntries);
       const ptToPx = getPtToPxScale(zipEntries);
+      const sectionByRid = extractSections(zipEntries);
+      const slideIdByEntry = buildSlideIdMap(zipEntries);
 
       const slides = slideEntries.map(entry => {
         const xmlData = entry.getData().toString('utf8');
+        const slideId = slideIdByEntry.get(entry.entryName);
         return {
           slideName: entry.entryName.split('/').pop(),
           text: extractSlideText(xmlData),
           bgImage: extractBgImage(entry.entryName),
+          bgColor: extractSlideBgColor(xmlData, theme),
+          section: slideId ? sectionByRid.get(slideId) || null : null,
           style: extractSlideStyle(xmlData, theme, ptToPx)
         };
       });

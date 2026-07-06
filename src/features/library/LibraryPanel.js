@@ -177,16 +177,28 @@ export class LibraryPanel {
                 id: 'pptx-' + Date.now(),
                 name: presName,
                 category: 'Templates',
-                slides: slidesData.map((s, i) => ({
-                  id: 'slide-' + Math.random().toString(36).substr(2, 9),
-                  label: `Slide ${i + 1}`,
-                  text: s.text,
-                  type: 'worship',
-                  style: s.style && Object.keys(s.style).length ? s.style : undefined,
-                  background: s.bgImage
-                    ? { type: 'media', color: '#000000', mediaPath: s.bgImage }
-                    : { type: 'color', color: '#000000', mediaPath: null }
-                }))
+                slides: slidesData.map((s, i) => {
+                  // Preserve PPTX background color when present; fall back to
+                  // black only when the slide had no color background at all
+                  const bgColor = s.bgColor || '#000000'
+                  const background = s.bgImage
+                    ? { type: 'media', color: bgColor, mediaPath: s.bgImage }
+                    : { type: 'color', color: bgColor, mediaPath: null }
+
+                  // 'imported' type: keeps the slide's own captured style
+                  // instead of being reformatted by a preset template.
+                  // `label` stays a plain slide number — the section name is
+                  // shown once, in the grid's section-header row.
+                  return {
+                    id: 'slide-' + Math.random().toString(36).substr(2, 9),
+                    label: `Slide ${i + 1}`,
+                    section: s.section || null,
+                    text: s.text,
+                    type: 'imported',
+                    style: s.style && Object.keys(s.style).length ? s.style : undefined,
+                    background
+                  }
+                })
               }
               const presentations = [...state.get('presentations'), newPres]
               state.set('presentations', presentations)
@@ -369,9 +381,21 @@ export class LibraryPanel {
           const copy = JSON.parse(JSON.stringify(pres))
           copy.id = 'dup-' + Date.now()
           copy.name = `${pres.name} (Copy)`
+          // Regenerate slide ids, then remap any arrangement sequences that
+          // reference the old ids — otherwise the duplicate's arrangements
+          // resolve to an empty sequence (falling back to Master silently).
+          const idMap = new Map()
           copy.slides.forEach((s) => {
+            const oldId = s.id
             s.id = 'slide-' + Math.random().toString(36).substr(2, 9)
+            idMap.set(oldId, s.id)
           })
+          if (Array.isArray(copy.arrangements)) {
+            copy.arrangements = copy.arrangements.map((a) => ({
+              ...a,
+              sequence: (a.sequence || []).map((id) => idMap.get(id) || id)
+            }))
+          }
           state.set('presentations', [...presentations, copy])
           this._renderList()
           showToast(`Duplicated "${pres.name}"`, 'success')

@@ -18,6 +18,11 @@ export class SlideView {
     state.on('selectedPresentation', () => this.render())
     state.on('liveSlideIndex', () => this._updateLiveState())
     state.on('activeSlideIndex', () => this._updateActiveState())
+    // Thumbnails bake the active theme's styles (font, color, size) into the
+    // rendered image — without this, changing a theme (e.g. its font) only
+    // ever showed up once something else happened to trigger a re-render
+    state.on('activeThemeId', () => this._renderSlides())
+    state.on('themes', () => this._renderSlides())
   }
 
   render() {

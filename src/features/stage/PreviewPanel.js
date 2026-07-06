@@ -11,6 +11,8 @@ export class PreviewPanel {
 
     state.on('layers', () => this._updatePreview())
     state.on('liveSlideIndex', () => this._updatePreview())
+    state.on('activeThemeId', () => this._updatePreview())
+    state.on('themes', () => this._updatePreview())
   }
 
   render() {
@@ -59,6 +61,10 @@ export class PreviewPanel {
     const layers = state.get('layers')
     const slideLayer = layers.slide
 
+    const activeThemeId = state.get('activeThemeId')
+    const themes = state.get('themes') || []
+    const activeTheme = themes.find((t) => t.id === activeThemeId) || themes[0]
+
     // Skip redundant repaints: navigation fires both 'liveSlideIndex' and
     // 'layers', and rasterizing slide text into a GPU texture isn't free.
     const bg = slideLayer.content?.background
@@ -70,15 +76,12 @@ export class PreviewPanel {
       bgMarker,
       layers.message?.active,
       layers.message?.content,
-      state.get('activeThemeId'),
+      activeThemeId,
+      activeTheme?.styles || null, // catches in-place edits to the active theme, not just switching to a different one
       state.get('timer_main') // {timer} token in messages depends on this
     ])
     if (signature === this._lastSignature) return
     this._lastSignature = signature
-
-    const activeThemeId = state.get('activeThemeId')
-    const themes = state.get('themes') || []
-    const activeTheme = themes.find((t) => t.id === activeThemeId) || themes[0]
 
     // Background is CSS-layered behind the transparent PIXI canvas so image
     // backgrounds (imported PPTX designs) work without a GPU texture pipeline

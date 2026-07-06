@@ -101,6 +101,20 @@ export function createSlideEditor(container) {
 
         <div id="box-props" style="display:flex;flex-direction:column;gap:12px;opacity:0.4;pointer-events:none;">
           <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);">
+            Font
+            <input type="text" id="prop-font-family" class="input" list="editor-font-list" placeholder="Inter" />
+            <datalist id="editor-font-list">
+              <option value="Inter"></option>
+              <option value="Open Sans"></option>
+              <option value="Montserrat"></option>
+              <option value="Arial"></option>
+              <option value="Georgia"></option>
+              <option value="Calibri"></option>
+              <option value="Times New Roman"></option>
+            </datalist>
+          </label>
+
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);">
             Font Size
             <div style="display:flex;align-items:center;gap:8px;">
               <input type="number" id="prop-font-size" class="input" value="80" style="flex:1;" min="12" max="300" />
@@ -157,6 +171,7 @@ export function createSlideEditor(container) {
   const snapH = container.querySelector('#snap-guide-h')
   const saveBtn = container.querySelector('#editor-save-btn')
   const closeBtn = container.querySelector('#editor-close-btn')
+  const fontFamilyInput = container.querySelector('#prop-font-family')
   const fontSizeInput = container.querySelector('#prop-font-size')
   const autosizeCheckbox = container.querySelector('#prop-autosize')
   const colorInput = container.querySelector('#prop-color')
@@ -288,6 +303,7 @@ export function createSlideEditor(container) {
       ? `(${elements.indexOf(el) + 1} of ${elements.length})`
       : '(none selected)'
     if (!el) return
+    fontFamilyInput.value = el.fontFamily || 'Inter'
     fontSizeInput.value = Math.round(el.fontSize)
     autosizeCheckbox.checked = el.textScaling === 'scaleToFit'
     colorInput.value = el.color
@@ -526,6 +542,10 @@ export function createSlideEditor(container) {
     syncPropsPanel()
   }
 
+  fontFamilyInput.addEventListener('input', () => withSelected((el) => {
+    el.fontFamily = fontFamilyInput.value.trim() || 'Inter'
+    if (el.textScaling === 'scaleToFit') applyAutosize(el)
+  }))
   fontSizeInput.addEventListener('input', () => withSelected((el) => {
     el.fontSize = parseInt(fontSizeInput.value, 10) || el.fontSize
     el.textScaling = 'none'
@@ -614,12 +634,23 @@ export function createSlideEditor(container) {
     if (Array.isArray(slide.elements) && slide.elements.length > 0) {
       elements = slide.elements.map((e) => new TextElement(e))
     } else {
-      // Legacy slide: single text field → one full-width box
+      // Legacy slide: single text field → one full-width box. Imported PPTX
+      // slides land here (they carry `slide.style`, not `slide.elements`) —
+      // honor that captured style instead of silently resetting to the
+      // generic template look the moment the slide is opened for editing.
+      const importedStyle = slide.style || {}
       elements = [
         new TextElement({
           text: slide.text || '',
           x: 96, y: 190, width: CANVAS_W - 192, height: CANVAS_H - 380,
-          fontSize: t.fontSize, color: t.color, hAlign: t.align,
+          fontSize: importedStyle.fontSize || t.fontSize,
+          fontFamily: importedStyle.fontFamily,
+          color: importedStyle.color || t.color,
+          hAlign: importedStyle.hAlign || t.align,
+          vAlign: importedStyle.vAlign,
+          bold: importedStyle.bold,
+          italic: importedStyle.italic,
+          lineSpacing: importedStyle.lineSpacing,
           textScaling: 'scaleToFit',
         }),
       ]

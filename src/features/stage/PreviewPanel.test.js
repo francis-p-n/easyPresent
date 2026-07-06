@@ -111,3 +111,39 @@ describe('PreviewPanel — message overlay', () => {
     expect(renderMessage).toHaveBeenCalledWith(null)
   })
 })
+
+describe('PreviewPanel — theme reactivity (regression: editing the active theme never repainted)', () => {
+  const baseThemes = () => [
+    { id: 'default', name: 'Worship Lyrics', styles: { fontFamily: 'Inter', fontSize: '64px', color: '#ffffff' } },
+    { id: 'other', name: 'Other', styles: { fontFamily: 'Georgia', fontSize: '48px', color: '#00ff00' } }
+  ]
+
+  beforeEach(() => {
+    state.set('themes', baseThemes())
+    state.set('activeThemeId', 'default')
+    setSlideLayer({ id: 's1', text: 'Themed slide' }) // no per-slide style — theme should drive rendering
+    renderSlideText.mockClear()
+  })
+
+  it('repaints when switching to a different theme id', () => {
+    state.set('activeThemeId', 'other')
+    expect(renderSlideText).toHaveBeenCalledTimes(1)
+    expect(renderSlideText.mock.calls[0][1].fontFamily).toBe('Georgia')
+  })
+
+  it('repaints when the currently-active theme is edited in place (same id, new styles)', () => {
+    const themes = baseThemes()
+    themes[0].styles.fontFamily = 'Comic Sans MS'
+    state.set('themes', themes)
+    state.set('activeThemeId', 'default') // unchanged id — the actual regression case
+
+    expect(renderSlideText).toHaveBeenCalledTimes(1)
+    expect(renderSlideText.mock.calls[0][1].fontFamily).toBe('Comic Sans MS')
+  })
+
+  it('does not repaint when re-applying identical theme styles', () => {
+    state.set('themes', baseThemes()) // new array, same content
+    state.set('activeThemeId', 'default')
+    expect(renderSlideText).not.toHaveBeenCalled()
+  })
+})

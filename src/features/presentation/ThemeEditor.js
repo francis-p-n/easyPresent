@@ -3,6 +3,7 @@ import { icon } from '../../components/common/Icons.js'
 
 export function createThemeEditor() {
   const overlay = document.createElement('div')
+  overlay.id = 'theme-editor-overlay'
   overlay.className = 'modal-overlay'
   Object.assign(overlay.style, {
     position: 'fixed',
@@ -67,6 +68,7 @@ export function createThemeEditor() {
     '<label class="text-xs text-muted" style="display:block;margin-bottom:4px">Select Theme</label>'
   const themeSelect = document.createElement('select')
   themeSelect.className = 'input'
+  themeSelect.id = 'theme-editor-select'
   themes.forEach((t) => {
     const opt = document.createElement('option')
     opt.value = t.id
@@ -83,6 +85,7 @@ export function createThemeEditor() {
   const bgColorInput = document.createElement('input')
   bgColorInput.type = 'color'
   bgColorInput.className = 'input'
+  bgColorInput.id = 'theme-editor-bg-color'
   bgColorInput.value = currentTheme.styles.backgroundColor || '#000000'
   bgColorGroup.appendChild(bgColorInput)
 
@@ -92,6 +95,7 @@ export function createThemeEditor() {
   const colorInput = document.createElement('input')
   colorInput.type = 'color'
   colorInput.className = 'input'
+  colorInput.id = 'theme-editor-text-color'
   colorInput.value = currentTheme.styles.color || '#ffffff'
   colorGroup.appendChild(colorInput)
 
@@ -100,6 +104,7 @@ export function createThemeEditor() {
     '<label class="text-xs text-muted" style="display:block;margin-bottom:4px">Font Family</label>'
   const fontSelect = document.createElement('select')
   fontSelect.className = 'input'
+  fontSelect.id = 'theme-editor-font-select'
   const fonts = ['Inter', 'Open Sans', 'Montserrat', 'Arial', 'Georgia']
   fonts.forEach((f) => {
     const opt = document.createElement('option')
@@ -126,6 +131,7 @@ export function createThemeEditor() {
 
   const applyBtn = document.createElement('button')
   applyBtn.className = 'btn btn--primary'
+  applyBtn.id = 'theme-editor-apply'
   applyBtn.textContent = 'Apply Theme'
   applyBtn.addEventListener('click', () => {
     // Update theme
@@ -133,13 +139,11 @@ export function createThemeEditor() {
     currentTheme.styles.color = colorInput.value
     currentTheme.styles.fontFamily = fontSelect.value
 
-    // Trigger update
+    // Trigger update — PreviewPanel and SlideView both listen for these
+    // directly and repaint (including in-place edits to the already-active
+    // theme, since their dedup signature hashes the theme's style content)
     state.set('themes', themes)
     state.set('activeThemeId', currentTheme.id)
-
-    // Force preview re-render
-    const layers = state.get('layers')
-    state.set('layers', { ...layers })
     overlay.remove()
   })
 

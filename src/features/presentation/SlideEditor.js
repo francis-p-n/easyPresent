@@ -1,5 +1,6 @@
 import { state } from '../../engine/StateManager.js'
 import { TextElement } from '../../models/TextElement.js'
+import { getActiveSequence } from '../../engine/arrangement.js'
 
 const CANVAS_W = 1920
 const CANVAS_H = 1080
@@ -590,9 +591,14 @@ export function createSlideEditor(container) {
   })
 
   // ── Load slide into editor ─────────────────────────────────────────────────
-  function loadSlide(idx) {
+  // `sequenceIdx` is a position in the active ARRANGEMENT (see arrangement.js),
+  // which can repeat a slide — resolve it back to the slide's real position in
+  // pres.slides, since that's what edits and saves must target.
+  function loadSlide(sequenceIdx) {
     const pres = state.get('selectedPresentation')
-    if (!pres || !pres.slides[idx]) return
+    const sequenceSlide = pres && getActiveSequence(pres)[sequenceIdx]
+    const idx = sequenceSlide ? pres.slides.findIndex((s) => s.id === sequenceSlide.id) : -1
+    if (idx === -1) return
     stopInlineEdit()
     currentSlideIndex = idx
     const slide = pres.slides[idx]
@@ -642,8 +648,11 @@ export function createSlideEditor(container) {
       p.linkedAudio = rehearsalAudioInput.value.trim()
     })
 
+    // Compare by slide identity, not liveSlideIndex — an arrangement can put
+    // this same slide at a different position than its master index
     const layers = state.get('layers')
-    if (updated && layers.slide.active && state.get('liveSlideIndex') === currentSlideIndex) {
+    const editedId = pres.slides[currentSlideIndex].id
+    if (updated && layers.slide.active && layers.slide.content?.id === editedId) {
       layers.slide.content = updated.slides[currentSlideIndex]
       state.set('layers', { ...layers })
     }

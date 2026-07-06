@@ -8,6 +8,7 @@ import { state } from './engine/StateManager.js'
 import { storageManager } from './engine/StorageManager.js'
 import { goLive, goLiveNext, goLivePrev } from './engine/navigation.js'
 import { buildOutputPayload, payloadSignature } from './engine/outputSync.js'
+import { getActiveSequence } from './engine/arrangement.js'
 
 /**
  * Main App Entry Point — Mounts core panels and lazy-loads optional modules
@@ -62,7 +63,8 @@ class App {
 
     state.on('liveSlideIndex', (idx) => {
       const pres = state.get('selectedPresentation')
-      broadcast(pres && pres.slides[idx] ? pres.slides[idx] : { text: '' })
+      const sequence = pres ? getActiveSequence(pres) : []
+      broadcast(sequence[idx] ? sequence[idx] : { text: '' })
     })
 
     state.on('layers', (layers) => {
@@ -198,7 +200,7 @@ class App {
       // Update editor data for current slide
       const pres = state.get('selectedPresentation')
       const idx = state.get('activeSlideIndex')
-      if (pres && pres.slides[idx]) {
+      if (pres && getActiveSequence(pres)[idx]) {
         state.set('activeSlideIndex', idx) // Trigger editor update
       }
 

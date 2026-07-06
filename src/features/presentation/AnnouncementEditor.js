@@ -116,8 +116,11 @@ export class AnnouncementEditor {
           }
         })
 
+        // Compare by slide identity, not liveSlideIndex — an arrangement can
+        // put this same slide at a different position than its master index
         const layers = state.get('layers')
-        if (updated && layers.slide.active && state.get('liveSlideIndex') === this.currentSlideIndex) {
+        const editedId = pres.slides[this.currentSlideIndex].id
+        if (updated && layers.slide.active && layers.slide.content?.id === editedId) {
           layers.slide.content = updated.slides[this.currentSlideIndex]
           state.set('layers', { ...layers })
         }

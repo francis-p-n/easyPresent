@@ -1,4 +1,5 @@
 import { state } from './StateManager.js'
+import { getActiveSequence } from './arrangement.js'
 
 /**
  * navigation.js — Single source of truth for slide navigation.
@@ -7,18 +8,23 @@ import { state } from './StateManager.js'
  * state.set calls (activeSlideIndex, liveSlideIndex, layers) spread across
  * keyboard, touch, click, and number-key handlers. Centralizing it here means
  * one code path, one event sequence, and no per-consumer dedup hacks.
+ *
+ * Indices here are positions in the presentation's ACTIVE ARRANGEMENT (see
+ * arrangement.js), not necessarily `pres.slides` — a custom arrangement can
+ * repeat a slide, so the two only coincide for the default Master arrangement.
  */
 
-/** Make the slide at `index` live (and selected). */
+/** Make the slide at `index` (in the active arrangement) live and selected. */
 export function goLive(index) {
   const pres = state.get('selectedPresentation')
-  if (!pres || !pres.slides[index]) return
+  const sequence = getActiveSequence(pres)
+  if (!pres || !sequence[index]) return
 
   state.set('activeSlideIndex', index)
   state.set('liveSlideIndex', index)
 
   const layers = { ...state.get('layers') }
-  layers.slide = { active: true, content: pres.slides[index] }
+  layers.slide = { active: true, content: sequence[index] }
   state.set('layers', layers)
 }
 
@@ -26,7 +32,7 @@ export function goLive(index) {
 export function goLiveNext() {
   const pres = state.get('selectedPresentation')
   if (!pres) return
-  goLive(Math.min(state.get('liveSlideIndex') + 1, pres.slides.length - 1))
+  goLive(Math.min(state.get('liveSlideIndex') + 1, getActiveSequence(pres).length - 1))
 }
 
 /** Go back to the previous slide (clamped to the start). */

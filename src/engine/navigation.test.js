@@ -66,6 +66,51 @@ describe('goLiveNext / goLivePrev', () => {
   })
 })
 
+describe('navigation over a custom arrangement (repeated slides)', () => {
+  const withArrangement = () => {
+    const pres = makePres()
+    pres.arrangements = [{ id: 'arr-1', name: 'Set', sequence: ['b', 'a', 'b', 'c', 'b'] }]
+    pres.activeArrangementId = 'arr-1'
+    state.set('selectedPresentation', pres)
+    return pres
+  }
+
+  it('goLive indexes into the arrangement sequence, not pres.slides', () => {
+    withArrangement()
+    goLive(0)
+    expect(state.get('layers').slide.content.id).toBe('b') // sequence[0], not slides[0] ('a')
+  })
+
+  it('walks repeated entries as distinct navigation steps', () => {
+    withArrangement()
+    goLive(0)
+    expect(state.get('layers').slide.content.id).toBe('b')
+    goLiveNext()
+    expect(state.get('layers').slide.content.id).toBe('a')
+    goLiveNext()
+    expect(state.get('layers').slide.content.id).toBe('b') // repeat #2, same underlying slide
+    goLiveNext()
+    expect(state.get('layers').slide.content.id).toBe('c')
+    goLiveNext()
+    expect(state.get('layers').slide.content.id).toBe('b') // repeat #3
+  })
+
+  it('clamps at the arrangement length, not the master slide count', () => {
+    withArrangement() // sequence has 5 entries, master has 3 slides
+    goLive(4)
+    goLiveNext()
+    expect(state.get('liveSlideIndex')).toBe(4) // clamped at sequence.length - 1, not 2
+  })
+
+  it('falls back to Master (identity with pres.slides) once activeArrangementId is Master', () => {
+    const pres = withArrangement()
+    pres.activeArrangementId = 'master'
+    state.set('selectedPresentation', { ...pres })
+    goLive(1)
+    expect(state.get('layers').slide.content.id).toBe('b') // slides[1], per normal order
+  })
+})
+
 describe('style merge contract (defaults → theme → per-slide)', () => {
   // Mirrors the merge order used by SlideView and PreviewPanel: per-slide
   // style from an import must override theme values, and slides without a

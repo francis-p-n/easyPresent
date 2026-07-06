@@ -4,6 +4,7 @@ import NativeRender from '../../engine/NativeRender.js'
 import { renderChordSheet } from './ChordSheet.js'
 import { announcementEditor } from './AnnouncementEditor.js'
 import { goLive } from '../../engine/navigation.js'
+import { getActiveSequence } from '../../engine/arrangement.js'
 
 /**
  * SlideView — Center panel showing slide thumbnails in a grid
@@ -52,7 +53,16 @@ export class SlideView {
         `
             : ''
         }
-        ${pres ? `<span class="text-muted text-xs">${pres.slides.length} slides</span>` : ''}
+        ${
+          pres && pres.slides.length > 0
+            ? `
+          <button class="btn btn--icon tooltip" id="arrangement-btn" data-tooltip="Arrangement">
+            ${icon('layers', 14).outerHTML}
+          </button>
+        `
+            : ''
+        }
+        ${pres ? `<span class="text-muted text-xs">${getActiveSequence(pres).length} slides</span>` : ''}
       </div>
     `
     this.container.appendChild(header)
@@ -90,6 +100,13 @@ export class SlideView {
         }
       })
     }
+
+    // Arrangement editor
+    header.querySelector('#arrangement-btn')?.addEventListener('click', async () => {
+      if (!pres) return
+      const { arrangementEditor } = await import('./ArrangementEditor.js')
+      arrangementEditor.open(pres.id)
+    })
 
     // Audio Playback Event
     const playBtn = header.querySelector('#play-rehearsal-audio')
@@ -142,7 +159,11 @@ export class SlideView {
     const activeIdx = state.get('activeSlideIndex')
     const fragment = document.createDocumentFragment()
 
-    pres.slides.forEach((slide, index) => {
+    // Renders the active arrangement's sequence, not necessarily pres.slides —
+    // a custom arrangement can reference the same slide more than once (e.g.
+    // a repeated chorus), so `index` here is a position in that sequence,
+    // matching what goLive()/goLiveNext() navigate over.
+    getActiveSequence(pres).forEach((slide, index) => {
       const thumb = document.createElement('div')
       thumb.className = 'slide-thumbnail'
       thumb.dataset.index = index
@@ -263,9 +284,16 @@ export class SlideView {
       const thumb = e.target.closest('.slide-thumbnail')
       if (!thumb) return
 
-      const index = parseInt(thumb.dataset.index, 10)
+      const sequenceIndex = parseInt(thumb.dataset.index, 10)
       const pres = state.get('selectedPresentation')
-      if (!pres || isNaN(index)) return
+      if (!pres || isNaN(sequenceIndex)) return
+
+      // AnnouncementEditor edits the underlying slide by its position in
+      // pres.slides, not its position in the (possibly repeating) arrangement
+      // sequence — resolve the clicked occurrence back to that master index.
+      const sequenceSlide = getActiveSequence(pres)[sequenceIndex]
+      const index = sequenceSlide ? pres.slides.findIndex((s) => s.id === sequenceSlide.id) : -1
+      if (index === -1) return
 
       const slide = pres.slides[index]
       if (slide && slide.type === 'announcement') {

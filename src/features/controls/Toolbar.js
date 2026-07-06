@@ -183,6 +183,17 @@ export class Toolbar {
       const { createThemeEditor } = await import('../presentation/ThemeEditor.js')
       createThemeEditor()
     })
+
+    // Screens: toggle the fullscreen audience output window
+    this.container.querySelector('#toolbar-screens-btn')?.addEventListener('click', async () => {
+      if (!window.electronAPI || !window.electronAPI.toggleAudienceOutput) {
+        const { showToast } = await import('../../components/common/ToastManager.js')
+        showToast('Audience output requires the desktop app.', 'error')
+        return
+      }
+      const open = await window.electronAPI.toggleAudienceOutput()
+      this.container.querySelector('#toolbar-screens-btn')?.classList.toggle('active', open)
+    })
   }
 
   _clearLayer(layer) {

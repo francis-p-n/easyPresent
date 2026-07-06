@@ -7,6 +7,7 @@ import { ShowControls } from './features/controls/ShowControls.js'
 import { state } from './engine/StateManager.js'
 import { storageManager } from './engine/StorageManager.js'
 import { goLive, goLiveNext, goLivePrev } from './engine/navigation.js'
+import { buildOutputPayload, payloadSignature } from './engine/outputSync.js'
 
 /**
  * Main App Entry Point — Mounts core panels and lazy-loads optional modules
@@ -67,6 +68,28 @@ class App {
     state.on('layers', (layers) => {
       broadcast(layers.slide.active ? layers.slide.content || { text: '' } : { text: '' })
     })
+
+    // Feed the audience output window. Deduped with a cheap signature so
+    // multi-MB imported backgrounds aren't re-sent on every state event.
+    const syncAudience = () => {
+      if (!window.electronAPI || !window.electronAPI.updateAudienceOutput) return
+      const themes = state.get('themes') || []
+      const activeTheme = themes.find((t) => t.id === state.get('activeThemeId')) || themes[0]
+      const payload = buildOutputPayload(
+        state.get('layers'),
+        activeTheme,
+        state.get('showLogo'),
+        state.get('timer_main')
+      )
+      const sig = payloadSignature(payload)
+      if (sig === this._lastAudienceSig) return
+      this._lastAudienceSig = sig
+      window.electronAPI.updateAudienceOutput(payload)
+    }
+    state.on('layers', syncAudience)
+    state.on('showLogo', syncAudience)
+    state.on('activeThemeId', syncAudience)
+    state.on('timer_main', syncAudience) // live {timer} token in messages
 
     // Auto save data
     storageManager.initAutoSave()

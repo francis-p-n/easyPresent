@@ -1,0 +1,55 @@
+/**
+ * outputSync — builds the state payload the audience output window renders.
+ *
+ * The operator window owns all state; the output window is a dumb renderer
+ * fed over IPC. The payload carries everything needed to draw one frame of
+ * output: the live slide (text + per-slide style + background), the message
+ * overlay, the logo/clear state, and the active theme's base styles.
+ */
+
+/** Assemble the render payload from app state. */
+export function buildOutputPayload(layers, activeTheme, showLogo, timerValue) {
+  const slideLayer = layers?.slide || { active: false, content: null }
+  const messageLayer = layers?.message || { active: false, content: null }
+
+  let message = null
+  if (messageLayer.active && messageLayer.content) {
+    message = messageLayer.content
+    if (message.includes('{timer}')) {
+      message = message.replace('{timer}', timerValue || '00:00')
+    }
+  }
+
+  const content = slideLayer.active ? slideLayer.content : null
+
+  return {
+    slide: content
+      ? {
+          text: content.text || '',
+          style: content.style || null,
+          background: content.background || null
+        }
+      : null,
+    message,
+    showLogo: !!showLogo,
+    themeStyles: activeTheme?.styles || null
+  }
+}
+
+/**
+ * Cheap change signature. Imported slides carry multi-MB base64 backgrounds —
+ * hashing those per state change would burn the main thread, so backgrounds
+ * are represented by type + length only.
+ */
+export function payloadSignature(payload) {
+  const bg = payload.slide?.background
+  const bgMarker = bg ? `${bg.type}:${bg.color || ''}:${bg.mediaPath ? bg.mediaPath.length : 0}` : ''
+  return JSON.stringify([
+    payload.slide?.text ?? null,
+    payload.slide?.style ?? null,
+    bgMarker,
+    payload.message,
+    payload.showLogo,
+    payload.themeStyles
+  ])
+}

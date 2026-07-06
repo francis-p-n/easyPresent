@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Audience Output</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      cursor: none;
+    }
+    #output-root {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="output-root"></div>
+  <script src="audience-render.js"></script>
+  <script>
+    const root = document.getElementById('output-root')
+    const scale = () => window.innerWidth / 1920
+
+    let lastState = null
+    const paint = () => renderAudienceState(lastState, root, scale())
+
+    if (window.electronAPI && window.electronAPI.onAudienceUpdate) {
+      window.electronAPI.onAudienceUpdate((state) => {
+        lastState = state
+        paint()
+      })
+    }
+    window.addEventListener('resize', paint)
+  </script>
+</body>
+</html>

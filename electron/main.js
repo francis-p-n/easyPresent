@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, screen } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const { parsePptx } = require('./pptx-parser')
@@ -92,6 +92,67 @@ app.whenReady().then(() => {
       pendingSlide = slideData // replayed when the server starts
     }
   });
+
+  // ---- Audience output: the fullscreen projection window ----
+  let audienceWindow = null
+  let lastAudiencePayload = null
+
+  function audienceHtmlPath() {
+    // Repo runs serve from public/; packaged builds only ship dist/
+    // (vite copies public/* into it)
+    const dev = path.join(__dirname, '../public/output/audience.html')
+    return fs.existsSync(dev) ? dev : path.join(__dirname, '../dist/output/audience.html')
+  }
+
+  ipcMain.handle('toggle-audience-output', () => {
+    if (audienceWindow) {
+      audienceWindow.close()
+      audienceWindow = null
+      return false
+    }
+
+    // Project to the external display when one exists (ProPresenter's
+    // operator-screen/output-screen split); otherwise a window on the
+    // primary display so single-monitor setups can still see the output
+    const displays = screen.getAllDisplays()
+    const primary = screen.getPrimaryDisplay()
+    const external = displays.find((d) => d.id !== primary.id)
+
+    audienceWindow = new BrowserWindow({
+      x: (external || primary).bounds.x + 40,
+      y: (external || primary).bounds.y + 40,
+      width: external ? external.bounds.width : 960,
+      height: external ? external.bounds.height : 540,
+      fullscreen: !!external,
+      frame: !external,
+      autoHideMenuBar: true,
+      backgroundColor: '#000000',
+      title: 'Audience Output',
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    })
+
+    audienceWindow.loadFile(audienceHtmlPath())
+    audienceWindow.webContents.on('did-finish-load', () => {
+      if (lastAudiencePayload) {
+        audienceWindow.webContents.send('audience-update', lastAudiencePayload)
+      }
+    })
+    audienceWindow.on('closed', () => {
+      audienceWindow = null
+    })
+    return true
+  })
+
+  ipcMain.on('update-audience-output', (event, payload) => {
+    lastAudiencePayload = payload
+    if (audienceWindow) {
+      audienceWindow.webContents.send('audience-update', payload)
+    }
+  })
 
   ipcMain.on('create-stage-display', () => {
     ensureStageServer()

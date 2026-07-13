@@ -104,3 +104,122 @@ describe('SlideEditor — imported PPTX style preservation (regression)', () => 
     expect(container.querySelector('#prop-color').value.toLowerCase()).toBe('#ffffff')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Positioned image layers (imported PPTX decorations)
+// ---------------------------------------------------------------------------
+
+const PNG = 'data:image/png;base64,AAAA'
+
+const makeImagePres = () =>
+  makePres({
+    slides: [{
+      id: 's1',
+      text: 'Over art',
+      type: 'worship',
+      elements: [{ id: 'el1', text: 'Over art', x: 100, y: 100, width: 400, height: 200 }],
+      images: [{ id: 'im1', mediaPath: PNG, x: 50, y: 60, width: 300, height: 150 }]
+    }]
+  })
+
+const loadImageSlide = () => {
+  const pres = makeImagePres()
+  state.set('presentations', [pres])
+  state.set('selectedPresentation', pres)
+  state.set('activeSlideIndex', 0)
+}
+
+describe('SlideEditor — image layers', () => {
+  it('renders imported image layers behind the text boxes', () => {
+    loadImageSlide()
+    const canvas = container.querySelector('#editor-canvas')
+    const imgNode = canvas.querySelector('.editor-image')
+    const textNode = canvas.querySelector('.editor-textbox')
+    expect(imgNode).not.toBeNull()
+    expect(imgNode.style.left).toBe('50px')
+    expect(imgNode.style.top).toBe('60px')
+    // DOM order = paint order: image first, text after
+    expect(imgNode.compareDocumentPosition(textNode) & window.Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('selecting an image disables the text panel and labels the selection', () => {
+    loadImageSlide()
+    const imgNode = container.querySelector('.editor-image')
+    imgNode.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true }))
+    expect(container.querySelector('#box-props').style.pointerEvents).toBe('none')
+    expect(container.querySelector('#selected-box-label').textContent).toContain('image 1 of 1')
+  })
+
+  it('duplicating a selected image adds an offset copy', () => {
+    loadImageSlide()
+    container.querySelector('.editor-image')
+      .dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true }))
+    container.querySelector('#dup-textbox-btn').click()
+    const imgs = container.querySelectorAll('.editor-image')
+    expect(imgs).toHaveLength(2)
+  })
+
+  it('deleting a selected image removes it, and Save persists the removal', () => {
+    loadImageSlide()
+    container.querySelector('.editor-image')
+      .dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true }))
+    container.querySelector('#del-textbox-btn').click()
+    expect(container.querySelectorAll('.editor-image')).toHaveLength(0)
+
+    container.querySelector('#editor-save-btn').click()
+    expect(state.get('selectedPresentation').slides[0].images).toEqual([])
+  })
+
+  it('Save round-trips image layers onto the slide', () => {
+    loadImageSlide()
+    container.querySelector('#editor-save-btn').click()
+    const saved = state.get('selectedPresentation').slides[0]
+    expect(saved.images).toHaveLength(1)
+    expect(saved.images[0].mediaPath).toBe(PNG)
+    expect(saved.images[0].x).toBe(50)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Background image controls
+// ---------------------------------------------------------------------------
+
+describe('SlideEditor — background image', () => {
+  const loadBgSlide = () => {
+    const pres = makePres({
+      slides: [{
+        id: 's1', text: 'Hello', type: 'worship',
+        background: { type: 'media', color: '#000000', mediaPath: PNG }
+      }]
+    })
+    state.set('presentations', [pres])
+    state.set('selectedPresentation', pres)
+    state.set('activeSlideIndex', 0)
+  }
+
+  it('shows the clear button when the slide has a background image', () => {
+    loadBgSlide()
+    expect(container.querySelector('#prop-bg-image-clear').style.display).toBe('block')
+  })
+
+  it('clearing the background image persists on Save (regression)', () => {
+    loadBgSlide()
+    container.querySelector('#prop-bg-image-clear').click()
+    container.querySelector('#editor-save-btn').click()
+    const bg = state.get('selectedPresentation').slides[0].background
+    expect(bg.type).toBe('color')
+    expect(bg.mediaPath).toBeUndefined()
+  })
+
+  it('offers the built-in background gallery and applies a swatch on click', () => {
+    loadImageSlide()
+    const swatches = container.querySelectorAll('.builtin-bg-swatch')
+    expect(swatches.length).toBeGreaterThanOrEqual(8)
+
+    swatches[0].click()
+    container.querySelector('#editor-save-btn').click()
+    const bg = state.get('selectedPresentation').slides[0].background
+    expect(bg.type).toBe('media')
+    expect(bg.mediaPath).toMatch(/^data:image\/svg\+xml/)
+  })
+})

@@ -32,6 +32,41 @@ export function fillRectStyle(fill) {
   }
 }
 
+/**
+ * Composes the fillRect frame with an <a:srcRect> source crop (Canva crops
+ * nearly every photo this way). The crop shows only a sub-rectangle of the
+ * source image, so the full <img> must be enlarged and shifted such that the
+ * cropped region lands exactly in the fillRect frame.
+ */
+export function imageFrameStyle(fill, crop) {
+  const f = fillRectStyle(fill)
+  if (!crop) return f
+  const wFrac = (100000 - crop.l - crop.r) / 100000
+  const hFrac = (100000 - crop.t - crop.b) / 100000
+  if (wFrac <= 0 || hFrac <= 0) return f
+  const width = f.width / wFrac
+  const height = f.height / hFrac
+  return {
+    left: f.left - (crop.l / 100000) * width,
+    top: f.top - (crop.t / 100000) * height,
+    width,
+    height
+  }
+}
+
+/**
+ * CSS transform for a PPTX shape's rotation + flips. PowerPoint flips the
+ * shape in place first, then rotates about its center — which is CSS's
+ * rightmost-first order `rotate(...) scale(...)`. Empty string when the shape
+ * is untransformed so the common path adds no style noise.
+ */
+export function shapeTransform({ rot, flipH, flipV } = {}) {
+  const parts = []
+  if (rot) parts.push(`rotate(${rot}deg)`)
+  if (flipH || flipV) parts.push(`scale(${flipH ? -1 : 1}, ${flipV ? -1 : 1})`)
+  return parts.join(' ')
+}
+
 /** True when a slide carries positioned layout the flat renderers can't show. */
 export function hasLayout(slide) {
   return !!(slide && ((slide.elements && slide.elements.length) || (slide.images && slide.images.length)))
@@ -55,11 +90,13 @@ export function renderSlideLayout(container, { elements = [], images = [] } = {}
   images.forEach((img) => {
     if (!img.mediaPath) return
     const box = document.createElement('div')
+    const transform = shapeTransform(img)
     box.style.cssText =
       `position:absolute;overflow:hidden;` +
       `left:${wpct(img.x)}cqw;top:${hpct(img.y)}cqh;` +
-      `width:${wpct(img.width)}cqw;height:${hpct(img.height)}cqh;`
-    const f = fillRectStyle(img.fill)
+      `width:${wpct(img.width)}cqw;height:${hpct(img.height)}cqh;` +
+      (transform ? `transform:${transform};` : '')
+    const f = imageFrameStyle(img.fill, img.crop)
     const inner = document.createElement('img')
     inner.src = img.mediaPath
     inner.style.cssText =

@@ -1,7 +1,7 @@
 import { state } from '../../engine/StateManager.js'
 import { TextElement } from '../../models/TextElement.js'
 import { getActiveSequence } from '../../engine/arrangement.js'
-import { fillRectStyle } from '../../engine/slideLayout.js'
+import { imageFrameStyle, shapeTransform } from '../../engine/slideLayout.js'
 
 const CANVAS_W = 1920
 const CANVAS_H = 1080
@@ -293,14 +293,16 @@ export function createSlideEditor(container) {
       const node = document.createElement('div')
       node.className = 'editor-image'
       node.dataset.boxId = im.id
+      const imTransform = shapeTransform(im)
       node.style.cssText = `
         position:absolute; overflow:hidden;
         left:${im.x}px; top:${im.y}px; width:${im.width}px; height:${im.height}px;
         box-sizing:border-box; cursor:move;
         border:2px ${im.id === selectedId ? 'solid #3b82f6' : 'dashed rgba(255,255,255,0.12)'};
+        ${imTransform ? `transform:${imTransform};` : ''}
       `
-      // Inner image framed per PPTX fillRect (see slideLayout.fillRectStyle)
-      const f = fillRectStyle(im.fill)
+      // Inner image framed per PPTX fillRect + srcRect crop
+      const f = imageFrameStyle(im.fill, im.crop)
       const inner = document.createElement('img')
       inner.src = im.mediaPath
       inner.draggable = false

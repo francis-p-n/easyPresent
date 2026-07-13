@@ -271,16 +271,28 @@ function getSlideMetrics(zipEntries) {
   return { sx, sy, ptToPx };
 }
 
-/** Extracts a shape's bounding box (px) from its <a:xfrm>, or null if absent. */
-function shapeGeometry(shapeXml, sx, sy) {
+/** Extracts a shape's raw EMU bounding box from its first <a:xfrm>, or null. */
+function shapeGeometryEmu(shapeXml) {
   const off = shapeXml.match(/<a:off x="(-?\d+)" y="(-?\d+)"/);
   const ext = shapeXml.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
   if (!off || !ext) return null;
   return {
-    x: Math.round(parseInt(off[1], 10) * sx),
-    y: Math.round(parseInt(off[2], 10) * sy),
-    width: Math.round(parseInt(ext[1], 10) * sx),
-    height: Math.round(parseInt(ext[2], 10) * sy)
+    x: parseInt(off[1], 10),
+    y: parseInt(off[2], 10),
+    cx: parseInt(ext[1], 10),
+    cy: parseInt(ext[2], 10)
+  };
+}
+
+/** Rotation (degrees) and flips from a shape's own <a:xfrm> attributes. */
+function shapeXfrmAttrs(shapeXml) {
+  const m = shapeXml.match(/<a:xfrm\b([^>]*)>/);
+  if (!m) return { rot: 0, flipH: false, flipV: false };
+  const rotRaw = (m[1].match(/\brot="(-?\d+)"/) || [])[1];
+  return {
+    rot: rotRaw ? parseInt(rotRaw, 10) / 60000 : 0, // 60000ths of a degree
+    flipH: /\bflipH="1"/.test(m[1]),
+    flipV: /\bflipV="1"/.test(m[1])
   };
 }
 
@@ -514,22 +526,113 @@ function extractFillRect(shapeXml) {
   return { l, t, r, b };
 }
 
-/** True when a geometry covers almost the whole slide from near its origin. */
+/**
+ * Extracts a picture fill's <a:srcRect> insets — the sub-rectangle of the
+ * SOURCE image that is shown, in 1000ths of a percent. Canva exports crop
+ * nearly every photo this way. Null when absent / a full-image fill.
+ */
+function extractSrcRect(shapeXml) {
+  const m = shapeXml.match(/<a:srcRect\b([^>]*)\/?>/);
+  if (!m) return null;
+  const attrs = m[1];
+  const get = (k) => {
+    const mm = attrs.match(new RegExp(`\\b${k}="(-?\\d+)"`));
+    return mm ? parseInt(mm[1], 10) : 0;
+  };
+  const l = get('l'), t = get('t'), r = get('r'), b = get('b');
+  if (!l && !t && !r && !b) return null;
+  return { l, t, r, b };
+}
+
+/**
+ * True when a geometry COVERS almost the whole slide. Checked edge-to-edge on
+ * all four sides — a wide decoration hanging off the left edge starts before
+ * x=0 but never reaches the right edge, so it must stay a positioned image
+ * rather than being stretched into the background (a real Canva failure mode).
+ */
 function isFullBleed(geom) {
   if (!geom) return false;
   return (
     geom.x <= RENDER_WIDTH * 0.05 &&
     geom.y <= RENDER_HEIGHT * 0.05 &&
-    geom.width >= RENDER_WIDTH * 0.85 &&
-    geom.height >= RENDER_HEIGHT * 0.85
+    geom.x + geom.width >= RENDER_WIDTH * 0.95 &&
+    geom.y + geom.height >= RENDER_HEIGHT * 0.95
   );
 }
 
 /**
- * Walks a slide's shape tree in document order, classifying each <p:sp>/<p:pic>
- * as a positioned text element or a positioned image. A picture-filled shape
- * that covers the whole slide is returned as the full-bleed background instead
- * of a positioned image.
+ * Splits `xml` into its top-level <p:sp>/<p:pic>/<p:grpSp> blocks, skipping
+ * blocks nested inside a group — the group's own recursion handles those.
+ * A depth stack (rather than a lazy regex) keeps nested groups intact.
+ */
+function topLevelShapeBlocks(xml) {
+  const tagRe = /<(\/?)p:(sp|pic|grpSp)\b[^>]*?(\/)?>/g;
+  const blocks = [];
+  const stack = [];
+  let m;
+  while ((m = tagRe.exec(xml)) !== null) {
+    const closing = m[1] === '/';
+    const selfClosed = m[3] === '/';
+    if (!closing && !selfClosed) {
+      stack.push({ kind: m[2], contentStart: m.index + m[0].length });
+    } else if (closing && stack.length) {
+      const open = stack.pop();
+      if (stack.length === 0) {
+        blocks.push({ kind: open.kind, xml: xml.slice(open.contentStart, m.index) });
+      }
+    }
+  }
+  return blocks;
+}
+
+/**
+ * A group's child→parent coordinate mapping from its <a:xfrm>:
+ * abs = off + (child − chOff) × (ext / chExt). Returns {ox, oy, kx, ky} such
+ * that abs.x = ox + child.x × kx (and similarly for y), or null if the group
+ * declares no usable transform. Group flips/rotation are rare in real decks
+ * and are intentionally not modeled.
+ */
+function groupChildTransform(grpXml) {
+  const xfrm = grpXml.match(/<a:xfrm\b[^>]*>([\s\S]*?)<\/a:xfrm>/);
+  if (!xfrm) return null;
+  const inner = xfrm[1];
+  const off = inner.match(/<a:off x="(-?\d+)" y="(-?\d+)"/);
+  const ext = inner.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
+  const chOff = inner.match(/<a:chOff x="(-?\d+)" y="(-?\d+)"/);
+  const chExt = inner.match(/<a:chExt cx="(\d+)" cy="(\d+)"/);
+  if (!off || !ext || !chOff || !chExt) return null;
+  const chCx = parseInt(chExt[1], 10) || 1;
+  const chCy = parseInt(chExt[2], 10) || 1;
+  const kx = parseInt(ext[1], 10) / chCx;
+  const ky = parseInt(ext[2], 10) / chCy;
+  return {
+    kx,
+    ky,
+    ox: parseInt(off[1], 10) - parseInt(chOff[1], 10) * kx,
+    oy: parseInt(off[2], 10) - parseInt(chOff[2], 10) * ky
+  };
+}
+
+const IDENTITY_TRANSFORM = { ox: 0, oy: 0, kx: 1, ky: 1 };
+
+/** Composes parent∘local so child coordinates map straight to slide EMU. */
+function composeTransforms(parent, local) {
+  return {
+    kx: parent.kx * local.kx,
+    ky: parent.ky * local.ky,
+    ox: parent.ox + local.ox * parent.kx,
+    oy: parent.oy + local.oy * parent.ky
+  };
+}
+
+/**
+ * Walks a slide's shape tree in document order — descending into <p:grpSp>
+ * groups and mapping child geometry through the group transform (Canva wraps
+ * nearly everything in groups) — classifying each <p:sp>/<p:pic> as a
+ * positioned text element or a positioned image. A picture that covers the
+ * whole slide is returned as the full-bleed background instead. Shapes may
+ * extend beyond the slide edges; their geometry is preserved as-is and the
+ * renderers clip at the slide boundary, exactly like PowerPoint does.
  */
 function extractShapes(xmlData, theme, metrics, relMap, mediaByName) {
   const { sx, sy, ptToPx } = metrics;
@@ -544,55 +647,83 @@ function extractShapes(xmlData, theme, metrics, relMap, mediaByName) {
     if (bgImg) background = bgImg;
   }
 
-  const shapeRegex = /<p:(sp|pic)(?:\s[^>]*)?>([\s\S]*?)<\/p:\1>/g;
-  let m;
-  while ((m = shapeRegex.exec(xmlData)) !== null) {
-    const shapeXml = m[2];
-    const geom = shapeGeometry(shapeXml, sx, sy);
+  // Only walk the shape tree — <p:bg> above must not be re-matched as a shape.
+  const spTree = xmlData.match(/<p:spTree\b[^>]*>([\s\S]*)<\/p:spTree>/);
+  const treeXml = spTree ? spTree[1] : xmlData;
 
-    const txBodyMatch = shapeXml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/);
-    const text = txBodyMatch ? extractTextBoxText(txBodyMatch[1]) : '';
+  function walk(xml, t) {
+    for (const block of topLevelShapeBlocks(xml)) {
+      if (block.kind === 'grpSp') {
+        const local = groupChildTransform(block.xml);
+        walk(block.xml, local ? composeTransforms(t, local) : t);
+        continue;
+      }
 
-    if (text.trim()) {
-      const style = styleFromBody(txBodyMatch[1], theme, ptToPx, ELEMENT_FONT_MAX);
-      const box = geom || { x: 96, y: 190, width: RENDER_WIDTH - 192, height: RENDER_HEIGHT - 380 };
-      elements.push({
-        text,
-        x: box.x,
-        y: box.y,
-        width: box.width,
-        height: box.height,
-        fontSize: style.fontSize || 48,
-        fontFamily: style.fontFamily,
-        color: style.color || '#000000',
-        bold: style.bold || false,
-        italic: style.italic || false,
-        hAlign: style.hAlign || 'left',
-        vAlign: style.vAlign || 'top',
-        lineSpacing: style.lineSpacing,
-        textScaling: 'none',
-        hasShadow: false // PowerPoint body text has no drop shadow; match it
-      });
-      continue;
-    }
+      const shapeXml = block.xml;
+      const raw = shapeGeometryEmu(shapeXml);
+      // Map through the accumulated group transform, then into design px.
+      const geom = raw
+        ? {
+            x: Math.round((t.ox + raw.x * t.kx) * sx),
+            y: Math.round((t.oy + raw.y * t.ky) * sy),
+            width: Math.round(raw.cx * t.kx * sx),
+            height: Math.round(raw.cy * t.ky * sy)
+          }
+        : null;
+      // Text inside a scaled group renders proportionally smaller/larger.
+      const fontScale = Math.sqrt(Math.abs(t.kx * t.ky)) || 1;
 
-    const fullBleed = isFullBleed(geom) || !geom;
-    // Downscale decorations to ~2× their on-slide width; backgrounds stay full.
-    const targetW = fullBleed ? RENDER_WIDTH : Math.min(RENDER_WIDTH, Math.max(640, geom.width * 2));
-    const img = resolveBlipImage(shapeXml, relMap, mediaByName, targetW);
-    if (img) {
-      if (fullBleed) {
-        // Whole-slide (or unpositioned) picture → treat as the background
-        if (!background) background = img;
-      } else {
-        images.push({
-          mediaPath: img,
-          x: geom.x, y: geom.y, width: geom.width, height: geom.height,
-          fill: extractFillRect(shapeXml) || undefined
+      const txBodyMatch = shapeXml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/);
+      const text = txBodyMatch ? extractTextBoxText(txBodyMatch[1]) : '';
+
+      if (text.trim()) {
+        const style = styleFromBody(txBodyMatch[1], theme, ptToPx, ELEMENT_FONT_MAX);
+        const box = geom || { x: 96, y: 190, width: RENDER_WIDTH - 192, height: RENDER_HEIGHT - 380 };
+        elements.push({
+          text,
+          x: box.x,
+          y: box.y,
+          width: box.width,
+          height: box.height,
+          fontSize: Math.round((style.fontSize || 48) * fontScale),
+          fontFamily: style.fontFamily,
+          color: style.color || '#000000',
+          bold: style.bold || false,
+          italic: style.italic || false,
+          hAlign: style.hAlign || 'left',
+          vAlign: style.vAlign || 'top',
+          lineSpacing: style.lineSpacing,
+          textScaling: 'none',
+          hasShadow: false // PowerPoint body text has no drop shadow; match it
         });
+        continue;
+      }
+
+      const fullBleed = isFullBleed(geom) || !geom;
+      // Downscale decorations to ~2× their on-slide width; backgrounds stay full.
+      const targetW = fullBleed ? RENDER_WIDTH : Math.min(RENDER_WIDTH, Math.max(640, geom.width * 2));
+      const img = resolveBlipImage(shapeXml, relMap, mediaByName, targetW);
+      if (img) {
+        if (fullBleed) {
+          // Whole-slide (or unpositioned) picture → treat as the background
+          if (!background) background = img;
+        } else {
+          const { rot, flipH, flipV } = shapeXfrmAttrs(shapeXml);
+          images.push({
+            mediaPath: img,
+            x: geom.x, y: geom.y, width: geom.width, height: geom.height,
+            fill: extractFillRect(shapeXml) || undefined,
+            crop: extractSrcRect(shapeXml) || undefined,
+            rot: rot || undefined,
+            flipH: flipH || undefined,
+            flipV: flipV || undefined
+          });
+        }
       }
     }
   }
+
+  walk(treeXml, IDENTITY_TRANSFORM);
 
   return { elements, images, background };
 }

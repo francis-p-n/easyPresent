@@ -72,6 +72,32 @@ function fillRectStyle(fill) {
   }
 }
 
+// fillRect frame composed with an <a:srcRect> source crop. Mirror of
+// src/engine/slideLayout.js imageFrameStyle.
+function imageFrameStyle(fill, crop) {
+  const f = fillRectStyle(fill)
+  if (!crop) return f
+  const wFrac = (100000 - crop.l - crop.r) / 100000
+  const hFrac = (100000 - crop.t - crop.b) / 100000
+  if (wFrac <= 0 || hFrac <= 0) return f
+  const width = f.width / wFrac
+  const height = f.height / hFrac
+  return {
+    left: f.left - (crop.l / 100000) * width,
+    top: f.top - (crop.t / 100000) * height,
+    width,
+    height
+  }
+}
+
+// Rotation + flip transform. Mirror of src/engine/slideLayout.js shapeTransform.
+function shapeTransform(img) {
+  const parts = []
+  if (img.rot) parts.push(`rotate(${img.rot}deg)`)
+  if (img.flipH || img.flipV) parts.push(`scale(${img.flipH ? -1 : 1}, ${img.flipV ? -1 : 1})`)
+  return parts.join(' ')
+}
+
 // Positioned layout renderer — mirror of src/engine/slideLayout.js, but for the
 // standalone output window (no module system). All coordinates are in the
 // 1920×1080 design space; `scale` maps them to the real screen.
@@ -90,7 +116,9 @@ function renderSlideLayout(slide, root, scale) {
       width: `${img.width * scale}px`,
       height: `${img.height * scale}px`
     })
-    const f = fillRectStyle(img.fill)
+    const transform = shapeTransform(img)
+    if (transform) box.style.transform = transform
+    const f = imageFrameStyle(img.fill, img.crop)
     const inner = document.createElement('img')
     inner.src = img.mediaPath
     Object.assign(inner.style, {

@@ -12,6 +12,11 @@ function normalizeImage(img = {}) {
   }
   // fill: PPTX stretch/fillRect framing (1000ths of a percent). Absent = full fill.
   if (img.fill) out.fill = { ...img.fill }
+  // crop: PPTX srcRect source cropping (Canva crops most photos this way)
+  if (img.crop) out.crop = { ...img.crop }
+  if (img.rot) out.rot = img.rot
+  if (img.flipH) out.flipH = true
+  if (img.flipV) out.flipV = true
   return out
 }
 

@@ -387,6 +387,148 @@ describe('parsePptx — positioned layout', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Canva-style geometry: groups, out-of-bounds shapes, srcRect crops, rotation
+// ---------------------------------------------------------------------------
+
+describe('parsePptx — Canva-style geometry', () => {
+  it('maps shapes inside a <p:grpSp> through the group transform', async () => {
+    // Group occupies the right half of the slide but its children are authored
+    // in a 0..1000000 child space → child at (500000, 0) size 500000² lands at
+    // the group's midpoint, scaled to half the group's size.
+    const grouped = sld(`
+      <p:grpSp>
+        <p:grpSpPr><a:xfrm>
+          <a:off x="6096000" y="0"/><a:ext cx="6096000" cy="6858000"/>
+          <a:chOff x="0" y="0"/><a:chExt cx="1000000" cy="1000000"/>
+        </a:xfrm></p:grpSpPr>
+        <p:pic>
+          <p:spPr><a:xfrm><a:off x="500000" y="0"/><a:ext cx="500000" cy="500000"/></a:xfrm></p:spPr>
+          <p:blipFill><a:blip r:embed="rId1"/></p:blipFill>
+        </p:pic>
+      </p:grpSp>`)
+    const file = buildPptx(path.join(tmpDir, 'group.pptx'), {
+      slides: { 'slide1.xml': grouped },
+      media: { 'image1.png': TINY_PNG },
+      rels: { 'slide1.xml.rels': IMAGE_REL }
+    })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].images).toHaveLength(1)
+    const img = slides[0].images[0]
+    // Group starts at slide midpoint (960px); child at half the child space →
+    // 960 + 480 = 1440px. Child size 500000/1000000 × group 6096000 EMU = 480px.
+    expect(img.x).toBe(1440)
+    expect(img.y).toBe(0)
+    expect(img.width).toBe(480)
+  })
+
+  it('keeps an off-slide decoration positioned with negative coordinates', async () => {
+    // A Canva decoration hanging off the top-left corner.
+    const offslide = sld(`
+      <p:pic>
+        <p:spPr><a:xfrm><a:off x="-800000" y="-400000"/><a:ext cx="2000000" cy="1600000"/></a:xfrm></p:spPr>
+        <p:blipFill><a:blip r:embed="rId1"/></p:blipFill>
+      </p:pic>`)
+    const file = buildPptx(path.join(tmpDir, 'offslide.pptx'), {
+      slides: { 'slide1.xml': offslide },
+      media: { 'image1.png': TINY_PNG },
+      rels: { 'slide1.xml.rels': IMAGE_REL }
+    })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].background).toBeNull()
+    expect(slides[0].images).toHaveLength(1)
+    expect(slides[0].images[0].x).toBeLessThan(0)
+    expect(slides[0].images[0].y).toBeLessThan(0)
+  })
+
+  it('does NOT misclassify a wide left-hanging decoration as the background', async () => {
+    // Starts before x=0 (passes the old x<=5% + width>=85% check) but never
+    // reaches the right edge — must stay a positioned image.
+    const hanging = sld(`
+      <p:pic>
+        <p:spPr><a:xfrm><a:off x="-3000000" y="0"/><a:ext cx="10500000" cy="6858000"/></a:xfrm></p:spPr>
+        <p:blipFill><a:blip r:embed="rId1"/></p:blipFill>
+      </p:pic>`)
+    const file = buildPptx(path.join(tmpDir, 'hanging.pptx'), {
+      slides: { 'slide1.xml': hanging },
+      media: { 'image1.png': TINY_PNG },
+      rels: { 'slide1.xml.rels': IMAGE_REL }
+    })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].background).toBeNull()
+    expect(slides[0].images).toHaveLength(1)
+  })
+
+  it('still treats an oversized image with bleed on all sides as the background', async () => {
+    const bleed = sld(`
+      <p:pic>
+        <p:spPr><a:xfrm><a:off x="-300000" y="-300000"/><a:ext cx="12800000" cy="7500000"/></a:xfrm></p:spPr>
+        <p:blipFill><a:blip r:embed="rId1"/></p:blipFill>
+      </p:pic>`)
+    const file = buildPptx(path.join(tmpDir, 'bleed.pptx'), {
+      slides: { 'slide1.xml': bleed },
+      media: { 'image1.png': TINY_PNG },
+      rels: { 'slide1.xml.rels': IMAGE_REL }
+    })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].background).toBe(`data:image/png;base64,${TINY_PNG.toString('base64')}`)
+    expect(slides[0].images).toEqual([])
+  })
+
+  it('captures srcRect source crops (how Canva crops photos)', async () => {
+    const cropped = sld(`
+      <p:pic>
+        <p:spPr><a:xfrm><a:off x="9000000" y="5000000"/><a:ext cx="1500000" cy="1000000"/></a:xfrm></p:spPr>
+        <p:blipFill><a:blip r:embed="rId1"/><a:srcRect l="10000" t="20000" r="30000" b="5000"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>
+      </p:pic>`)
+    const file = buildPptx(path.join(tmpDir, 'srcrect.pptx'), {
+      slides: { 'slide1.xml': cropped },
+      media: { 'image1.png': TINY_PNG },
+      rels: { 'slide1.xml.rels': IMAGE_REL }
+    })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].images[0].crop).toEqual({ l: 10000, t: 20000, r: 30000, b: 5000 })
+  })
+
+  it('captures rotation and flips from the shape xfrm', async () => {
+    // rot is in 60000ths of a degree: 2700000 → 45°
+    const rotated = sld(`
+      <p:pic>
+        <p:spPr><a:xfrm rot="2700000" flipH="1"><a:off x="9000000" y="5000000"/><a:ext cx="1500000" cy="1000000"/></a:xfrm></p:spPr>
+        <p:blipFill><a:blip r:embed="rId1"/></p:blipFill>
+      </p:pic>`)
+    const file = buildPptx(path.join(tmpDir, 'rotated.pptx'), {
+      slides: { 'slide1.xml': rotated },
+      media: { 'image1.png': TINY_PNG },
+      rels: { 'slide1.xml.rels': IMAGE_REL }
+    })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].images[0].rot).toBe(45)
+    expect(slides[0].images[0].flipH).toBe(true)
+    expect(slides[0].images[0].flipV).toBeUndefined()
+  })
+
+  it('scales text font size inside a scaled group', async () => {
+    // Group shrinks a 1000000-EMU child space into 500000 EMU → 0.5× scale.
+    const groupedText = sld(`
+      <p:grpSp>
+        <p:grpSpPr><a:xfrm>
+          <a:off x="1000000" y="1000000"/><a:ext cx="500000" cy="500000"/>
+          <a:chOff x="0" y="0"/><a:chExt cx="1000000" cy="1000000"/>
+        </a:xfrm></p:grpSpPr>
+        <p:sp>
+          <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1000000" cy="1000000"/></a:xfrm></p:spPr>
+          <p:txBody><a:p><a:r><a:rPr sz="4800"/><a:t>Scaled</a:t></a:r></a:p></p:txBody>
+        </p:sp>
+      </p:grpSp>`)
+    const file = buildPptx(path.join(tmpDir, 'grouptext.pptx'), { slides: { 'slide1.xml': groupedText } })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].elements).toHaveLength(1)
+    // 48pt × 2px/pt = 96px, halved by the group scale → 48px
+    expect(slides[0].elements[0].fontSize).toBe(48)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error handling
 // ---------------------------------------------------------------------------
 
@@ -406,7 +548,7 @@ describe('parsePptx — error handling', () => {
 // Integration — the user's real decks (skipped on machines without them)
 // ---------------------------------------------------------------------------
 
-const SESSION_DIR = 'C:/Users/MSI/Desktop/session slides'
+const SESSION_DIR = 'C:/Users/hp/Desktop/session slides'
 
 function findPptxFiles(dir) {
   const out = []

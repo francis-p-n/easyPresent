@@ -1,5 +1,6 @@
 import { state } from '../../engine/StateManager.js'
 import NativeRender from '../../engine/NativeRender.js'
+import { hasLayout, renderSlideLayout } from '../../engine/slideLayout.js'
 
 /**
  * PreviewPanel — Shows live output preview using the NativeRender engine
@@ -69,11 +70,18 @@ export class PreviewPanel {
     // 'layers', and rasterizing slide text into a GPU texture isn't free.
     const bg = slideLayer.content?.background
     const bgMarker = bg?.mediaPath ? `media:${bg.mediaPath.length}` : `color:${bg?.color || ''}`
+    const layoutMarker = hasLayout(slideLayer.content)
+      ? JSON.stringify([
+          (slideLayer.content.elements || []).map((e) => [e.x, e.y, e.width, e.height, e.fontSize, e.text]),
+          (slideLayer.content.images || []).map((i) => [i.x, i.y, i.width, i.height, i.mediaPath ? i.mediaPath.length : 0])
+        ])
+      : ''
     const signature = JSON.stringify([
       slideLayer.active,
       slideLayer.content?.text || '',
       slideLayer.content?.style || null, // per-slide style (e.g. PPTX import) changes the render even when text doesn't
       bgMarker,
+      layoutMarker,
       layers.message?.active,
       layers.message?.content,
       activeThemeId,
@@ -95,7 +103,36 @@ export class PreviewPanel {
       screen.style.background = '#000'
     }
 
-    if (slideLayer.active && slideLayer.content) {
+    // Remove any previous positioned-layout overlay before re-evaluating.
+    const prevOverlay = screen.querySelector('#preview-layout-overlay')
+    if (prevOverlay) prevOverlay.remove()
+
+    if (slideLayer.active && slideLayer.content && hasLayout(slideLayer.content)) {
+      // Imported layout slide: the flat PIXI text layer can't represent
+      // multiple positioned boxes + images, so clear it and overlay a faithful
+      // DOM layout scaled to the (16:9) preview screen.
+      NativeRender.clearLayer(1)
+      NativeRender.compositeLayers()
+
+      const overlay = document.createElement('div')
+      overlay.id = 'preview-layout-overlay'
+      overlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;'
+      renderSlideLayout(overlay, slideLayer.content)
+      screen.appendChild(overlay)
+
+      const messageLayer = layers.message
+      if (messageLayer && messageLayer.active && messageLayer.content) {
+        let msg = messageLayer.content
+        if (msg.includes('{timer}')) msg = msg.replace('{timer}', state.get('timer_main') || '00:00')
+        NativeRender.renderMessage(msg)
+      } else {
+        NativeRender.renderMessage(null)
+      }
+
+      status.textContent = 'LIVE'
+      status.className = 'preview-status preview-status--live'
+      screen.classList.add('preview-screen--live')
+    } else if (slideLayer.active && slideLayer.content) {
       // Base styles
       const styleOpts = {
         fontSize: 48,

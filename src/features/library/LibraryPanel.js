@@ -179,10 +179,14 @@ export class LibraryPanel {
                 category: 'Templates',
                 slides: slidesData.map((s, i) => {
                   // Preserve PPTX background color when present; fall back to
-                  // black only when the slide had no color background at all
+                  // black only when the slide had no color background at all.
+                  // `s.background` is a TRUE full-bleed image (or null) — a
+                  // small decoration is NOT stretched across the slide; it
+                  // arrives positioned in `s.images` instead.
                   const bgColor = s.bgColor || '#000000'
-                  const background = s.bgImage
-                    ? { type: 'media', color: bgColor, mediaPath: s.bgImage }
+                  const fullBleed = s.background || null
+                  const background = fullBleed
+                    ? { type: 'media', color: bgColor, mediaPath: fullBleed }
                     : { type: 'color', color: bgColor, mediaPath: null }
 
                   // 'imported' type: keeps the slide's own captured style
@@ -196,6 +200,8 @@ export class LibraryPanel {
                     text: s.text,
                     type: 'imported',
                     style: s.style && Object.keys(s.style).length ? s.style : undefined,
+                    elements: s.elements && s.elements.length ? s.elements : undefined,
+                    images: s.images && s.images.length ? s.images : undefined,
                     background
                   }
                 })

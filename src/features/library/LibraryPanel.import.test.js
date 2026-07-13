@@ -41,10 +41,15 @@ const PARSED = {
     {
       slideName: 'slide1.xml',
       text: 'How great the pain of sear-ing loss.',
+      // A TRUE full-bleed background (covers the slide). `bgImage` mirrors it.
+      background: 'data:image/png;base64,AAAA',
       bgImage: 'data:image/png;base64,AAAA',
-      style: { fontSize: 84, bold: true, color: '#FFFFFF' }
+      bgColor: null,
+      style: { fontSize: 84, bold: true, color: '#FFFFFF' },
+      elements: [{ text: 'How great the pain of sear-ing loss.', x: 96, y: 190, width: 1728, height: 700, fontSize: 84 }],
+      images: [{ mediaPath: 'data:image/png;base64,BBBB', x: 1500, y: 800, width: 200, height: 150 }]
     },
-    { slideName: 'slide2.xml', text: 'Plain slide', bgImage: null, style: {} }
+    { slideName: 'slide2.xml', text: 'Plain slide', background: null, bgImage: null, bgColor: null, style: {}, elements: [], images: [] }
   ]
 }
 
@@ -68,9 +73,14 @@ describe('LibraryPanel — PPTX import integration', () => {
     expect(s1.text).toBe('How great the pain of sear-ing loss.')
     expect(s1.style).toEqual({ fontSize: 84, bold: true, color: '#FFFFFF' })
     expect(s1.background).toEqual({ type: 'media', color: '#000000', mediaPath: 'data:image/png;base64,AAAA' })
+    // Positioned layout maps straight through
+    expect(s1.elements).toHaveLength(1)
+    expect(s1.images).toHaveLength(1)
 
-    // Empty style objects are dropped, color background default applied
+    // Empty style/elements/images are dropped, color background default applied
     expect(s2.style).toBeUndefined()
+    expect(s2.elements).toBeUndefined()
+    expect(s2.images).toBeUndefined()
     expect(s2.background).toEqual({ type: 'color', color: '#000000', mediaPath: null })
 
     // The imported deck becomes the selected presentation

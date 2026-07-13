@@ -26,8 +26,27 @@ describe('buildOutputPayload', () => {
     expect(payload.slide).toEqual({
       text: 'Amazing grace',
       style: { fontSize: 84, bold: true },
-      background: { type: 'color', color: '#111111' }
+      background: { type: 'color', color: '#111111' },
+      elements: null,
+      images: null
     })
+  })
+
+  it('carries positioned layout (elements + images) when present', () => {
+    const layers = {
+      slide: {
+        active: true,
+        content: {
+          text: 'Title\nBody',
+          elements: [{ text: 'Title', x: 0, y: 0, width: 100, height: 50, fontSize: 40 }],
+          images: [{ mediaPath: 'data:image/png;base64,AAAA', x: 10, y: 10, width: 20, height: 20 }]
+        }
+      },
+      message: { active: false, content: null }
+    }
+    const payload = buildOutputPayload(layers, theme, false, '00:00')
+    expect(payload.slide.elements).toHaveLength(1)
+    expect(payload.slide.images).toHaveLength(1)
   })
 
   it('defaults style/background to null when the slide omits them', () => {

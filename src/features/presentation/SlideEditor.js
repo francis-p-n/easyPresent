@@ -1,6 +1,7 @@
 import { state } from '../../engine/StateManager.js'
 import { TextElement } from '../../models/TextElement.js'
 import { getActiveSequence } from '../../engine/arrangement.js'
+import { fillRectStyle } from '../../engine/slideLayout.js'
 
 const CANVAS_W = 1920
 const CANVAS_H = 1080
@@ -78,7 +79,12 @@ export function createSlideEditor(container) {
         <div style="display:flex;gap:8px;">
           <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);flex:1;">
             Background
-            <input type="color" id="prop-bg-color" class="input" value="#000000" style="height:32px;" />
+            <div style="display:flex;gap:4px;align-items:center;">
+              <input type="color" id="prop-bg-color" class="input" value="#000000" style="height:32px;flex:1;" />
+              <button class="btn btn--icon" id="prop-bg-image-btn" title="Set background image" style="height:32px;padding:0 8px;flex-shrink:0;">&#128247;</button>
+              <button class="btn btn--icon" id="prop-bg-image-clear" title="Clear background image" style="height:32px;padding:0 6px;flex-shrink:0;display:none;">&#x2715;</button>
+            </div>
+            <input type="file" id="prop-bg-image-file" accept="image/*" style="display:none;" />
           </label>
           <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);flex:1;">
             Slide Type
@@ -180,6 +186,10 @@ export function createSlideEditor(container) {
   const autosizeCheckbox = container.querySelector('#prop-autosize')
   const colorInput = container.querySelector('#prop-color')
   const bgColorInput = container.querySelector('#prop-bg-color')
+  const bgImageBtn = container.querySelector('#prop-bg-image-btn')
+  const bgImageClearBtn = container.querySelector('#prop-bg-image-clear')
+  const bgImageFile = container.querySelector('#prop-bg-image-file')
+  let bgImageDataUrl = null
   const alignInput = container.querySelector('#prop-align')
   const valignInput = container.querySelector('#prop-valign')
   const boldBtn = container.querySelector('#style-bold')
@@ -195,9 +205,18 @@ export function createSlideEditor(container) {
 
   let currentSlideIndex = -1
   let elements = [] // TextElement instances for the current slide
+  let images = [] // positioned image layers { id, mediaPath, x, y, width, height }
   let selectedId = null
   let scale = 1
   let editingId = null // box currently in inline text-edit mode
+
+  // Selection can be a text element OR an image layer — both carry x/y/w/h.
+  function findObj(id) {
+    return elements.find((e) => e.id === id) || images.find((im) => im.id === id) || null
+  }
+  function isImageSelected() {
+    return images.some((im) => im.id === selectedId)
+  }
 
   // ── Scaling ────────────────────────────────────────────────────────────────
   function updateScale() {
@@ -243,8 +262,54 @@ export function createSlideEditor(container) {
     return canvas.querySelector(`[data-box-id="${id}"]`)
   }
 
+  // 8-point resize handles for the selected node (shared by text + image)
+  function addHandles(node) {
+    const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']
+    handles.forEach((dir) => {
+      const h = document.createElement('div')
+      h.className = 'resize-handle'
+      h.dataset.dir = dir
+      const pos = {
+        nw: 'top:-7px;left:-7px;cursor:nwse-resize;',
+        n: 'top:-7px;left:calc(50% - 6px);cursor:ns-resize;',
+        ne: 'top:-7px;right:-7px;cursor:nesw-resize;',
+        e: 'top:calc(50% - 6px);right:-7px;cursor:ew-resize;',
+        se: 'bottom:-7px;right:-7px;cursor:nwse-resize;',
+        s: 'bottom:-7px;left:calc(50% - 6px);cursor:ns-resize;',
+        sw: 'bottom:-7px;left:-7px;cursor:nesw-resize;',
+        w: 'top:calc(50% - 6px);left:-7px;cursor:ew-resize;',
+      }[dir]
+      h.style.cssText = `position:absolute;width:12px;height:12px;background:#3b82f6;border:2px solid white;border-radius:50%;z-index:20;${pos}`
+      node.appendChild(h)
+    })
+  }
+
   function renderBoxes() {
-    canvas.querySelectorAll('.editor-textbox').forEach((n) => n.remove())
+    canvas.querySelectorAll('.editor-textbox, .editor-image').forEach((n) => n.remove())
+
+    // Image layers render first so they sit behind the text boxes, matching
+    // the imported slide's stacking (decorations behind, text on top).
+    images.forEach((im) => {
+      const node = document.createElement('div')
+      node.className = 'editor-image'
+      node.dataset.boxId = im.id
+      node.style.cssText = `
+        position:absolute; overflow:hidden;
+        left:${im.x}px; top:${im.y}px; width:${im.width}px; height:${im.height}px;
+        box-sizing:border-box; cursor:move;
+        border:2px ${im.id === selectedId ? 'solid #3b82f6' : 'dashed rgba(255,255,255,0.12)'};
+      `
+      // Inner image framed per PPTX fillRect (see slideLayout.fillRectStyle)
+      const f = fillRectStyle(im.fill)
+      const inner = document.createElement('img')
+      inner.src = im.mediaPath
+      inner.draggable = false
+      inner.style.cssText = `position:absolute;left:${f.left}%;top:${f.top}%;width:${f.width}%;height:${f.height}%;pointer-events:none;`
+      node.appendChild(inner)
+      if (im.id === selectedId) addHandles(node)
+      canvas.appendChild(node)
+    })
+
     elements.forEach((el) => {
       const node = document.createElement('div')
       node.className = 'editor-textbox'
@@ -271,32 +336,24 @@ export function createSlideEditor(container) {
       node.appendChild(textDiv)
 
       // Resize handles (only on the selected box)
-      if (el.id === selectedId) {
-        const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']
-        handles.forEach((dir) => {
-          const h = document.createElement('div')
-          h.className = 'resize-handle'
-          h.dataset.dir = dir
-          const pos = {
-            nw: 'top:-7px;left:-7px;cursor:nwse-resize;',
-            n: 'top:-7px;left:calc(50% - 6px);cursor:ns-resize;',
-            ne: 'top:-7px;right:-7px;cursor:nesw-resize;',
-            e: 'top:calc(50% - 6px);right:-7px;cursor:ew-resize;',
-            se: 'bottom:-7px;right:-7px;cursor:nwse-resize;',
-            s: 'bottom:-7px;left:calc(50% - 6px);cursor:ns-resize;',
-            sw: 'bottom:-7px;left:-7px;cursor:nesw-resize;',
-            w: 'top:calc(50% - 6px);left:-7px;cursor:ew-resize;',
-          }[dir]
-          h.style.cssText = `position:absolute;width:12px;height:12px;background:#3b82f6;border:2px solid white;border-radius:50%;z-index:20;${pos}`
-          node.appendChild(h)
-        })
-      }
+      if (el.id === selectedId) addHandles(node)
 
       canvas.appendChild(node)
     })
   }
 
   function syncPropsPanel() {
+    // Image layers can be moved/resized/deleted but have no text properties, so
+    // the text panel is only active for a selected text box.
+    if (isImageSelected()) {
+      const idx = images.findIndex((im) => im.id === selectedId)
+      boxProps.style.opacity = '0.4'
+      boxProps.style.pointerEvents = 'none'
+      dupBoxBtn.disabled = false
+      delBoxBtn.disabled = false
+      selectedBoxLabel.textContent = `(image ${idx + 1} of ${images.length})`
+      return
+    }
     const el = elements.find((e) => e.id === selectedId)
     const hasSel = !!el
     boxProps.style.opacity = hasSel ? '1' : '0.4'
@@ -325,7 +382,7 @@ export function createSlideEditor(container) {
   }
 
   function getSelected() {
-    return elements.find((e) => e.id === selectedId)
+    return findObj(selectedId)
   }
 
   // ── Inline text editing ────────────────────────────────────────────────────
@@ -402,7 +459,7 @@ export function createSlideEditor(container) {
   canvas.addEventListener('mousedown', (e) => {
     if (editingId) return // let text editing receive clicks
     const handle = e.target.closest('.resize-handle')
-    const box = e.target.closest('.editor-textbox')
+    const box = e.target.closest('[data-box-id]') // text box or image layer
     if (!box) {
       selectBox(null)
       return
@@ -436,7 +493,7 @@ export function createSlideEditor(container) {
     requestAnimationFrame(() => {
       rafPending = false
       if (!drag) return
-      const el = elements.find((b) => b.id === drag.id)
+      const el = findObj(drag.id) // text element or image layer
       const node = boxNode(drag.id)
       if (!el || !node) return
 
@@ -524,6 +581,7 @@ export function createSlideEditor(container) {
       case 'Delete':
       case 'Backspace':
         elements = elements.filter((b) => b.id !== el.id)
+        images = images.filter((b) => b.id !== el.id)
         selectBox(null)
         return
       case 'Escape': selectBox(null); return
@@ -567,7 +625,34 @@ export function createSlideEditor(container) {
     if (el.textScaling === 'scaleToFit') applyAutosize(el)
   }))
   italicBtn.addEventListener('click', () => withSelected((el) => { el.italic = !el.italic }))
-  bgColorInput.addEventListener('input', () => { canvas.style.background = bgColorInput.value })
+  bgColorInput.addEventListener('input', () => {
+    if (bgImageDataUrl) {
+      canvas.style.background = `${bgColorInput.value} url(${bgImageDataUrl}) center / cover no-repeat`
+    } else {
+      canvas.style.background = bgColorInput.value
+    }
+  })
+
+  bgImageBtn.addEventListener('click', () => bgImageFile.click())
+
+  bgImageFile.addEventListener('change', () => {
+    const file = bgImageFile.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      bgImageDataUrl = ev.target.result
+      canvas.style.background = `${bgColorInput.value} url(${bgImageDataUrl}) center / cover no-repeat`
+      bgImageClearBtn.style.display = 'block'
+    }
+    reader.readAsDataURL(file)
+    bgImageFile.value = ''
+  })
+
+  bgImageClearBtn.addEventListener('click', () => {
+    bgImageDataUrl = null
+    bgImageClearBtn.style.display = 'none'
+    canvas.style.background = bgColorInput.value
+  })
 
   addBoxBtn.addEventListener('click', () => {
     const el = new TextElement({
@@ -581,6 +666,14 @@ export function createSlideEditor(container) {
   })
 
   dupBoxBtn.addEventListener('click', () => {
+    if (isImageSelected()) {
+      const im = images.find((i) => i.id === selectedId)
+      if (!im) return
+      const copy = { ...im, id: crypto.randomUUID(), x: im.x + 40, y: im.y + 40 }
+      images.push(copy)
+      selectBox(copy.id)
+      return
+    }
     const el = getSelected()
     if (!el) return
     const copy = new TextElement({ ...el.toJSON(), id: undefined, x: el.x + 40, y: el.y + 40 })
@@ -589,9 +682,9 @@ export function createSlideEditor(container) {
   })
 
   delBoxBtn.addEventListener('click', () => {
-    const el = getSelected()
-    if (!el) return
-    elements = elements.filter((b) => b.id !== el.id)
+    if (!selectedId) return
+    elements = elements.filter((b) => b.id !== selectedId)
+    images = images.filter((b) => b.id !== selectedId)
     selectBox(null)
   })
 
@@ -658,11 +751,17 @@ export function createSlideEditor(container) {
       slide.background.mediaPath
         ? slide.background.mediaPath
         : null
-    if (bgMediaPath) {
-      canvas.style.background = `${bg} url(${bgMediaPath}) center / cover no-repeat`
+    bgImageDataUrl = bgMediaPath || null
+    bgImageClearBtn.style.display = bgImageDataUrl ? 'block' : 'none'
+    if (bgImageDataUrl) {
+      canvas.style.background = `${bg} url(${bgImageDataUrl}) center / cover no-repeat`
     } else {
       canvas.style.background = bg
     }
+
+    // Positioned image layers (imported PPTX decorations) — shown behind the
+    // text boxes so the operator edits over the real layout.
+    images = Array.isArray(slide.images) ? slide.images.map((im) => ({ ...im })) : []
 
     if (Array.isArray(slide.elements) && slide.elements.length > 0) {
       elements = slide.elements.map((e) => new TextElement(e))
@@ -704,6 +803,7 @@ export function createSlideEditor(container) {
     const updated = state.updatePresentation(pres.id, (p) => {
       const slide = p.slides[currentSlideIndex]
       slide.elements = elements.map((e) => e.toJSON())
+      slide.images = images.map((im) => ({ ...im }))
       // Keep plain text in sync so thumbnails, search, and stage display still work
       slide.text = elements.map((e) => e.text).filter((s) => s.trim()).join('\n')
       slide.type = slideTypeSelect.value
@@ -713,11 +813,17 @@ export function createSlideEditor(container) {
       // silently dropped the imported bg image the first time the operator
       // saved an edit — the slide would go from a themed design to a plain
       // color background with no warning.
+      // bgImageDataUrl is the single source of truth for the bg image: it is
+      // seeded from the slide on load, replaced on upload, and nulled by the
+      // clear button — so falling back to prevBg.mediaPath here would silently
+      // resurrect an image the operator just cleared.
       const prevBg = slide.background || {}
+      const mediaPath = bgImageDataUrl || null
       slide.background = {
         ...prevBg,
-        type: prevBg.mediaPath ? 'media' : 'color',
-        color: bgColorInput.value
+        type: mediaPath ? 'media' : 'color',
+        color: bgColorInput.value,
+        mediaPath: mediaPath || undefined,
       }
       p.linkedAudio = rehearsalAudioInput.value.trim()
     })

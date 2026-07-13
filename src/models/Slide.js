@@ -1,5 +1,20 @@
 import { TextElement } from './TextElement.js'
 
+/** Normalizes a positioned image layer, assigning an id when missing. */
+function normalizeImage(img = {}) {
+  const out = {
+    id: img.id || crypto.randomUUID(),
+    mediaPath: img.mediaPath || '',
+    x: img.x || 0,
+    y: img.y || 0,
+    width: img.width || 400,
+    height: img.height || 300
+  }
+  // fill: PPTX stretch/fillRect framing (1000ths of a percent). Absent = full fill.
+  if (img.fill) out.fill = { ...img.fill }
+  return out
+}
+
 export class Slide {
   constructor(options = {}) {
     this.id = options.id || crypto.randomUUID()
@@ -9,6 +24,10 @@ export class Slide {
 
     // Content
     this.elements = options.elements ? options.elements.map((e) => new TextElement(e)) : []
+
+    // Positioned image layers (e.g. decorative art from a PPTX import). Each:
+    // { id, mediaPath, x, y, width, height }. Rendered behind the text elements.
+    this.images = options.images ? options.images.map((img) => normalizeImage(img)) : []
 
     // Background
     this.background = options.background || {
@@ -63,6 +82,7 @@ export class Slide {
       group: this.group,
       groupColor: this.groupColor,
       elements: this.elements.map((e) => e.toJSON()),
+      images: this.images.map((img) => ({ ...img })),
       background: this.background,
       transition: this.transition,
       actions: this.actions,

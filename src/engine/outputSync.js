@@ -27,7 +27,11 @@ export function buildOutputPayload(layers, activeTheme, showLogo, timerValue) {
       ? {
           text: content.text || '',
           style: content.style || null,
-          background: content.background || null
+          background: content.background || null,
+          // Positioned layout (imported PPTX). When present, the output window
+          // renders these faithfully instead of the flat single text block.
+          elements: content.elements && content.elements.length ? content.elements : null,
+          images: content.images && content.images.length ? content.images : null
         }
       : null,
     message,
@@ -44,10 +48,22 @@ export function buildOutputPayload(layers, activeTheme, showLogo, timerValue) {
 export function payloadSignature(payload) {
   const bg = payload.slide?.background
   const bgMarker = bg ? `${bg.type}:${bg.color || ''}:${bg.mediaPath ? bg.mediaPath.length : 0}` : ''
+  // Positioned layout: hash geometry + text cheaply; image data URLs are
+  // represented by length only (they can be multi-MB base64).
+  const els = payload.slide?.elements
+  const elMarker = els
+    ? els.map((e) => `${e.x},${e.y},${e.width},${e.height},${e.fontSize},${e.text}`).join('|')
+    : ''
+  const imgs = payload.slide?.images
+  const imgMarker = imgs
+    ? imgs.map((i) => `${i.x},${i.y},${i.width},${i.height},${i.mediaPath ? i.mediaPath.length : 0}`).join('|')
+    : ''
   return JSON.stringify([
     payload.slide?.text ?? null,
     payload.slide?.style ?? null,
     bgMarker,
+    elMarker,
+    imgMarker,
     payload.message,
     payload.showLogo,
     payload.themeStyles

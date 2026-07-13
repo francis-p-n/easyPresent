@@ -24,12 +24,13 @@ export const ToastManager = {
     void toast.offsetWidth
     toast.classList.add('toast--visible')
 
-    setTimeout(() => {
+    const dismiss = () => {
       toast.classList.remove('toast--visible')
-      toast.addEventListener('transitionend', () => {
-        toast.remove()
-      })
-    }, 3000)
+      toast.addEventListener('transitionend', () => toast.remove(), { once: true })
+    }
+
+    toast.addEventListener('click', dismiss)
+    setTimeout(dismiss, 1500)
   }
 }
 

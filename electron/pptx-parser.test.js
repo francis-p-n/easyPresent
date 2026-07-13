@@ -233,26 +233,156 @@ describe('parsePptx — style extraction', () => {
 // Background extraction
 // ---------------------------------------------------------------------------
 
-describe('parsePptx — background images', () => {
-  it('resolves the referenced raster image to a data URL', async () => {
-    const file = buildPptx(path.join(tmpDir, 'bg.pptx'), {
-      slides: { 'slide1.xml': SLIDE_RUNS },
-      media: { 'image1.png': TINY_PNG },
-      rels: {
-        'slide1.xml.rels': `<?xml version="1.0"?>
+// A slide-level picture-fill background (<p:bg>).
+const SLIDE_BG_PICTURE = sld(`
+  <p:bg><p:bgPr><a:blipFill><a:blip r:embed="rId1"/></a:blipFill></p:bgPr></p:bg>
+  <p:sp><p:txBody><a:p><a:r><a:rPr sz="4200"/><a:t>Over a full background</a:t></a:r></a:p></p:txBody></p:sp>`)
+
+// A shape filled with a picture that covers the whole slide → full-bleed bg.
+const SLIDE_FULLBLEED_SHAPE = sld(`
+  <p:pic>
+    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="12192000" cy="6858000"/></a:xfrm></p:spPr>
+    <p:blipFill><a:blip r:embed="rId1"/></p:blipFill>
+  </p:pic>
+  <p:sp><p:txBody><a:p><a:r><a:rPr sz="4200"/><a:t>Title</a:t></a:r></a:p></p:txBody></p:sp>`)
+
+// A small decorative picture in the corner → positioned image, NOT a background.
+const SLIDE_CORNER_DECORATION = sld(`
+  <p:pic>
+    <p:spPr><a:xfrm><a:off x="10000000" y="5500000"/><a:ext cx="1000000" cy="800000"/></a:xfrm></p:spPr>
+    <p:blipFill><a:blip r:embed="rId1"/></p:blipFill>
+  </p:pic>
+  <p:sp>
+    <p:spPr><a:xfrm><a:off x="500000" y="500000"/><a:ext cx="6000000" cy="1000000"/></a:xfrm></p:spPr>
+    <p:txBody><a:p><a:r><a:rPr sz="4200"/><a:t>Body text</a:t></a:r></a:p></p:txBody>
+  </p:sp>`)
+
+const IMAGE_REL = `<?xml version="1.0"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
 </Relationships>`
-      }
+
+describe('parsePptx — background images', () => {
+  it('treats a <p:bg> picture fill as the full-bleed background', async () => {
+    const file = buildPptx(path.join(tmpDir, 'bg.pptx'), {
+      slides: { 'slide1.xml': SLIDE_BG_PICTURE },
+      media: { 'image1.png': TINY_PNG },
+      rels: { 'slide1.xml.rels': IMAGE_REL }
     })
     const { slides } = await parsePptx(file)
-    expect(slides[0].bgImage).toBe(`data:image/png;base64,${TINY_PNG.toString('base64')}`)
+    expect(slides[0].background).toBe(`data:image/png;base64,${TINY_PNG.toString('base64')}`)
+    expect(slides[0].bgImage).toBe(slides[0].background)
+    expect(slides[0].images).toEqual([])
   })
 
-  it('returns null when the slide references no media', async () => {
+  it('treats a whole-slide picture SHAPE as the full-bleed background', async () => {
+    const file = buildPptx(path.join(tmpDir, 'fullbleed.pptx'), {
+      slides: { 'slide1.xml': SLIDE_FULLBLEED_SHAPE },
+      media: { 'image1.png': TINY_PNG },
+      rels: { 'slide1.xml.rels': IMAGE_REL }
+    })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].background).toBe(`data:image/png;base64,${TINY_PNG.toString('base64')}`)
+    expect(slides[0].images).toEqual([])
+  })
+
+  it('keeps a small corner picture as a POSITIONED image, not a background', async () => {
+    const file = buildPptx(path.join(tmpDir, 'corner.pptx'), {
+      slides: { 'slide1.xml': SLIDE_CORNER_DECORATION },
+      media: { 'image1.png': TINY_PNG },
+      rels: { 'slide1.xml.rels': IMAGE_REL }
+    })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].background).toBeNull()
+    expect(slides[0].images).toHaveLength(1)
+    // 10000000 EMU / 12192000 * 1920 ≈ 1575px x; positioned, not stretched
+    expect(slides[0].images[0].x).toBeGreaterThan(1500)
+    expect(slides[0].images[0].mediaPath).toBe(`data:image/png;base64,${TINY_PNG.toString('base64')}`)
+    // A plain corner picture has no fillRect framing
+    expect(slides[0].images[0].fill).toBeUndefined()
+  })
+
+  it('captures stretch fillRect insets so a zoomed/cropped decoration frames correctly', async () => {
+    const cropped = sld(`
+      <p:pic>
+        <p:spPr><a:xfrm><a:off x="10000000" y="5500000"/><a:ext cx="1000000" cy="800000"/></a:xfrm></p:spPr>
+        <p:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect l="-626050" t="-72085" r="-90089" b="-501533"/></a:stretch></p:blipFill>
+      </p:pic>`)
+    const file = buildPptx(path.join(tmpDir, 'cropfill.pptx'), {
+      slides: { 'slide1.xml': cropped },
+      media: { 'image1.png': TINY_PNG },
+      rels: { 'slide1.xml.rels': IMAGE_REL }
+    })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].images[0].fill).toEqual({ l: -626050, t: -72085, r: -90089, b: -501533 })
+  })
+
+  it('returns null background when the slide references no media', async () => {
     const file = buildPptx(path.join(tmpDir, 'nobg.pptx'), { slides: { 'slide1.xml': SLIDE_RUNS } })
     const { slides } = await parsePptx(file)
+    expect(slides[0].background).toBeNull()
     expect(slides[0].bgImage).toBeNull()
+    expect(slides[0].images).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Positioned layout (elements + list formatting)
+// ---------------------------------------------------------------------------
+
+// Two shapes with real geometry: a small title box and a body list box.
+const SLIDE_LAYOUT = sld(`
+  <p:sp>
+    <p:spPr><a:xfrm><a:off x="1000000" y="500000"/><a:ext cx="4000000" cy="1000000"/></a:xfrm></p:spPr>
+    <p:txBody><a:bodyPr anchor="t"/><a:p><a:pPr algn="l"/><a:r><a:rPr sz="4800"><a:solidFill><a:srgbClr val="343434"/></a:solidFill></a:rPr><a:t>Title Here</a:t></a:r></a:p></p:txBody>
+  </p:sp>
+  <p:sp>
+    <p:spPr><a:xfrm><a:off x="1000000" y="2000000"/><a:ext cx="9000000" cy="3000000"/></a:xfrm></p:spPr>
+    <p:txBody><a:bodyPr anchor="t"/>
+      <a:p><a:pPr lvl="0" algn="l"><a:buAutoNum type="arabicPeriod"/></a:pPr><a:r><a:rPr sz="2400"/><a:t>First question</a:t></a:r></a:p>
+      <a:p><a:pPr lvl="0" algn="l"><a:buAutoNum type="arabicPeriod"/></a:pPr><a:r><a:rPr sz="2400"/><a:t>Second question</a:t></a:r></a:p>
+      <a:p><a:pPr lvl="1"><a:buChar char="&#8226;"/></a:pPr><a:r><a:rPr sz="2400"/><a:t>A sub point</a:t></a:r></a:p>
+    </p:txBody>
+  </p:sp>`)
+
+describe('parsePptx — positioned layout', () => {
+  it('emits one positioned text element per shape with real geometry', async () => {
+    const file = buildPptx(path.join(tmpDir, 'layout.pptx'), { slides: { 'slide1.xml': SLIDE_LAYOUT } })
+    const { slides } = await parsePptx(file)
+    const els = slides[0].elements
+    expect(els).toHaveLength(2)
+    // Title box: 1000000 EMU / 12192000 * 1920 ≈ 157px x, 500000/6858000*1080 ≈ 79px y
+    expect(els[0].x).toBeGreaterThan(140)
+    expect(els[0].x).toBeLessThan(175)
+    expect(els[0].text).toBe('Title Here')
+    expect(els[0].color).toBe('#343434')
+    // Body box sits lower and wider
+    expect(els[1].y).toBeGreaterThan(els[0].y)
+    expect(els[1].width).toBeGreaterThan(els[0].width)
+  })
+
+  it('bakes auto-numbering and bullet markers into the body text', async () => {
+    const file = buildPptx(path.join(tmpDir, 'lists.pptx'), { slides: { 'slide1.xml': SLIDE_LAYOUT } })
+    const { slides } = await parsePptx(file)
+    const body = slides[0].elements[1].text
+    expect(body).toContain('1. First question')
+    expect(body).toContain('2. Second question')
+    expect(body).toContain('• A sub point')
+    // Level-1 bullet is indented deeper than the level-0 numbers
+    expect(body).toMatch(/\n {4}• A sub point/)
+  })
+
+  it('honors authored font sizes above the flat-style clamp for positioned text', async () => {
+    // sz=4800 → 48pt × 2px/pt = 96px; the legacy style clamp is 110 but a big
+    // title (e.g. 127pt) must survive as a positioned element.
+    const BIG = sld(`<p:sp>
+      <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="6000000" cy="3000000"/></a:xfrm></p:spPr>
+      <p:txBody><a:p><a:r><a:rPr sz="12700"/><a:t>Discussion</a:t></a:r></a:p></p:txBody>
+    </p:sp>`)
+    const file = buildPptx(path.join(tmpDir, 'bigtitle.pptx'), { slides: { 'slide1.xml': BIG } })
+    const { slides } = await parsePptx(file)
+    // 127pt × 2 = 254px, under the 300 element ceiling
+    expect(slides[0].elements[0].fontSize).toBe(254)
   })
 })
 

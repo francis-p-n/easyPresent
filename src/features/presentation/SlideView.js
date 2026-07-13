@@ -5,6 +5,7 @@ import { renderChordSheet } from './ChordSheet.js'
 import { announcementEditor } from './AnnouncementEditor.js'
 import { goLive } from '../../engine/navigation.js'
 import { getActiveSequence } from '../../engine/arrangement.js'
+import { hasLayout, renderSlideLayout } from '../../engine/slideLayout.js'
 
 /**
  * SlideView — Center panel showing slide thumbnails in a grid
@@ -237,28 +238,42 @@ export class SlideView {
       const bgMedia =
         slide.background && slide.background.type === 'media' && slide.background.mediaPath
 
-      if (bgMedia) styleOpts.transparentBg = true
-
-      // Generate a high-fidelity scaled data URL of the slide text
-      const imgUrl = NativeRender.generateThumbnailDataUrl(slide.text || '', styleOpts)
-
-      if (bgMedia) {
-        content.style.backgroundImage = `url(${imgUrl}), url(${slide.background.mediaPath})`
-        content.style.backgroundSize = 'contain, cover'
-      } else {
-        content.style.backgroundImage = `url(${imgUrl})`
-        content.style.backgroundSize = 'contain'
-      }
-      content.style.backgroundPosition = 'center'
-      content.style.backgroundRepeat = 'no-repeat'
       // Prefer the slide's own background color (e.g. from a PPTX import) so
       // solid-color slides don't all fall back to black
       const slideBgColor =
         slide.background && slide.background.type === 'color' && slide.background.color
           ? slide.background.color
           : null
-      content.style.backgroundColor =
-        slideBgColor || styleOpts.backgroundColor || '#000000'
+
+      if (hasLayout(slide)) {
+        // Imported layout slide: render positioned text boxes + images faithful
+        // to the original, instead of collapsing everything into one text block.
+        content.style.backgroundColor = slideBgColor || '#000000'
+        if (bgMedia) {
+          content.style.backgroundImage = `url(${slide.background.mediaPath})`
+          content.style.backgroundSize = 'cover'
+          content.style.backgroundPosition = 'center'
+          content.style.backgroundRepeat = 'no-repeat'
+        }
+        renderSlideLayout(content, slide)
+      } else {
+        if (bgMedia) styleOpts.transparentBg = true
+
+        // Generate a high-fidelity scaled data URL of the slide text
+        const imgUrl = NativeRender.generateThumbnailDataUrl(slide.text || '', styleOpts)
+
+        if (bgMedia) {
+          content.style.backgroundImage = `url(${imgUrl}), url(${slide.background.mediaPath})`
+          content.style.backgroundSize = 'contain, cover'
+        } else {
+          content.style.backgroundImage = `url(${imgUrl})`
+          content.style.backgroundSize = 'contain'
+        }
+        content.style.backgroundPosition = 'center'
+        content.style.backgroundRepeat = 'no-repeat'
+        content.style.backgroundColor =
+          slideBgColor || styleOpts.backgroundColor || '#000000'
+      }
 
       thumb.appendChild(content)
 
@@ -334,6 +349,9 @@ export class SlideView {
       const slide = pres.slides[index]
       if (slide && slide.type === 'announcement') {
         announcementEditor.open(index)
+      } else {
+        state.set('activeSlideIndex', sequenceIndex)
+        state.set('isEditing', true)
       }
     })
   }

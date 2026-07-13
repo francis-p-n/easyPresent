@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import Module from 'node:module'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 
 /**
  * Integration test for electron/main.js's IPC handlers, especially the
@@ -20,6 +23,8 @@ let ipcHandlers
 let ipcListeners
 let createdWindows
 let displays
+let userDataDir
+let dialogMock
 
 function makeFakeBrowserWindow(opts) {
   const win = {
@@ -56,7 +61,7 @@ function fakeElectron() {
   return {
     app: {
       whenReady: () => Promise.resolve(),
-      getPath: () => '/fake/userData',
+      getPath: () => userDataDir,
       on: vi.fn(),
       quit: vi.fn()
     },
@@ -67,7 +72,7 @@ function fakeElectron() {
       handle: (channel, fn) => ipcHandlers.set(channel, fn),
       on: (channel, fn) => ipcListeners.set(channel, fn)
     },
-    dialog: { showOpenDialog: vi.fn() },
+    dialog: dialogMock,
     screen: {
       getAllDisplays: () => displays,
       getPrimaryDisplay: () => displays[0]
@@ -80,6 +85,8 @@ beforeEach(() => {
   ipcListeners = new Map()
   createdWindows = []
   displays = [{ id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 } }] // single monitor by default
+  userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'easypresent-main-test-'))
+  dialogMock = { showOpenDialog: vi.fn(), showSaveDialog: vi.fn() }
 
   origLoad = Module._load
   Module._load = function (request, parent, isMain) {
@@ -92,6 +99,7 @@ beforeEach(() => {
 
 afterEach(() => {
   Module._load = origLoad
+  fs.rmSync(userDataDir, { recursive: true, force: true })
 })
 
 async function loadMain() {
@@ -177,5 +185,107 @@ describe('create-stage-display (regression: was loading a nonexistent file)', ()
     const win = createdWindows.at(-1)
     expect(win.loadURL).toHaveBeenCalledWith('http://localhost:8080')
     expect(win.loadFile).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Library persistence: atomic saves, rotating backups, corruption recovery
+// ---------------------------------------------------------------------------
+
+const LIB = () => path.join(userDataDir, 'library.json')
+const BACKUPS = () => path.join(userDataDir, 'backups')
+
+describe('save-library / load-library', () => {
+  it('round-trips the library through the file', async () => {
+    await loadMain()
+    const payload = JSON.stringify({ version: 1, presentations: [{ id: 'p1' }] })
+    await ipcHandlers.get('save-library')({}, payload)
+    expect(fs.existsSync(LIB())).toBe(true)
+    expect(await ipcHandlers.get('load-library')()).toBe(payload)
+  })
+
+  it('returns null when no library exists yet', async () => {
+    await loadMain()
+    expect(await ipcHandlers.get('load-library')()).toBeNull()
+  })
+
+  it('snapshots the previous library into backups/ on a later save', async () => {
+    await loadMain()
+    const save = ipcHandlers.get('save-library')
+    await save({}, JSON.stringify({ version: 1, presentations: [] }))
+    await save({}, JSON.stringify({ version: 1, presentations: [{ id: 'p2' }] }))
+    const backups = fs.readdirSync(BACKUPS())
+    expect(backups.length).toBe(1)
+    expect(backups[0]).toMatch(/^library-\d+\.json$/)
+    // The backup holds the version that was about to be overwritten
+    const backedUp = JSON.parse(fs.readFileSync(path.join(BACKUPS(), backups[0]), 'utf8'))
+    expect(backedUp.presentations).toEqual([])
+  })
+
+  it('recovers from the newest valid backup when the library file is corrupt', async () => {
+    await loadMain()
+    const good = JSON.stringify({ version: 1, presentations: [{ id: 'keep-me' }] })
+    fs.mkdirSync(BACKUPS(), { recursive: true })
+    fs.writeFileSync(path.join(BACKUPS(), 'library-1000.json'), '{ torn json', 'utf8')
+    fs.writeFileSync(path.join(BACKUPS(), 'library-0999.json'), good, 'utf8')
+    fs.writeFileSync(LIB(), '{"presentations": [{ "id": "trunc', 'utf8') // torn write
+    const loaded = await ipcHandlers.get('load-library')()
+    expect(JSON.parse(loaded).presentations[0].id).toBe('keep-me')
+  })
+})
+
+describe('export-library / import-library', () => {
+  it('writes the library JSON to the chosen path on export', async () => {
+    await loadMain()
+    const dest = path.join(userDataDir, 'exported.json')
+    dialogMock.showSaveDialog.mockResolvedValue({ canceled: false, filePath: dest })
+    const payload = JSON.stringify({ version: 1, presentations: [] })
+    expect(await ipcHandlers.get('export-library')({}, payload)).toBe(true)
+    expect(fs.readFileSync(dest, 'utf8')).toBe(payload)
+  })
+
+  it('returns false when the export dialog is cancelled', async () => {
+    await loadMain()
+    dialogMock.showSaveDialog.mockResolvedValue({ canceled: true })
+    expect(await ipcHandlers.get('export-library')({}, '{}')).toBe(false)
+  })
+
+  it('imports a valid library file, replacing the current library on disk', async () => {
+    await loadMain()
+    const src = path.join(userDataDir, 'incoming.json')
+    const payload = JSON.stringify({ version: 1, presentations: [{ id: 'imported' }] })
+    fs.writeFileSync(src, payload, 'utf8')
+    dialogMock.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [src] })
+    expect(await ipcHandlers.get('import-library')()).toBe(payload)
+    expect(fs.readFileSync(LIB(), 'utf8')).toBe(payload)
+  })
+
+  it('snapshots the existing library before an import replaces it', async () => {
+    await loadMain()
+    const original = JSON.stringify({ version: 1, presentations: [{ id: 'original' }] })
+    await ipcHandlers.get('save-library')({}, original)
+    const src = path.join(userDataDir, 'incoming.json')
+    fs.writeFileSync(src, JSON.stringify({ version: 1, presentations: [] }), 'utf8')
+    dialogMock.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [src] })
+    await ipcHandlers.get('import-library')()
+    const backups = fs.readdirSync(BACKUPS()).map((n) =>
+      JSON.parse(fs.readFileSync(path.join(BACKUPS(), n), 'utf8'))
+    )
+    expect(backups.some((b) => b.presentations?.[0]?.id === 'original')).toBe(true)
+  })
+
+  it('rejects a JSON file that is not an EasyPresent library', async () => {
+    await loadMain()
+    const src = path.join(userDataDir, 'not-a-library.json')
+    fs.writeFileSync(src, JSON.stringify({ some: 'other data' }), 'utf8')
+    dialogMock.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [src] })
+    await expect(ipcHandlers.get('import-library')()).rejects.toThrow(/not an easypresent library/i)
+    expect(fs.existsSync(LIB())).toBe(false) // nothing was overwritten
+  })
+
+  it('returns null when the import dialog is cancelled', async () => {
+    await loadMain()
+    dialogMock.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] })
+    expect(await ipcHandlers.get('import-library')()).toBeNull()
   })
 })

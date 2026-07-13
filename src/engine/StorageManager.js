@@ -18,6 +18,9 @@ class StorageManager {
 
   _serialize() {
     return JSON.stringify({
+      // Schema version — bump when the payload shape changes so future
+      // versions can migrate old library files instead of misreading them.
+      version: 1,
       presentations: state.get('presentations'),
       playlists: state.get('playlists'),
       themes: state.get('themes')
@@ -103,6 +106,25 @@ class StorageManager {
     } catch (e) {
       console.error('Failed to load data', e)
     }
+  }
+
+  /** Exports the library to a user-chosen .json file. Returns true on write. */
+  async exportLibrary() {
+    if (!window.electronAPI?.exportLibrary) return false
+    return window.electronAPI.exportLibrary(this._serialize())
+  }
+
+  /**
+   * Imports a library .json chosen by the user, replacing the current one
+   * (main process snapshots the old library to backups/ first). Returns true
+   * when a file was imported, false when the dialog was cancelled.
+   */
+  async importLibrary() {
+    if (!window.electronAPI?.importLibrary) return false
+    const json = await window.electronAPI.importLibrary()
+    if (!json) return false
+    this._applyData(JSON.parse(json))
+    return true
   }
 
   initAutoSave() {

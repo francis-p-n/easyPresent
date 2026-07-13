@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   broadcastSlide: (slideData) => ipcRenderer.send('broadcast-slide', slideData),
   saveLibrary: (json) => ipcRenderer.invoke('save-library', json),
   loadLibrary: () => ipcRenderer.invoke('load-library'),
+  exportLibrary: (json) => ipcRenderer.invoke('export-library', json),
+  importLibrary: () => ipcRenderer.invoke('import-library'),
 
   // Audience output (fullscreen projection window)
   toggleAudienceOutput: () => ipcRenderer.invoke('toggle-audience-output'),

@@ -64,8 +64,48 @@ app.whenReady().then(() => {
 
   // Library persistence — atomic file write (temp + rename) so a crash
   // mid-save can never corrupt the library
+  const backupsDir = () => path.join(app.getPath('userData'), 'backups')
+  const BACKUP_INTERVAL_MS = 10 * 60 * 1000 // snapshot at most every 10 min
+  const BACKUP_KEEP = 10
+
+  async function listBackups() {
+    try {
+      const names = await fs.promises.readdir(backupsDir())
+      return names
+        .filter((n) => /^library-\d+\.json$/.test(n))
+        .sort() // timestamp in name → lexicographic == chronological
+        .map((n) => path.join(backupsDir(), n))
+    } catch {
+      return []
+    }
+  }
+
+  // Copies the current library into backups/ (rate-limited, pruned) before it
+  // gets overwritten — the safety net for corruption and operator mistakes.
+  async function rotateBackups() {
+    const target = libraryPath()
+    let stat
+    try {
+      stat = await fs.promises.stat(target)
+    } catch {
+      return // nothing to back up yet
+    }
+    const backups = await listBackups()
+    const last = backups[backups.length - 1]
+    const lastTs = last ? parseInt(path.basename(last).match(/library-(\d+)/)[1], 10) : 0
+    if (stat.mtimeMs - lastTs < BACKUP_INTERVAL_MS && backups.length > 0) return
+
+    await fs.promises.mkdir(backupsDir(), { recursive: true })
+    await fs.promises.copyFile(target, path.join(backupsDir(), `library-${Date.now()}.json`))
+    const all = await listBackups()
+    for (const old of all.slice(0, Math.max(0, all.length - BACKUP_KEEP))) {
+      await fs.promises.unlink(old).catch(() => {})
+    }
+  }
+
   ipcMain.handle('save-library', async (event, json) => {
     const target = libraryPath()
+    await rotateBackups().catch((e) => console.error('Library backup failed:', e))
     const tmp = target + '.tmp'
     await fs.promises.writeFile(tmp, json, 'utf8')
     await fs.promises.rename(tmp, target)
@@ -74,10 +114,61 @@ app.whenReady().then(() => {
 
   ipcMain.handle('load-library', async () => {
     try {
-      return await fs.promises.readFile(libraryPath(), 'utf8')
-    } catch {
-      return null // no file yet — renderer falls back to localStorage
+      const json = await fs.promises.readFile(libraryPath(), 'utf8')
+      JSON.parse(json) // validate — a torn/corrupt file must not nuke the library
+      return json
+    } catch (err) {
+      if (err.code === 'ENOENT') return null // no file yet — renderer falls back to localStorage
+      console.error('Library file unreadable, trying backups:', err.message)
+      for (const backup of (await listBackups()).reverse()) {
+        try {
+          const json = await fs.promises.readFile(backup, 'utf8')
+          JSON.parse(json)
+          console.error(`Recovered library from backup: ${path.basename(backup)}`)
+          return json
+        } catch { /* try older backup */ }
+      }
+      return null
     }
+  });
+
+  // Export/import the whole library to a user-chosen .json file — the
+  // operator's way to move a library between machines or keep an off-device
+  // backup. Import validates before overwriting and snapshots the current
+  // library first, so a bad file can't destroy anything.
+  ipcMain.handle('export-library', async (event, json) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export Library',
+      defaultPath: `easypresent-library-${new Date().toISOString().slice(0, 10)}.json`,
+      filters: [{ name: 'EasyPresent Library', extensions: ['json'] }]
+    })
+    if (canceled || !filePath) return false
+    await fs.promises.writeFile(filePath, json, 'utf8')
+    return true
+  });
+
+  ipcMain.handle('import-library', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: 'Import Library',
+      filters: [{ name: 'EasyPresent Library', extensions: ['json'] }],
+      properties: ['openFile']
+    })
+    if (canceled || filePaths.length === 0) return null
+    const json = await fs.promises.readFile(filePaths[0], 'utf8')
+    const data = JSON.parse(json) // throws → renderer surfaces the error
+    if (!data || typeof data !== 'object' || !Array.isArray(data.presentations)) {
+      throw new Error('Not an EasyPresent library file')
+    }
+    // Snapshot whatever we're about to replace, ignoring the rate limit
+    const target = libraryPath()
+    if (fs.existsSync(target)) {
+      await fs.promises.mkdir(backupsDir(), { recursive: true })
+      await fs.promises.copyFile(target, path.join(backupsDir(), `library-${Date.now()}.json`))
+    }
+    const tmp = target + '.tmp'
+    await fs.promises.writeFile(tmp, json, 'utf8')
+    await fs.promises.rename(tmp, target)
+    return json
   });
 
   // Stage server starts lazily — binding 0.0.0.0:8080 with open CORS at

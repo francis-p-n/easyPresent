@@ -1,5 +1,7 @@
 import { state } from '../../engine/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
+import { storageManager } from '../../engine/StorageManager.js'
+import { showToast } from '../../components/common/ToastManager.js'
 
 /**
  * Toolbar — Top toolbar with view tabs, search, edit toggle, and clear buttons
@@ -91,6 +93,19 @@ export class Toolbar {
     screensBtn.innerHTML = `${icon('monitor', 16).outerHTML}<span class="toolbar-btn-label">Screens</span>`
     this.container.appendChild(screensBtn)
 
+    // Library backup menu (export/import the whole library as .json)
+    const libWrap = document.createElement('div')
+    libWrap.style.position = 'relative'
+    libWrap.innerHTML = `
+      <button class="btn tooltip" id="toolbar-library-btn" data-tooltip="Library backup">
+        ${icon('folder', 16).outerHTML}<span class="toolbar-btn-label">Library</span>
+      </button>
+      <div id="toolbar-library-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:200;background:var(--bg-toolbar);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-md);min-width:180px;padding:4px;">
+        <button class="btn" id="library-export-btn" style="width:100%;justify-content:flex-start;border:none;">Export Library…</button>
+        <button class="btn" id="library-import-btn" style="width:100%;justify-content:flex-start;border:none;">Import Library…</button>
+      </div>`
+    this.container.appendChild(libWrap)
+
     // Separator (presenter-only — hidden alongside the clear group in edit mode)
     const sepBeforeClears = this._sep()
     sepBeforeClears.classList.add('toolbar-presenter-only')
@@ -171,6 +186,39 @@ export class Toolbar {
     // Search
     this.container.querySelector('#toolbar-search-input')?.addEventListener('input', (e) => {
       state.set('searchQuery', e.target.value)
+    })
+
+    // Library backup menu
+    const libraryBtn = this.container.querySelector('#toolbar-library-btn')
+    const libraryMenu = this.container.querySelector('#toolbar-library-menu')
+    libraryBtn?.addEventListener('click', (e) => {
+      e.stopPropagation()
+      libraryMenu.style.display = libraryMenu.style.display === 'none' ? 'block' : 'none'
+    })
+    document.addEventListener('click', () => {
+      if (libraryMenu) libraryMenu.style.display = 'none'
+    })
+    this.container.querySelector('#library-export-btn')?.addEventListener('click', async () => {
+      libraryMenu.style.display = 'none'
+      try {
+        const ok = await storageManager.exportLibrary()
+        if (ok) showToast('Library exported', 'success')
+        else if (!window.electronAPI?.exportLibrary) showToast('Export needs the desktop app', 'error')
+      } catch (err) {
+        console.error('Library export failed:', err)
+        showToast('Export failed', 'error')
+      }
+    })
+    this.container.querySelector('#library-import-btn')?.addEventListener('click', async () => {
+      libraryMenu.style.display = 'none'
+      try {
+        const ok = await storageManager.importLibrary()
+        if (ok) showToast('Library imported', 'success')
+        else if (!window.electronAPI?.importLibrary) showToast('Import needs the desktop app', 'error')
+      } catch (err) {
+        console.error('Library import failed:', err)
+        showToast('Import failed — not a valid library file', 'error')
+      }
     })
 
     // Edit toggle — updates label + active state, and stays in sync if

@@ -21,7 +21,7 @@ const makePres = (overrides = {}) => ({
   ...overrides
 })
 
-let container, view
+let container, _view
 
 beforeEach(() => {
   // jsdom has no real canvas 2D context — stub the thumbnail renderer so the
@@ -46,14 +46,14 @@ afterEach(() => {
 describe('SlideView — default (no custom arrangement)', () => {
   it('renders one thumbnail per master slide, in master order', () => {
     state.set('selectedPresentation', makePres())
-    view = new SlideView(container)
+    _view = new SlideView(container)
     const labels = [...container.querySelectorAll('.slide-thumbnail__label')].map((l) => l.textContent)
     expect(labels).toEqual(['Verse 1', 'Chorus', 'Bridge'])
   })
 
   it('slide count reflects the master slide count', () => {
     state.set('selectedPresentation', makePres())
-    view = new SlideView(container)
+    _view = new SlideView(container)
     expect(container.querySelector('.slide-view-header .text-muted').textContent).toBe('3 slides')
   })
 })
@@ -67,20 +67,20 @@ describe('SlideView — custom arrangement with repeats', () => {
 
   it('renders thumbnails in arrangement order, repeating a slide as separate tiles', () => {
     state.set('selectedPresentation', withArrangement())
-    view = new SlideView(container)
+    _view = new SlideView(container)
     const labels = [...container.querySelectorAll('.slide-thumbnail__label')].map((l) => l.textContent)
     expect(labels).toEqual(['Chorus', 'Verse 1', 'Chorus', 'Bridge', 'Chorus'])
   })
 
   it('slide count reflects the arrangement length, not the master slide count', () => {
     state.set('selectedPresentation', withArrangement())
-    view = new SlideView(container)
+    _view = new SlideView(container)
     expect(container.querySelector('.slide-view-header .text-muted').textContent).toBe('5 slides')
   })
 
   it('clicking a repeated occurrence goes live on that arrangement position', () => {
     state.set('selectedPresentation', withArrangement())
-    view = new SlideView(container)
+    _view = new SlideView(container)
     container.querySelectorAll('.slide-thumbnail')[4].click() // 5th tile: the last "Chorus"
     expect(state.get('liveSlideIndex')).toBe(4)
     expect(state.get('layers').slide.content.id).toBe('s2')
@@ -88,7 +88,7 @@ describe('SlideView — custom arrangement with repeats', () => {
 
   it('the live/active highlight lands on the correct occurrence, not just the first match', () => {
     state.set('selectedPresentation', withArrangement())
-    view = new SlideView(container)
+    _view = new SlideView(container)
     container.querySelectorAll('.slide-thumbnail')[2].click() // 3rd tile: the middle "Chorus"
     const thumbs = container.querySelectorAll('.slide-thumbnail')
     expect(thumbs[2].classList.contains('live')).toBe(true)
@@ -100,13 +100,13 @@ describe('SlideView — custom arrangement with repeats', () => {
 describe('SlideView — Arrangement button visibility', () => {
   it('shows the Arrangement button when the presentation has slides', () => {
     state.set('selectedPresentation', makePres())
-    view = new SlideView(container)
+    _view = new SlideView(container)
     expect(container.querySelector('#arrangement-btn')).not.toBeNull()
   })
 
   it('hides it when no presentation is selected', () => {
     state.set('selectedPresentation', null)
-    view = new SlideView(container)
+    _view = new SlideView(container)
     expect(container.querySelector('#arrangement-btn')).toBeNull()
   })
 })

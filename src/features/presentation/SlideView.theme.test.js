@@ -22,7 +22,7 @@ const baseThemes = () => [
   { id: 'other', name: 'Other', styles: { fontFamily: 'Georgia', fontSize: '48px', color: '#00ff00' } }
 ]
 
-let container, view, thumbSpy
+let container, _view, thumbSpy
 
 beforeEach(() => {
   thumbSpy = vi.spyOn(NativeRender, 'generateThumbnailDataUrl').mockReturnValue('data:image/png;base64,stub')
@@ -31,7 +31,7 @@ beforeEach(() => {
   state.set('selectedPresentation', makePres())
   state.set('themes', baseThemes())
   state.set('activeThemeId', 'default')
-  view = new SlideView(container)
+  _view = new SlideView(container)
   thumbSpy.mockClear()
 })
 

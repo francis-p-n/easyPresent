@@ -12,7 +12,8 @@
     "icon": "node scripts/generate-icon.js",
     "preview": "vite preview",
     "test": "vitest run",
-    "lint": "eslint src/ --fix",
+    "lint": "eslint src/ electron/ scripts/ --fix",
+    "lint:check": "eslint src/ electron/ scripts/",
     "format": "prettier --write \"src/**/*.{js,jsx,css,html}\""
   },
   "dependencies": {

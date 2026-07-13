@@ -9,6 +9,7 @@
     "dev": "vite",
     "build": "vite build && electron-builder",
     "build:native": "cmake-js compile",
+    "icon": "node scripts/generate-icon.js",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint src/ --fix",
@@ -42,10 +43,12 @@
     "appId": "com.easypresent.app",
     "productName": "EasyPresent",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "resources"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "resources/icon.ico"
     },
     "nsis": {
       "oneClick": false,

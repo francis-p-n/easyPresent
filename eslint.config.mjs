@@ -52,8 +52,8 @@ export default [
     }
   },
   {
-    // Electron main process + servers run in Node (CommonJS)
-    files: ["electron/**/*.js"],
+    // Electron main process, servers, and build scripts run in Node (CommonJS)
+    files: ["electron/**/*.js", "scripts/**/*.js"],
     languageOptions: {
       sourceType: "commonjs",
       globals: nodeGlobals

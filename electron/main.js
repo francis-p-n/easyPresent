@@ -6,6 +6,12 @@ const { startServer } = require('./server')
 
 const libraryPath = () => path.join(app.getPath('userData'), 'library.json')
 
+// Window icon for dev runs (packaged builds inherit the exe icon that
+// electron-builder embeds from resources/icon.ico). Undefined when the
+// generated file is absent so Electron falls back to its default.
+const devIconPath = path.join(__dirname, '../resources/icon.png')
+const appIcon = fs.existsSync(devIconPath) ? devIconPath : undefined
+
 let mainWindow
 let stageServer
 
@@ -15,7 +21,8 @@ function createWindow() {
     height: 800,
     minWidth: 1024,
     minHeight: 768,
-    title: 'ProPresenter Clone',
+    title: 'EasyPresent',
+    icon: appIcon,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -128,6 +135,7 @@ app.whenReady().then(() => {
       autoHideMenuBar: true,
       backgroundColor: '#000000',
       title: 'Audience Output',
+      icon: appIcon,
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
         nodeIntegration: false,
@@ -160,6 +168,7 @@ app.whenReady().then(() => {
       width: 1280,
       height: 720,
       title: 'Stage Display',
+      icon: appIcon,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true

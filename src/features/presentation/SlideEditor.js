@@ -2,6 +2,7 @@ import { state } from '../../engine/StateManager.js'
 import { TextElement } from '../../models/TextElement.js'
 import { getActiveSequence } from '../../engine/arrangement.js'
 import { imageFrameStyle, shapeTransform } from '../../engine/slideLayout.js'
+import { BUILTIN_BACKGROUNDS } from '../../assets/builtinBackgrounds.js'
 
 const CANVAS_W = 1920
 const CANVAS_H = 1080
@@ -98,6 +99,16 @@ export function createSlideEditor(container) {
             </select>
           </label>
         </div>
+
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);">
+          Built-in Backgrounds
+          <div id="builtin-bg-strip" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;">
+            ${BUILTIN_BACKGROUNDS.map(
+              (bg) => `<button class="builtin-bg-swatch" data-bg-id="${bg.id}" title="${bg.name}"
+                style="flex-shrink:0;width:64px;height:36px;border-radius:4px;border:2px solid var(--border-color);cursor:pointer;padding:0;background:#000 url('${bg.dataUrl}') center / cover no-repeat;"></button>`
+            ).join('')}
+          </div>
+        </label>
 
         <div style="display:flex;gap:6px;">
           <button class="btn" id="add-textbox-btn" style="flex:1;font-size:11px;">+ Text Box</button>
@@ -654,6 +665,18 @@ export function createSlideEditor(container) {
     bgImageDataUrl = null
     bgImageClearBtn.style.display = 'none'
     canvas.style.background = bgColorInput.value
+  })
+
+  // Built-in background gallery — clicking a swatch applies it like an
+  // uploaded image (same save path), so it syncs to every output unchanged.
+  container.querySelector('#builtin-bg-strip').addEventListener('click', (e) => {
+    const swatch = e.target.closest('[data-bg-id]')
+    if (!swatch) return
+    const bg = BUILTIN_BACKGROUNDS.find((b) => b.id === swatch.dataset.bgId)
+    if (!bg) return
+    bgImageDataUrl = bg.dataUrl
+    canvas.style.background = `${bgColorInput.value} url("${bg.dataUrl}") center / cover no-repeat`
+    bgImageClearBtn.style.display = 'block'
   })
 
   addBoxBtn.addEventListener('click', () => {

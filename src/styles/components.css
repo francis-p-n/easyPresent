@@ -28,6 +28,13 @@
   border-color: var(--border-light);
 }
 
+/* Toggled-on state for toolbar buttons (Edit, Screens) */
+.btn.active {
+  background: var(--accent-blue-soft);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
 .btn:active {
   transform: translateY(1px);
 }
@@ -242,6 +249,8 @@
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
+  background: transparent;
+  border: 0;
   border-bottom: 2px solid transparent;
   transition: all 0.15s ease;
   text-transform: uppercase;

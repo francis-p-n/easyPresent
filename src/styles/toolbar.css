@@ -368,8 +368,14 @@
    the 320px right panel (hidden scrollbar = no affordance). Grid keeps every
    tab visible at any panel width. */
 #show-controls-tabs {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+/* 4 on the first row, the remaining tabs stretch to fill the second */
+#show-controls-tabs .tab {
+  flex: 1 1 25%;
 }
 
 #show-controls-tabs .tab {

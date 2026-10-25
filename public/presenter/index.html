@@ -10,6 +10,8 @@
     header { display: flex; justify-content: space-between; align-items: baseline; padding: 1.5vh 3vw; color: #9aa; font-size: 2.4vh; }
     #clock { font-size: 5vh; color: #fff; font-variant-numeric: tabular-nums; }
     #timer { color: #ffcc00; font-size: 4vh; font-variant-numeric: tabular-nums; }
+    #logo-bar { display: none; background: #1f4f8f; color: #fff; text-align: center; font-size: 3.4vh; font-weight: bold; padding: 1vh 2vw; }
+    #current.covered { opacity: .45; border-color: #1f4f8f; }
     #message { display: none; background: #c0392b; color: #fff; text-align: center; font-size: 4vh; font-weight: bold; padding: 1.2vh 2vw; }
     main { flex: 1; display: flex; flex-direction: column; padding: 0 3vw 2vh; gap: 2vh; min-height: 0; }
     .panel { border-radius: 1vh; padding: 2vh 2.5vw; overflow: hidden; }
@@ -18,8 +20,10 @@
     .tag { font-size: 2.2vh; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 1vh; color: #2ecc71; }
     #next .tag { color: #8899aa; }
     .text { white-space: pre-wrap; line-height: 1.25; font-weight: 600; }
+    .panel { min-height: 0; }
     #current .text { font-size: 7vh; }
     #next .text { font-size: 3.6vh; color: #cfd6dd; }
+    .fit { overflow: hidden; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
     .empty { color: #667; font-style: italic; }
     #conn { position: fixed; bottom: .8vh; right: 1vw; font-size: 1.8vh; color: #667; }
   </style>
@@ -29,10 +33,11 @@
     <div id="title">Waiting for presentation…</div>
     <div><span id="timer"></span> &nbsp; <span id="clock"></span></div>
   </header>
+  <div id="logo-bar">LOGO ON SCREEN — the congregation cannot see the slide</div>
   <div id="message"></div>
   <main>
-    <section class="panel" id="current"><div class="tag" id="current-tag">Now</div><div class="text empty" id="current-text">Nothing on screen</div></section>
-    <section class="panel" id="next"><div class="tag">Next</div><div class="text" id="next-text"></div></section>
+    <section class="panel" id="current"><div class="tag" id="current-tag">Now</div><div class="fit"><div class="text empty" id="current-text">Nothing on screen</div></div></section>
+    <section class="panel" id="next"><div class="tag">Next</div><div class="fit"><div class="text" id="next-text"></div></div></section>
   </main>
   <div id="conn">connecting…</div>
 
@@ -48,6 +53,10 @@
       const msg = document.getElementById('message');
       msg.style.display = s.message ? 'block' : 'none';
       msg.textContent = s.message || '';
+
+      const logoBar = document.getElementById('logo-bar');
+      logoBar.style.display = s.showLogo ? 'block' : 'none';
+      document.getElementById('current').classList.toggle('covered', !!s.showLogo);
 
       const cur = document.getElementById('current-text');
       const tag = document.getElementById('current-tag');
@@ -70,7 +79,24 @@
         nxt.className = 'text empty';
         nxt.textContent = s.current ? 'End of presentation' : '';
       }
+      fitAll();
     }
+
+    // Shrink text until it fits its box — long slides must never spill out or hide the label
+    function fit(textEl, maxVh) {
+      const box = textEl.parentElement;
+      let size = window.innerHeight * maxVh / 100;
+      textEl.style.fontSize = size + 'px';
+      while (textEl.scrollHeight > box.clientHeight && size > 12) {
+        size *= 0.93;
+        textEl.style.fontSize = size + 'px';
+      }
+    }
+    function fitAll() {
+      fit(document.getElementById('current-text'), 7);
+      fit(document.getElementById('next-text'), 3.6);
+    }
+    window.addEventListener('resize', fitAll);
 
     function tick() {
       document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', { hour12: false });

@@ -1,6 +1,5 @@
 const { BrowserWindow } = require('electron')
-const path = require('path')
-const { appIcon } = require('../assets')
+const { appIcon, preload, indexHtml } = require('../paths')
 
 function createMainWindow() {
   const win = new BrowserWindow({
@@ -11,7 +10,7 @@ function createMainWindow() {
     title: 'EasyPresent',
     icon: appIcon,
     webPreferences: {
-      preload: path.join(__dirname, '../preload.js'),
+      preload,
       nodeIntegration: false,
       contextIsolation: true
     }
@@ -23,7 +22,7 @@ function createMainWindow() {
     win.loadURL(process.env.VITE_DEV_SERVER_URL)
     win.webContents.openDevTools()
   } else {
-    win.loadFile(path.join(__dirname, '../../dist/index.html'))
+    win.loadFile(indexHtml)
   }
   return win
 }

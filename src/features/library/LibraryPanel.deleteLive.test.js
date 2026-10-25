@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 
 /**
  * Regression: deleting the presentation that is currently LIVE used to clear

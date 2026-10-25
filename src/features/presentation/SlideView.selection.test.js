@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { state } from '../../engine/StateManager.js'
-import NativeRender from '../../engine/NativeRender.js'
+import { state } from '../../core/StateManager.js'
+import NativeRender from '../../services/NativeRender.js'
 import { SlideView } from './SlideView.js'
-import { goLive, goLiveNext, goLivePrev } from '../../engine/navigation.js'
+import { goLive, goLiveNext, goLivePrev } from '../../core/navigation.js'
 
 /**
  * Regression coverage for the live/active highlight in the thumbnail grid.

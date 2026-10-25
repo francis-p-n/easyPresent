@@ -1,4 +1,4 @@
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
 import {
   MASTER_ARRANGEMENT_ID,
@@ -8,7 +8,7 @@ import {
   deleteArrangement,
   renameArrangement,
   setArrangementSequence
-} from '../../engine/arrangement.js'
+} from '../../core/arrangement.js'
 
 /**
  * ArrangementEditor — build a named, ordered sequence of a presentation's

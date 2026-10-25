@@ -1,6 +1,6 @@
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
-import { printSetlist } from '../../engine/printSheet.js'
+import { printSetlist } from '../../songs/printSheet.js'
 
 /**
  * PlaylistPanel — Service order management
@@ -47,11 +47,25 @@ export class PlaylistPanel {
     if (playlist) {
       const nameBar = document.createElement('div')
       nameBar.className = 'playlist-name'
+      const all = state.get('playlists') || []
+      const nameHtml =
+        all.length > 1
+          ? `<select class="playlist-name__select" id="playlist-switcher" title="Switch setlist">${all
+              .map((p) => `<option value="${p.id}"${p.id === playlist.id ? ' selected' : ''}>${p.name}</option>`)
+              .join('')}</select>`
+          : `<span class="playlist-name__text">${playlist.name}</span>`
       nameBar.innerHTML = `
         <span class="playlist-name__icon">${icon('list', 14).outerHTML}</span>
-        <span class="playlist-name__text">${playlist.name}</span>
+        ${nameHtml}
       `
       this.container.appendChild(nameBar)
+      nameBar.querySelector('#playlist-switcher')?.addEventListener('change', (e) => {
+        const next = all.find((p) => p.id === e.target.value)
+        if (next) {
+          state.set('activePlaylist', next)
+          this.render()
+        }
+      })
     }
 
     // Items list

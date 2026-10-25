@@ -1,8 +1,8 @@
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 import { TextElement } from '../../models/TextElement.js'
-import { getActiveSequence } from '../../engine/arrangement.js'
-import { imageFrameStyle, shapeTransform } from '../../engine/slideLayout.js'
-import { BUILTIN_BACKGROUNDS } from '../../assets/builtinBackgrounds.js'
+import { getActiveSequence } from '../../core/arrangement.js'
+import { imageFrameStyle, shapeTransform } from '../../core/slideLayout.js'
+import { BUILTIN_BACKGROUNDS } from '../../data/builtinBackgrounds.js'
 
 const CANVAS_W = 1920
 const CANVAS_H = 1080

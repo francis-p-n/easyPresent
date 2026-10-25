@@ -1,11 +1,11 @@
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
-import NativeRender from '../../engine/NativeRender.js'
+import NativeRender from '../../services/NativeRender.js'
 import { renderChordSheet } from './ChordSheet.js'
 import { announcementEditor } from './AnnouncementEditor.js'
-import { goLive } from '../../engine/navigation.js'
-import { getActiveSequence } from '../../engine/arrangement.js'
-import { hasLayout, renderSlideLayout } from '../../engine/slideLayout.js'
+import { goLive } from '../../core/navigation.js'
+import { getActiveSequence } from '../../core/arrangement.js'
+import { hasLayout, renderSlideLayout } from '../../core/slideLayout.js'
 
 /**
  * SlideView — Center panel showing slide thumbnails in a grid

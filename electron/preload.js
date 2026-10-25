@@ -10,6 +10,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadLibrary: () => ipcRenderer.invoke('load-library'),
   exportLibrary: (json) => ipcRenderer.invoke('export-library', json),
   broadcastLiveState: (state) => ipcRenderer.send('broadcast-live-state', state),
+  // Chart database (SQLite)
+  songsList: () => ipcRenderer.invoke('songs-list'),
+  songsUpsert: (songs) => ipcRenderer.invoke('songs-upsert', songs),
+  songsRemove: (ids) => ipcRenderer.invoke('songs-remove', ids),
+  songsMetaGet: (key) => ipcRenderer.invoke('songs-meta-get', key),
+  songsMetaSet: (key, value) => ipcRenderer.invoke('songs-meta-set', key, value),
+  songsExport: () => ipcRenderer.invoke('songs-export'),
+  songsImport: () => ipcRenderer.invoke('songs-import'),
   importLibrary: () => ipcRenderer.invoke('import-library'),
 
   // Role displays: 'audience' | 'presenter' | 'pa'

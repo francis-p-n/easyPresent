@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest'
-import { state } from '../../engine/StateManager.js'
-import NativeRender from '../../engine/NativeRender.js'
+import { state } from '../../core/StateManager.js'
+import NativeRender from '../../services/NativeRender.js'
 import { PreviewPanel } from './PreviewPanel.js'
 
 /**

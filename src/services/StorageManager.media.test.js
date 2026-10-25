@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { storageManager } from './StorageManager.js'
-import { state } from './StateManager.js'
+import { state } from '../core/StateManager.js'
 import { MEDIA_REF_PREFIX } from './mediaStore.js'
 
 /**

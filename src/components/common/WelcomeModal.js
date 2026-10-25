@@ -1,4 +1,4 @@
-import { icon } from '../../components/common/Icons.js'
+import { icon } from './Icons.js'
 
 export class WelcomeModal {
   constructor(onDismiss) {

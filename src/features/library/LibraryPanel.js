@@ -1,4 +1,4 @@
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
 import { createSongImporter } from './SongImporter.js'
 import { showToast } from '../../components/common/ToastManager.js'
@@ -77,7 +77,7 @@ export class LibraryPanel {
     if (!list) return
 
     if (!this.searchWorker) {
-      this.searchWorker = new Worker(new URL('../../engine/SearchWorker.js', import.meta.url))
+      this.searchWorker = new Worker(new URL('../../services/SearchWorker.js', import.meta.url))
       this.searchWorker.onmessage = (e) => {
         const byId = new Map(state.get('presentations').map((p) => [p.id, p]))
         this._renderListWithResults(e.data.ids.map((id) => byId.get(id)).filter(Boolean))

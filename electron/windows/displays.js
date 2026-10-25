@@ -9,8 +9,7 @@
  * also open on any phone/laptop at http://<this-pc>:8080/presenter and /pa.
  */
 const { BrowserWindow, screen } = require('electron')
-const path = require('path')
-const { appIcon, publicPage } = require('../assets')
+const { appIcon, publicPage, preload } = require('../paths')
 
 const ROLE_TITLES = { presenter: 'Presenter View', pa: 'PA View' }
 const WINDOWED_SIZE = { presenter: [1100, 650], pa: [1100, 650] }
@@ -69,7 +68,7 @@ function createDisplayManager({ stageHub }) {
       title: 'Audience Output',
       icon: appIcon,
       webPreferences: {
-        preload: path.join(__dirname, '../preload.js'),
+        preload,
         nodeIntegration: false,
         contextIsolation: true
       }

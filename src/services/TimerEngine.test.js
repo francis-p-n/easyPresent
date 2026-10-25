@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { timerEngine } from './TimerEngine.js'
-import { state } from './StateManager.js'
+import { state } from '../core/StateManager.js'
 
 beforeEach(() => {
   vi.useFakeTimers()

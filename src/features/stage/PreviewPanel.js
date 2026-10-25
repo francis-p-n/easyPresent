@@ -1,6 +1,6 @@
-import { state } from '../../engine/StateManager.js'
-import NativeRender from '../../engine/NativeRender.js'
-import { hasLayout, renderSlideLayout } from '../../engine/slideLayout.js'
+import { state } from '../../core/StateManager.js'
+import NativeRender from '../../services/NativeRender.js'
+import { hasLayout, renderSlideLayout } from '../../core/slideLayout.js'
 
 /**
  * PreviewPanel — Shows live output preview using the NativeRender engine

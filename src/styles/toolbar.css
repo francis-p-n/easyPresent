@@ -185,6 +185,23 @@
 
 /* ===== PLAYLIST SPECIFIC ===== */
 
+.playlist-name__select {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 4px);
+  font: inherit;
+  font-weight: 600;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.playlist-name__select:hover,
+.playlist-name__select:focus {
+  border-color: var(--border-color);
+  background: var(--bg-elevated);
+}
 .playlist-name {
   display: flex;
   align-items: center;

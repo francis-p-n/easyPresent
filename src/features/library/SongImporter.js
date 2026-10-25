@@ -1,6 +1,7 @@
 import { icon } from '../../components/common/Icons.js'
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 import { showToast } from '../../components/common/ToastManager.js'
+import { parseChordProToSlides } from '../../songs/chordpro.js'
 
 export function createSongImporter(onImport) {
   // Create overlay
@@ -226,79 +227,6 @@ export function createSongImporter(onImport) {
   overlay.appendChild(modal)
 
   document.body.appendChild(overlay)
-}
-
-export function parseChordProToSlides(text, maxLines = 4) {
-  // Split text into blocks by blank lines or bracket headers like [Verse 1]
-  const lines = text.split(/\r?\n/)
-  const slides = []
-
-  let currentGroup = 'Verse'
-  let currentLabel = 'Verse 1'
-  let currentTextLines = []
-  let currentLineData = [] // Stores { text, chords: [{pos, chord}] }
-
-  const commitSlide = () => {
-    if (currentTextLines.length > 0) {
-      slides.push({
-        id: 'slide-' + Math.random().toString(36).substr(2, 9),
-        group: currentGroup.toLowerCase(),
-        label: currentLabel,
-        text: currentTextLines.join('\n'),
-        linesData: currentLineData
-      })
-      currentTextLines = []
-      currentLineData = []
-    }
-  }
-
-  lines.forEach((line) => {
-    const trimmed = line.trim()
-
-    // Check for Section Header like [Chorus] or Verse 1:
-    const headerMatch = trimmed.match(
-      /^\[?(Verse|Chorus|Bridge|Pre-Chorus|Intro|Outro|Tag)(?:[\s:]+(.+))?\]?:?$/i
-    )
-
-    if (headerMatch) {
-      // It's a new section header
-      commitSlide()
-      currentGroup = headerMatch[1]
-      currentLabel = headerMatch[0].replace(/[[\]]/g, '') // remove brackets for label
-    } else if (trimmed === '') {
-      // Blank line means new slide within the same group
-      commitSlide()
-    } else {
-      // Parse chords from line (e.g., "[C]Amazing [F]grace")
-      let cleanText = ''
-      let chords = []
-      let chordRegex = /\[(.*?)\]/g
-      let match
-      let lastIdx = 0
-      let textOffset = 0
-
-      while ((match = chordRegex.exec(trimmed)) !== null) {
-        cleanText += trimmed.substring(lastIdx, match.index)
-        textOffset += match.index - lastIdx
-        chords.push({ pos: textOffset, chord: match[1] })
-        lastIdx = chordRegex.lastIndex
-      }
-      cleanText += trimmed.substring(lastIdx)
-
-      currentTextLines.push(cleanText)
-      currentLineData.push({ text: cleanText, chords })
-
-      // Auto-split slides if exceeding max lines (best practice)
-      if (currentTextLines.length >= maxLines) {
-        commitSlide()
-      }
-    }
-  })
-
-  // Commit last
-  commitSlide()
-
-  return slides
 }
 
 function downloadTemplate() {

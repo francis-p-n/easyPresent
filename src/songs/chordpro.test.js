@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseChordProToSlides } from './SongImporter.js'
+import { parseChordProToSlides } from './chordpro.js'
 
 describe('parseChordProToSlides — section headers', () => {
   it('starts a new slide at bracketed headers and uses them as group/label', () => {

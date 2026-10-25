@@ -1,4 +1,4 @@
-import { state } from './StateManager.js'
+import { state } from '../core/StateManager.js'
 
 class TimerEngine {
   constructor() {

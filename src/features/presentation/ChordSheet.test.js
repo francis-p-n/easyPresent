@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 import { renderChordSheet } from './ChordSheet.js'
 
 let container

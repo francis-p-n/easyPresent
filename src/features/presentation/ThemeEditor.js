@@ -1,4 +1,4 @@
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
 
 export function createThemeEditor() {

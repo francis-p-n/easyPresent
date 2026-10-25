@@ -17,9 +17,9 @@ export function createAudioBin() {
 
   setTimeout(() => {
     const list = container.querySelector('#audio-list')
-    import('../../engine/MediaManager.js').then((module) => {
+    import('../../services/MediaManager.js').then((module) => {
       const MediaManager = module.default
-      import('../../engine/StateManager.js').then((stateModule) => {
+      import('../../core/StateManager.js').then((stateModule) => {
         const state = stateModule.state
 
         state.on('audio:loaded', (items) => {

@@ -1,4 +1,4 @@
-import { state } from '../../../engine/StateManager.js'
+import { state } from '../../../core/StateManager.js'
 
 /**
  * GameTab — Live camp game controls: team scores, trivia questions, countdown timer.

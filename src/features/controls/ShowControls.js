@@ -1,5 +1,5 @@
-import { state } from '../../engine/StateManager.js'
-import { timerEngine } from '../../engine/TimerEngine.js'
+import { state } from '../../core/StateManager.js'
+import { timerEngine } from '../../services/TimerEngine.js'
 import { icon } from '../../components/common/Icons.js'
 import { renderTimers } from './tabs/TimersTab.js'
 import { renderMessages } from './tabs/MessagesTab.js'

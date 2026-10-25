@@ -1,7 +1,8 @@
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
-import { storageManager } from '../../engine/StorageManager.js'
+import { storageManager } from '../../services/StorageManager.js'
 import { showToast } from '../../components/common/ToastManager.js'
+import { exportSongDatabase, importSongDatabase } from '../../songs/songLibrary.js'
 
 /**
  * Toolbar — Top toolbar with view tabs, search, edit toggle, and clear buttons
@@ -119,6 +120,9 @@ export class Toolbar {
       <div id="toolbar-library-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:200;background:var(--bg-toolbar);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-md);min-width:180px;padding:4px;">
         <button class="btn" id="library-export-btn" style="width:100%;justify-content:flex-start;border:none;">Export Library…</button>
         <button class="btn" id="library-import-btn" style="width:100%;justify-content:flex-start;border:none;">Import Library…</button>
+        <div style="height:1px;background:var(--border-color);margin:4px 0;"></div>
+        <button class="btn" id="songs-export-btn" style="width:100%;justify-content:flex-start;border:none;" title="Save every chord chart to a .db file you can copy to another computer">Export Songs Database…</button>
+        <button class="btn" id="songs-import-btn" style="width:100%;justify-content:flex-start;border:none;" title="Merge the charts from another EasyPresent songs .db file">Import Songs Database…</button>
       </div>`
     this.container.appendChild(libWrap)
 
@@ -237,6 +241,29 @@ export class Toolbar {
       }
     })
 
+    this.container.querySelector('#songs-export-btn')?.addEventListener('click', async () => {
+      libraryMenu.style.display = 'none'
+      try {
+        const ok = await exportSongDatabase()
+        if (ok) showToast('Songs database exported', 'success')
+        else if (!window.electronAPI?.songsExport) showToast('Songs database needs the desktop app', 'error')
+      } catch (err) {
+        console.error('Songs export failed:', err)
+        showToast('Songs export failed', 'error')
+      }
+    })
+    this.container.querySelector('#songs-import-btn')?.addEventListener('click', async () => {
+      libraryMenu.style.display = 'none'
+      try {
+        const count = await importSongDatabase()
+        if (count != null) showToast(`Imported ${count} song${count === 1 ? '' : 's'}`, 'success')
+        else if (!window.electronAPI?.songsImport) showToast('Songs database needs the desktop app', 'error')
+      } catch (err) {
+        console.error('Songs import failed:', err)
+        showToast('Import failed — not a valid songs database', 'error')
+      }
+    })
+
     // Edit toggle — updates label + active state, and stays in sync if
     // `isEditing` is flipped from elsewhere (e.g. switching to Bible view
     // auto-exits editing in main.js)
@@ -271,6 +298,8 @@ export class Toolbar {
         btn.classList.toggle('btn--primary', open)
       })
       screensBtn.classList.toggle('active', openRoles.size > 0)
+      const label = screensBtn.querySelector('.toolbar-btn-label')
+      if (label) label.textContent = openRoles.size ? `Screens ${openRoles.size}/3` : 'Screens'
     }
     const fillDisplays = async () => {
       const displays = (await window.electronAPI.listDisplays?.()) || []

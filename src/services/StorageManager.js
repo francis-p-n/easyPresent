@@ -1,4 +1,4 @@
-import { state } from './StateManager.js'
+import { state } from '../core/StateManager.js'
 import { dehydrate, rehydrate } from './mediaStore.js'
 
 const SAVE_DEBOUNCE_MS = 500

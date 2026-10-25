@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 import { arrangementEditor } from './ArrangementEditor.js'
-import { MASTER_ARRANGEMENT_ID } from '../../engine/arrangement.js'
+import { MASTER_ARRANGEMENT_ID } from '../../core/arrangement.js'
 
 const makePres = () => ({
   id: 'pres-1',

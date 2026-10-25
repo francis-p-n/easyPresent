@@ -4,13 +4,13 @@ import { PlaylistPanel } from './features/library/PlaylistPanel.js'
 import { SlideView } from './features/presentation/SlideView.js'
 import { PreviewPanel } from './features/stage/PreviewPanel.js'
 import { ShowControls } from './features/controls/ShowControls.js'
-import { state } from './engine/StateManager.js'
-import { storageManager } from './engine/StorageManager.js'
-import { goLive, goLiveNext, goLivePrev } from './engine/navigation.js'
-import { buildOutputPayload, payloadSignature } from './engine/outputSync.js'
-import { getActiveSequence } from './engine/arrangement.js'
-import { installStarterSongs } from './engine/starterSongs.js'
-import { buildLiveState } from './engine/liveState.js'
+import { state } from './core/StateManager.js'
+import { storageManager } from './services/StorageManager.js'
+import { goLive, goLiveNext, goLivePrev } from './core/navigation.js'
+import { buildOutputPayload, payloadSignature } from './core/outputSync.js'
+import { getActiveSequence } from './core/arrangement.js'
+import { initSongLibrary } from './songs/songLibrary.js'
+import { buildLiveState } from './core/liveState.js'
 
 /**
  * Every transient overlay that owns the keyboard while it's open. All of these
@@ -64,7 +64,7 @@ class App {
   async init() {
     // Load persisted data before rendering (file-backed, so it's async)
     await storageManager.load()
-    if (installStarterSongs(state)) storageManager.scheduleSave()
+    if (await initSongLibrary()) storageManager.scheduleSave()
 
     // Mount core components synchronously
     this.toolbar = new Toolbar(document.getElementById('toolbar'))

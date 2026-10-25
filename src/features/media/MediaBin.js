@@ -18,10 +18,10 @@ export function createMediaBin() {
   // Wait for DOM
   setTimeout(() => {
     const grid = container.querySelector('#media-grid')
-    import('../../engine/MediaManager.js').then((module) => {
+    import('../../services/MediaManager.js').then((module) => {
       const MediaManager = module.default
 
-      import('../../engine/StateManager.js').then((stateModule) => {
+      import('../../core/StateManager.js').then((stateModule) => {
         const state = stateModule.state
 
         state.on('media:loaded', (items) => {

@@ -1,4 +1,4 @@
-import { state } from '../../engine/StateManager.js'
+import { state } from '../../core/StateManager.js'
 
 export function renderChordSheet(chordSheet) {
   chordSheet.innerHTML = ''

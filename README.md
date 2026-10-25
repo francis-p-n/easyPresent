@@ -31,10 +31,45 @@ The application is built in three distinct layers:
 
 ## 📁 Directory Structure
 
-- `/src`: Frontend code (HTML/JS/CSS assets)
-- `/electron`: Main, Preload, and PPTX Parsing scripts (`pptx-parser.js`) for Electron
-- `/native`: C++ source files for native bindings and integrations
-- `/dist-electron`: Built output folder for the Electron main/preload bundles
+```
+src/                     Renderer (the operator window)
+  main.js                App entry: mounts panels, wires global shortcuts
+  core/                  Pure show logic: state, navigation, arrangements, output payloads
+  services/              Persistence & infrastructure: storage, media, timers, native render
+  songs/                 Charts: ChordPro <-> slides, chord-sheet converter, SQLite sync, printing
+  features/              UI panels (library, presentation, controls, stage, media, bible)
+  components/common/     Shared widgets (icons, toasts, modals)
+  models/  data/  styles/
+
+electron/                Main process
+  main.js                Bootstrap only: creates services, registers IPC, opens the window
+  paths.js               Every file path the main process loads (anchored to the app root)
+  ipc/                   One file per concern: library, pptx, songs, displays
+  windows/               Main window and the Audience / Presenter / PA output windows
+  services/              libraryStore (file + backups), songDb (SQLite), stageHub (lazy web server)
+  server/                Express + Socket.IO feed for the stage / presenter / PA web views
+  pptx/                  PowerPoint importer
+  preload.js             The renderer's only bridge to the main process
+
+public/                  Static pages: output/ (audience), stage/, presenter/, pa/
+native/                  Optional C++ renderer addon
+```
+
+Tests sit next to the code they cover (`*.test.js`).
+
+### Three screens
+
+| Screen | Who | What it shows |
+| --- | --- | --- |
+| Audience | Congregation | The slide, message overlay or logo |
+| Presenter (`/presenter`) | Pastor | Current + next slide, position, clock, timer, messages |
+| PA (`/pa`) | Sound desk | A mirror of the audience screen with LIVE / LOGO / CLEARED state, up-next, clocks |
+
+Open them from **Screens** in the toolbar, each on its own display. Presenter and PA are plain web pages, so they also open on any phone or laptop on the venue Wi-Fi at `http://<this-pc>:8080/presenter` and `/pa`.
+
+### Chord charts and the songs database
+
+Every song chart is stored in a local SQLite file (`songs.db` in the app's user-data folder) as ChordPro text. **Library > Export Songs Database** writes a copy you can carry to another computer; **Import Songs Database** merges it in (the newest edit of each song wins). **Print** in the playlist panel prints the active setlist as chord sheets, one song per page.
 
 ---
 
@@ -43,7 +78,7 @@ The application is built in three distinct layers:
 - **Slide Engine:** Rich text formatting, slide groups (Verse, Chorus), and dynamic text scaling.
 - **Media Bin:** Organize and preview video and image assets.
 - **Audio Bin:** Manage background audio playlists with crossfade support.
-- **Multi-Screen Support:** Independent Audience and Stage Display outputs.
+- **Multi-Screen Support:** Independent Audience, Presenter and PA outputs, plus the band's Stage Display.
 - **Non-Destructive Editing:** Edit presentations without interrupting the live output.
 - **Live Output Preview:** Real-time preview of the audience screen directly in the control panel.
 - **Church Presentation Best Practices:** 

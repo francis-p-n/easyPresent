@@ -9,6 +9,7 @@ import { storageManager } from './engine/StorageManager.js'
 import { goLive, goLiveNext, goLivePrev } from './engine/navigation.js'
 import { buildOutputPayload, payloadSignature } from './engine/outputSync.js'
 import { getActiveSequence } from './engine/arrangement.js'
+import { installStarterSongs } from './engine/starterSongs.js'
 import { buildLiveState } from './engine/liveState.js'
 
 /**
@@ -63,6 +64,7 @@ class App {
   async init() {
     // Load persisted data before rendering (file-backed, so it's async)
     await storageManager.load()
+    if (installStarterSongs(state)) storageManager.scheduleSave()
 
     // Mount core components synchronously
     this.toolbar = new Toolbar(document.getElementById('toolbar'))

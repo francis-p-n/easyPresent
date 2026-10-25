@@ -1,5 +1,6 @@
 import { state } from '../../engine/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
+import { printSetlist } from '../../engine/printSheet.js'
 
 /**
  * PlaylistPanel — Service order management
@@ -33,6 +34,9 @@ export class PlaylistPanel {
     header.innerHTML = `
       <span class="panel-header__title">Playlist</span>
       <div class="panel-header__actions">
+        <button class="btn" id="playlist-print-btn" title="Print chord sheets for this setlist">
+          ${icon('file', 14).outerHTML} Print
+        </button>
         ${menuBtnHtml}
       </div>
     `
@@ -55,6 +59,11 @@ export class PlaylistPanel {
     content.className = 'panel-content'
     content.id = 'playlist-items'
     this.container.appendChild(content)
+
+    this.container.querySelector('#playlist-print-btn')?.addEventListener('click', () => {
+      const pl = state.get('activePlaylist')
+      if (pl) printSetlist(pl, state.get('presentations') || [])
+    })
 
     // Add event listeners for the dropdown
     const addBtn = this.container.querySelector('#playlist-add-btn')

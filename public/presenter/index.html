@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presenter View</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #000; color: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    header { display: flex; justify-content: space-between; align-items: baseline; padding: 1.5vh 3vw; color: #9aa; font-size: 2.4vh; }
+    #clock { font-size: 5vh; color: #fff; font-variant-numeric: tabular-nums; }
+    #timer { color: #ffcc00; font-size: 4vh; font-variant-numeric: tabular-nums; }
+    #message { display: none; background: #c0392b; color: #fff; text-align: center; font-size: 4vh; font-weight: bold; padding: 1.2vh 2vw; }
+    main { flex: 1; display: flex; flex-direction: column; padding: 0 3vw 2vh; gap: 2vh; min-height: 0; }
+    .panel { border-radius: 1vh; padding: 2vh 2.5vw; overflow: hidden; }
+    #current { flex: 3; background: #101c10; border: 0.4vh solid #2ecc71; display: flex; flex-direction: column; justify-content: center; }
+    #next { flex: 1.3; background: #151515; border: 0.3vh solid #444; display: flex; flex-direction: column; justify-content: center; }
+    .tag { font-size: 2.2vh; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 1vh; color: #2ecc71; }
+    #next .tag { color: #8899aa; }
+    .text { white-space: pre-wrap; line-height: 1.25; font-weight: 600; }
+    #current .text { font-size: 7vh; }
+    #next .text { font-size: 3.6vh; color: #cfd6dd; }
+    .empty { color: #667; font-style: italic; }
+    #conn { position: fixed; bottom: .8vh; right: 1vw; font-size: 1.8vh; color: #667; }
+  </style>
+</head>
+<body>
+  <header>
+    <div id="title">Waiting for presentation…</div>
+    <div><span id="timer"></span> &nbsp; <span id="clock"></span></div>
+  </header>
+  <div id="message"></div>
+  <main>
+    <section class="panel" id="current"><div class="tag" id="current-tag">Now</div><div class="text empty" id="current-text">Nothing on screen</div></section>
+    <section class="panel" id="next"><div class="tag">Next</div><div class="text" id="next-text"></div></section>
+  </main>
+  <div id="conn">connecting…</div>
+
+  <script src="socket.io.min.js"></script>
+  <script>
+    // Chords are for the band's stage view — the speaker only wants words
+    function stripChords(text) { return (text || '').replace(/\[[^\]]*\]/g, ''); }
+
+    function render(s) {
+      document.getElementById('title').textContent = s.title || 'Presenter View';
+      document.getElementById('timer').textContent = s.timer || '';
+
+      const msg = document.getElementById('message');
+      msg.style.display = s.message ? 'block' : 'none';
+      msg.textContent = s.message || '';
+
+      const cur = document.getElementById('current-text');
+      const tag = document.getElementById('current-tag');
+      if (s.current) {
+        cur.className = 'text';
+        cur.textContent = stripChords(s.current.text);
+        const pos = s.index != null ? ' · ' + (s.index + 1) + '/' + s.total : '';
+        tag.textContent = 'Now' + (s.current.label ? ' — ' + s.current.label : '') + pos;
+      } else {
+        cur.className = 'text empty';
+        cur.textContent = s.showLogo ? 'Logo on screen' : 'Nothing on screen';
+        tag.textContent = 'Now';
+      }
+
+      const nxt = document.getElementById('next-text');
+      if (s.next) {
+        nxt.className = 'text';
+        nxt.textContent = (s.next.label ? s.next.label + '\n' : '') + stripChords(s.next.text);
+      } else {
+        nxt.className = 'text empty';
+        nxt.textContent = s.current ? 'End of presentation' : '';
+      }
+    }
+
+    function tick() {
+      document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', { hour12: false });
+    }
+    tick(); setInterval(tick, 1000);
+
+    const socket = io();
+    const conn = document.getElementById('conn');
+    socket.on('connect', () => { conn.textContent = ''; });
+    socket.on('disconnect', () => { conn.textContent = 'disconnected — retrying…'; });
+    socket.on('live-state', render);
+  </script>
+</body>
+</html>

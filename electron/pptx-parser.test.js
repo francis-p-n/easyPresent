@@ -555,7 +555,8 @@ function findPptxFiles(dir) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name)
     if (e.isDirectory()) out.push(...findPptxFiles(p))
-    else if (/\.pptx$/i.test(e.name) && !e.name.startsWith('~$')) out.push(p)
+    // Skip Office lock files and 0-byte placeholders (unsynced cloud files)
+    else if (/\.pptx$/i.test(e.name) && !e.name.startsWith('~$') && fs.statSync(p).size > 0) out.push(p)
   }
   return out
 }

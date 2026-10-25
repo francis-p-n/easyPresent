@@ -5,6 +5,7 @@ const path = require('path');
 
 let io;
 let currentSlideData = null;
+let currentLiveState = null;
 
 function startServer(port = 8080) {
   const app = express();
@@ -19,10 +20,21 @@ function startServer(port = 8080) {
   app.use(express.static(path.join(__dirname, '../public/stage')));
   app.use(express.static(path.join(__dirname, '../dist/stage')));
 
+  // Role views: /presenter (pastor: current + next + clock) and /pa (PA team:
+  // output confirmation, cue list, timers). Both are read-only clients of the
+  // same socket feed, so they work on any phone/laptop on the venue Wi-Fi.
+  for (const view of ['presenter', 'pa']) {
+    app.use('/' + view, express.static(path.join(__dirname, '../public/' + view)));
+    app.use('/' + view, express.static(path.join(__dirname, '../dist/' + view)));
+  }
+
   io.on('connection', (socket) => {
     console.log('Stage display connected');
     if (currentSlideData) {
       socket.emit('slide-update', currentSlideData);
+    }
+    if (currentLiveState) {
+      socket.emit('live-state', currentLiveState);
     }
 
     socket.on('disconnect', () => {
@@ -39,6 +51,12 @@ function startServer(port = 8080) {
       currentSlideData = slideData;
       if (io) {
         io.emit('slide-update', slideData);
+      }
+    },
+    broadcastLiveState: (state) => {
+      currentLiveState = state;
+      if (io) {
+        io.emit('live-state', state);
       }
     }
   };

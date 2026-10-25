@@ -374,6 +374,20 @@ export class LibraryPanel {
         case 'delete': {
           // Deleting is irreversible — confirm before removing
           this._showConfirmDialog(`Delete "${pres.name}"?`, 'This cannot be undone.', () => {
+            // If this deck's slide is the one on the projector, take it down
+            // with the deck. Otherwise the audience keeps staring at a slide
+            // that no longer exists anywhere in the app — and since the deck is
+            // gone from the library, the operator can't reselect it to clear.
+            const liveId = state.get('layers')?.slide?.content?.id
+            if (liveId && (pres.slides || []).some((s) => s.id === liveId)) {
+              state.set('layers', {
+                ...state.get('layers'),
+                slide: { active: false, content: null }
+              })
+              state.set('liveSlideIndex', -1)
+              state.set('activeSlideIndex', -1)
+            }
+
             state.set('presentations', state.get('presentations').filter((p) => p.id !== presId))
             if (state.get('selectedPresentation')?.id === presId) {
               state.set('selectedPresentation', null)
@@ -429,12 +443,19 @@ export class LibraryPanel {
       }
     })
 
-    // Close on click outside
+    // Close on click outside, or on Escape. The Escape binding matters: the
+    // global show shortcuts deliberately stand down while a menu is open, so
+    // without this the menu would have no keyboard dismissal at all.
+    const onKey = (e) => {
+      if (e.key === 'Escape') close()
+    }
     const close = () => {
       menu.remove()
       document.removeEventListener('click', close)
+      document.removeEventListener('keydown', onKey)
     }
     setTimeout(() => document.addEventListener('click', close), 0)
+    document.addEventListener('keydown', onKey)
   }
 
   _showConfirmDialog(title, message, onConfirm) {

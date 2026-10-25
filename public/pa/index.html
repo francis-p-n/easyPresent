@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PA View</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #14161a; color: #e6e9ee; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 16px; }
+    h1 { font-size: 15px; margin: 0 0 12px; color: #8a93a0; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; display: flex; justify-content: space-between; }
+    .grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: #1d2026; border: 1px solid #2a2f37; border-radius: 8px; padding: 12px 14px; }
+    .card h2 { margin: 0 0 8px; font-size: 12px; color: #8a93a0; text-transform: uppercase; letter-spacing: .1em; }
+    .status { display: inline-block; padding: 4px 10px; border-radius: 99px; font-weight: 700; font-size: 13px; margin-left: 8px; }
+    .live { background: #1f6f3d; } .cleared { background: #444b55; } .logo { background: #1f4f8f; }
+    .out { background: #000; border-radius: 6px; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; font-weight: 700; font-size: clamp(14px, 2.2vw, 28px); white-space: pre-wrap; }
+    .out.dim { color: #556; font-weight: 400; font-style: italic; }
+    .big { font-size: 34px; font-variant-numeric: tabular-nums; font-weight: 700; }
+    .row { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0; }
+    .muted { color: #8a93a0; font-size: 13px; }
+    #message-card { display: none; background: #4a1f1f; border-color: #8a3a3a; margin-bottom: 12px; }
+    .bar { height: 6px; background: #2a2f37; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+    .bar > div { height: 100%; background: #3b82f6; width: 0; transition: width .2s; }
+    #conn.ok { color: #4ade80; } #conn.bad { color: #f87171; }
+  </style>
+</head>
+<body>
+  <h1><span>PA View — <span id="title">no presentation</span></span><span id="conn" class="bad">● offline</span></h1>
+  <div class="card" id="message-card"><h2>Message overlay is live</h2><div id="message"></div></div>
+  <div class="grid">
+    <div class="card">
+      <h2>What the audience sees <span id="status" class="status cleared">CLEARED</span></h2>
+      <div class="out dim" id="out">Nothing on screen</div>
+      <div class="bar"><div id="progress"></div></div>
+      <div class="muted" id="pos" style="margin-top:6px;"></div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:12px;">
+        <h2>Coming up</h2>
+        <div class="muted" id="next-label">—</div>
+        <div id="next-text" style="margin-top:4px;white-space:pre-wrap;"></div>
+      </div>
+      <div class="card">
+        <h2>Clocks</h2>
+        <div class="row"><span class="muted">Time</span><span class="big" id="clock"></span></div>
+        <div class="row"><span class="muted">Timer</span><span class="big" id="timer">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="socket.io.min.js"></script>
+  <script>
+    function stripChords(text) { return (text || '').replace(/\[[^\]]*\]/g, ''); }
+    const $ = (id) => document.getElementById(id);
+
+    function render(s) {
+      $('title').textContent = s.title || 'no presentation';
+      $('message-card').style.display = s.message ? 'block' : 'none';
+      $('message').textContent = s.message || '';
+
+      const out = $('out'), status = $('status');
+      if (s.current) {
+        out.className = 'out'; out.textContent = stripChords(s.current.text);
+        status.className = 'status live'; status.textContent = 'LIVE' + (s.current.label ? ' · ' + s.current.label : '');
+      } else if (s.showLogo) {
+        out.className = 'out dim'; out.textContent = 'Logo';
+        status.className = 'status logo'; status.textContent = 'LOGO';
+      } else {
+        out.className = 'out dim'; out.textContent = 'Nothing on screen';
+        status.className = 'status cleared'; status.textContent = 'CLEARED';
+      }
+
+      const has = s.index != null && s.total > 0;
+      $('pos').textContent = has ? 'Slide ' + (s.index + 1) + ' of ' + s.total : '';
+      $('progress').style.width = has ? ((s.index + 1) / s.total * 100) + '%' : '0';
+
+      $('next-label').textContent = s.next ? (s.next.label || 'Next slide') : (s.current ? 'End of presentation' : '—');
+      $('next-text').textContent = s.next ? stripChords(s.next.text) : '';
+      $('timer').textContent = s.timer || '—';
+    }
+
+    function tick() { $('clock').textContent = new Date().toLocaleTimeString('en-US', { hour12: false }); }
+    tick(); setInterval(tick, 1000);
+
+    const socket = io();
+    const conn = $('conn');
+    socket.on('connect', () => { conn.className = 'ok'; conn.textContent = '● connected'; });
+    socket.on('disconnect', () => { conn.className = 'bad'; conn.textContent = '● offline'; });
+    socket.on('live-state', render);
+  </script>
+</body>
+</html>

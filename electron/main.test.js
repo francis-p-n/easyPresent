@@ -289,3 +289,55 @@ describe('export-library / import-library', () => {
     expect(await ipcHandlers.get('import-library')()).toBeNull()
   })
 })
+
+describe('toggle-display — audience / presenter / PA roles', () => {
+  const threeDisplays = () => [
+    { id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 } },
+    { id: 2, bounds: { x: 1920, y: 0, width: 1280, height: 720 } },
+    { id: 3, bounds: { x: 3200, y: 0, width: 1024, height: 768 } }
+  ]
+
+  it('gives each role its own external display (no two outputs on one screen)', async () => {
+    displays = threeDisplays()
+    await loadMain()
+    const toggle = ipcHandlers.get('toggle-display')
+    await toggle(null, 'audience')
+    await toggle(null, 'presenter')
+    const [aud, pres] = createdWindows.slice(-2)
+    expect(aud.opts.x).toBe(1920 + 40)
+    expect(pres.opts.x).toBe(3200)
+    expect(pres.opts.fullscreen).toBe(true)
+  })
+
+  it('falls back to a window on the primary display when no external is free', async () => {
+    await loadMain() // one display
+    await ipcHandlers.get('toggle-display')(null, 'pa')
+    const opts = createdWindows.at(-1).opts
+    expect(opts.fullscreen).toBe(false)
+    expect(opts.width).toBe(1100)
+  })
+
+  it('honours an explicit display id', async () => {
+    displays = threeDisplays()
+    await loadMain()
+    await ipcHandlers.get('toggle-display')(null, 'presenter', 3)
+    expect(createdWindows.at(-1).opts.x).toBe(3200)
+  })
+
+  it('loads the role pages from the stage server and toggles closed', async () => {
+    await loadMain()
+    const toggle = ipcHandlers.get('toggle-display')
+    expect(await toggle(null, 'presenter')).toBe(true)
+    const win = createdWindows.at(-1)
+    expect(win.loadURL).toHaveBeenCalledWith('http://localhost:8080/presenter/')
+    expect(await ipcHandlers.get('open-displays')()).toEqual(['presenter'])
+    expect(await toggle(null, 'presenter')).toBe(false)
+    expect(win.close).toHaveBeenCalled()
+    expect(await ipcHandlers.get('open-displays')()).toEqual([])
+  })
+
+  it('rejects unknown roles', async () => {
+    await loadMain()
+    expect(() => ipcHandlers.get('toggle-display')(null, 'bogus')).toThrow(/Unknown display role/)
+  })
+})

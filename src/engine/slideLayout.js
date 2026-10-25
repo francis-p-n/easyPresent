@@ -109,12 +109,17 @@ export function renderSlideLayout(container, { elements = [], images = [] } = {}
     const box = document.createElement('div')
     const vAlign = el.vAlign === 'top' ? 'flex-start' : el.vAlign === 'bottom' ? 'flex-end' : 'center'
     const hAlign = el.hAlign === 'left' ? 'flex-start' : el.hAlign === 'right' ? 'flex-end' : 'center'
+    // No `overflow: hidden` here — PowerPoint/Canva never clip text to a
+    // shape's nominal box; text that's too big for its box simply spills
+    // over visually. Clipping it here chops words mid-letter on any slide
+    // whose box was sized tighter than its (possibly autofit-shrunk-in-the-
+    // editor-only) font. The slide-wide `.slide-layout-layer` still clips
+    // at the canvas edge, so overflow can't escape the slide itself.
     box.style.cssText =
       `position:absolute;` +
       `left:${wpct(el.x)}cqw;top:${hpct(el.y)}cqh;` +
       `width:${wpct(el.width)}cqw;height:${hpct(el.height)}cqh;` +
-      `display:flex;flex-direction:column;justify-content:${vAlign};align-items:${hAlign};` +
-      `overflow:hidden;`
+      `display:flex;flex-direction:column;justify-content:${vAlign};align-items:${hAlign};`
 
     const text = document.createElement('div')
     text.textContent = el.text || ''

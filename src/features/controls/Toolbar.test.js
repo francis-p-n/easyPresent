@@ -98,7 +98,7 @@ describe('Toolbar — Library backup menu', () => {
     await vi.waitFor(() => expect(exportLibrary).toHaveBeenCalled())
 
     const payload = JSON.parse(exportLibrary.mock.calls[0][0])
-    expect(payload.version).toBe(1)
+    expect(payload.version).toBe(2)
     expect(payload.presentations[0].id).toBe('p1')
   })
 

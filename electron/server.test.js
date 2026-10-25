@@ -33,4 +33,20 @@ describe('Stage Server Integration', () => {
       stageServer.broadcastSlide(testSlide);
     });
   });
+
+  it('replays the latest live-state to late joiners and serves role views', async () => {
+    const live = { title: 'Sunday', onAir: true, current: { label: 'Verse 1', text: 'hi' }, next: null };
+    stageServer.broadcastLiveState(live);
+
+    const late = Client(`http://localhost:${port}`);
+    const got = await new Promise((resolve) => late.on('live-state', resolve));
+    late.disconnect();
+    expect(got).toEqual(live);
+
+    for (const view of ['presenter', 'pa']) {
+      const res = await fetch(`http://localhost:${port}/${view}/`);
+      expect(res.status).toBe(200);
+      expect(await res.text()).toContain('live-state');
+    }
+  });
 });

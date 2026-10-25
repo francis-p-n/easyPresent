@@ -1,6 +1,15 @@
 import { state } from './StateManager.js'
+import { dehydrate, rehydrate } from './mediaStore.js'
 
 const SAVE_DEBOUNCE_MS = 500
+
+/**
+ * Schema version of the persisted payload.
+ *   1 — inline `data:` URLs, repeated per slide
+ *   2 — data URLs lifted into a shared `media` dictionary (see mediaStore.js)
+ * Both are readable; v1 files are upgraded on the next save.
+ */
+const SCHEMA_VERSION = 2
 
 /**
  * StorageManager — persists the library.
@@ -17,27 +26,35 @@ class StorageManager {
   }
 
   _serialize() {
-    return JSON.stringify({
-      // Schema version — bump when the payload shape changes so future
-      // versions can migrate old library files instead of misreading them.
-      version: 1,
-      presentations: state.get('presentations'),
-      playlists: state.get('playlists'),
-      themes: state.get('themes')
-    })
+    // One shared dictionary across all three sections so an image used by both
+    // a presentation and a theme is still stored once.
+    const media = {}
+    const seen = new Map()
+    const lift = (v) => dehydrate(v, media, seen).value
+
+    const presentations = lift(state.get('presentations'))
+    const playlists = lift(state.get('playlists'))
+    const themes = lift(state.get('themes'))
+
+    return JSON.stringify({ version: SCHEMA_VERSION, presentations, playlists, themes, media })
   }
 
   _applyData(data) {
-    if (data.presentations) state.set('presentations', data.presentations)
+    // v1 files carry no `media` key; rehydrate() then passes values through
+    // untouched, so old libraries load unchanged and upgrade on the next save.
+    const drop = (v) => rehydrate(v, data.media)
+
+    if (data.presentations) state.set('presentations', drop(data.presentations))
     if (data.playlists) {
-      state.set('playlists', data.playlists)
+      const playlists = drop(data.playlists)
+      state.set('playlists', playlists)
       // Re-point activePlaylist at the loaded object — otherwise it keeps
       // referencing the pre-load sample and saved changes never show
       const currentId = state.get('activePlaylist')?.id
-      const match = data.playlists.find((p) => p.id === currentId) || data.playlists[0] || null
+      const match = playlists.find((p) => p.id === currentId) || playlists[0] || null
       state.set('activePlaylist', match)
     }
-    if (data.themes) state.set('themes', data.themes)
+    if (data.themes) state.set('themes', drop(data.themes))
   }
 
   /** Immediate save (async when file-backed; sync fallback to localStorage) */

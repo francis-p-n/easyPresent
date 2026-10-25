@@ -371,6 +371,14 @@ function styleFromBody(body, theme, ptToPx, cap) {
   const anchorMatch = body.match(/<a:bodyPr[^>]*\banchor="(\w+)"/);
   if (anchorMatch && PPTX_ANCHOR[anchorMatch[1]]) style.vAlign = PPTX_ANCHOR[anchorMatch[1]];
 
+  // PowerPoint's "Shrink text on overflow" autofit stores the ORIGINAL font
+  // size on each run and a separate scale-down factor here — text boxes
+  // resized smaller than their text keep the big nominal `sz` in the XML.
+  // Without applying this, imported slides render at full size and clip
+  // inside a box that PowerPoint only ever showed shrunk.
+  const autofitMatch = body.match(/<a:normAutofit\b[^>]*\bfontScale="(\d+)"/);
+  const fontScale = autofitMatch ? parseInt(autofitMatch[1], 10) / 100000 : 1;
+
   const paraRegex = /<a:p(?:\s[^>]*)?>([\s\S]*?)<\/a:p>/g;
   let paraMatch;
   while ((paraMatch = paraRegex.exec(body)) !== null) {
@@ -393,7 +401,7 @@ function styleFromBody(body, theme, ptToPx, cap) {
 
         const szMatch = attrs.match(/\bsz="(\d+)"/);
         if (szMatch && !style.fontSize) {
-          const raw = Math.round((parseInt(szMatch[1], 10) / 100) * ptToPx);
+          const raw = Math.round((parseInt(szMatch[1], 10) / 100) * ptToPx * fontScale);
           style.fontSize = Math.min(cap, Math.max(MIN_FONT_SIZE, raw));
         }
         if (/\bb="1"/.test(attrs) && style.bold === undefined) style.bold = true;

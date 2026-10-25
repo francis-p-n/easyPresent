@@ -17,8 +17,14 @@ export class SlideView {
     this._bindEvents()
 
     state.on('selectedPresentation', () => this.render())
-    state.on('liveSlideIndex', () => this._updateLiveState())
-    state.on('activeSlideIndex', () => this._updateActiveState())
+    // All three keys feed one recompute. `goLive()` writes them in sequence
+    // (activeSlideIndex → liveSlideIndex → layers), so any listener that fires
+    // mid-sequence sees a half-updated world — notably `layers` still holding
+    // the PREVIOUS slide. Recomputing on all three means the last write always
+    // leaves the grid correct, whatever order they land in.
+    state.on('liveSlideIndex', () => this._updateSelectionState())
+    state.on('activeSlideIndex', () => this._updateSelectionState())
+    state.on('layers', () => this._updateSelectionState())
     // Thumbnails bake the active theme's styles (font, color, size) into the
     // rendered image — without this, changing a theme (e.g. its font) only
     // ever showed up once something else happened to trigger a re-render
@@ -297,27 +303,27 @@ export class SlideView {
     grid.appendChild(fragment)
   }
 
-  _updateLiveState() {
+  /**
+   * Recomputes the live/active highlight for every thumbnail from scratch.
+   *
+   * Deliberately unconditional: the previous split version skipped the live
+   * index when updating `active`, which left the outgoing slide permanently
+   * highlighted so several slides looked selected at once after a few moves.
+   * Matches render()'s semantics — the two states are mutually exclusive and
+   * LIVE wins.
+   */
+  _updateSelectionState() {
     const liveIdx = state.get('liveSlideIndex')
+    const activeIdx = state.get('activeSlideIndex')
     const liveContentId = state.get('layers')?.slide?.content?.id
     const pres = state.get('selectedPresentation')
     const sequence = pres ? getActiveSequence(pres) : []
     this.container.querySelectorAll('.slide-thumbnail').forEach((thumb, i) => {
       // Match by identity too, so the LIVE badge doesn't stick to whatever
       // slide happens to sit at the previous presentation's live index.
-      const isLive =
-        i === liveIdx && liveContentId && sequence[i]?.id === liveContentId
+      const isLive = i === liveIdx && !!liveContentId && sequence[i]?.id === liveContentId
       thumb.classList.toggle('live', isLive)
-    })
-  }
-
-  _updateActiveState() {
-    const activeIdx = state.get('activeSlideIndex')
-    const liveIdx = state.get('liveSlideIndex')
-    this.container.querySelectorAll('.slide-thumbnail').forEach((thumb, i) => {
-      if (i !== liveIdx) {
-        thumb.classList.toggle('active', i === activeIdx)
-      }
+      thumb.classList.toggle('active', !isLive && i === activeIdx)
     })
   }
 

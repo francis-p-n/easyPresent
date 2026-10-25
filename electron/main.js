@@ -179,9 +179,22 @@ app.whenReady().then(() => {
     if (!stageServer) {
       stageServer = startServer(8080)
       if (pendingSlide) stageServer.broadcastSlide(pendingSlide)
+      if (pendingLiveState) stageServer.broadcastLiveState(pendingLiveState)
     }
     return stageServer
   }
+
+  // Richer snapshot for the presenter / PA views (current + next slide, clock,
+  // message, logo). Same lazy-start / replay-on-start rule as broadcast-slide.
+  let pendingLiveState = null
+
+  ipcMain.on('broadcast-live-state', (event, liveState) => {
+    if (stageServer) {
+      stageServer.broadcastLiveState(liveState)
+    } else {
+      pendingLiveState = liveState
+    }
+  })
 
   ipcMain.on('broadcast-slide', (event, slideData) => {
     if (stageServer) {
@@ -202,27 +215,62 @@ app.whenReady().then(() => {
     return fs.existsSync(dev) ? dev : path.join(__dirname, '../dist/output/audience.html')
   }
 
-  ipcMain.handle('toggle-audience-output', () => {
-    if (audienceWindow) {
-      audienceWindow.close()
-      audienceWindow = null
-      return false
-    }
+  // ---- Role displays ----
+  // Three outputs: audience (fullscreen projection), presenter (pastor's
+  // confirmation monitor) and pa (the sound/media desk). Presenter and PA are
+  // local clients of the stage server, so the same pages also open on any
+  // phone/laptop at http://<this-pc>:8080/presenter and /pa.
+  const roleWindows = { presenter: null, pa: null }
+  const ROLE_TITLES = { presenter: 'Presenter View', pa: 'PA View' }
 
-    // Project to the external display when one exists (ProPresenter's
-    // operator-screen/output-screen split); otherwise a window on the
-    // primary display so single-monitor setups can still see the output
+  function displayInUse(display) {
+    return [audienceWindow, roleWindows.presenter, roleWindows.pa].some(
+      (w) => w && w.__displayId === display.id
+    )
+  }
+
+  // Explicit choice wins; otherwise the first external display nothing else is
+  // using; otherwise null (caller falls back to a window on the primary one).
+  function pickDisplay(requestedId) {
     const displays = screen.getAllDisplays()
+    if (requestedId != null) {
+      const asked = displays.find((d) => d.id === requestedId)
+      if (asked) return asked
+    }
     const primary = screen.getPrimaryDisplay()
-    const external = displays.find((d) => d.id !== primary.id)
+    return displays.find((d) => d.id !== primary.id && !displayInUse(d)) || null
+  }
+
+  ipcMain.handle('list-displays', () => {
+    const primary = screen.getPrimaryDisplay()
+    return screen.getAllDisplays().map((d, i) => ({
+      id: d.id,
+      label: `Display ${i + 1}${d.id === primary.id ? ' (main)' : ''} — ${d.bounds.width}×${d.bounds.height}`,
+      primary: d.id === primary.id
+    }))
+  })
+
+  // Windows can be closed from their own title bar, so the menu asks rather
+  // than trusting its own bookkeeping
+  ipcMain.handle('open-displays', () => [
+    ...(audienceWindow ? ['audience'] : []),
+    ...Object.keys(roleWindows).filter((r) => roleWindows[r])
+  ])
+
+  function openAudienceWindow(requestedId) {
+    const primary = screen.getPrimaryDisplay()
+    // Project fullscreen whenever the target isn't the operator's own screen
+    const picked = pickDisplay(requestedId)
+    const target = picked || primary
+    const projecting = !!picked && picked.id !== primary.id
 
     audienceWindow = new BrowserWindow({
-      x: (external || primary).bounds.x + 40,
-      y: (external || primary).bounds.y + 40,
-      width: external ? external.bounds.width : 960,
-      height: external ? external.bounds.height : 540,
-      fullscreen: !!external,
-      frame: !external,
+      x: target.bounds.x + 40,
+      y: target.bounds.y + 40,
+      width: projecting ? target.bounds.width : 960,
+      height: projecting ? target.bounds.height : 540,
+      fullscreen: projecting,
+      frame: !projecting,
       autoHideMenuBar: true,
       backgroundColor: '#000000',
       title: 'Audience Output',
@@ -233,6 +281,7 @@ app.whenReady().then(() => {
         contextIsolation: true
       }
     })
+    audienceWindow.__displayId = target.id
 
     audienceWindow.loadFile(audienceHtmlPath())
     audienceWindow.webContents.on('did-finish-load', () => {
@@ -243,6 +292,61 @@ app.whenReady().then(() => {
     audienceWindow.on('closed', () => {
       audienceWindow = null
     })
+  }
+
+  function openRoleWindow(role, requestedId) {
+    ensureStageServer()
+    const display = pickDisplay(requestedId)
+    const target = display || screen.getPrimaryDisplay()
+    const win = new BrowserWindow({
+      x: target.bounds.x + (display ? 0 : 60),
+      y: target.bounds.y + (display ? 0 : 60),
+      width: display ? target.bounds.width : 1100,
+      height: display ? target.bounds.height : 650,
+      fullscreen: !!display,
+      autoHideMenuBar: true,
+      backgroundColor: '#000000',
+      title: ROLE_TITLES[role],
+      icon: appIcon,
+      webPreferences: { nodeIntegration: false, contextIsolation: true }
+    })
+    win.__displayId = target.id
+    win.loadURL(`http://localhost:8080/${role}/`)
+    win.on('closed', () => {
+      roleWindows[role] = null
+    })
+    roleWindows[role] = win
+  }
+
+  // Returns true when the window is now open, false when it was closed
+  ipcMain.handle('toggle-display', (event, role, displayId) => {
+    if (role === 'audience') {
+      if (audienceWindow) {
+        audienceWindow.close()
+        audienceWindow = null
+        return false
+      }
+      openAudienceWindow(displayId)
+      return true
+    }
+    if (!(role in roleWindows)) throw new Error(`Unknown display role: ${role}`)
+    if (roleWindows[role]) {
+      roleWindows[role].close()
+      roleWindows[role] = null
+      return false
+    }
+    openRoleWindow(role, displayId)
+    return true
+  })
+
+  // Legacy single-button entry point (kept for the existing Screens button)
+  ipcMain.handle('toggle-audience-output', () => {
+    if (audienceWindow) {
+      audienceWindow.close()
+      audienceWindow = null
+      return false
+    }
+    openAudienceWindow()
     return true
   })
 

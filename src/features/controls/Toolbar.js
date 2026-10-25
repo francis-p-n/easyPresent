@@ -85,13 +85,29 @@ export class Toolbar {
     themeBtn.innerHTML = `${icon('droplet', 16).outerHTML}<span class="toolbar-btn-label">Themes</span>`
     this.container.appendChild(themeBtn)
 
-    // Screens Button
-    const screensBtn = document.createElement('button')
-    screensBtn.className = 'btn tooltip toolbar-presenter-only'
-    screensBtn.id = 'toolbar-screens-btn'
-    screensBtn.dataset.tooltip = 'Screen Configuration'
-    screensBtn.innerHTML = `${icon('monitor', 16).outerHTML}<span class="toolbar-btn-label">Screens</span>`
-    this.container.appendChild(screensBtn)
+    // Screens menu: one row per output role, each with a display picker
+    const screensWrap = document.createElement('div')
+    screensWrap.className = 'toolbar-presenter-only'
+    screensWrap.style.position = 'relative'
+    const roleRow = (role, title, hint) => `
+      <div class="screens-row" data-role="${role}" style="padding:6px;display:flex;flex-direction:column;gap:4px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <div><strong>${title}</strong><div style="font-size:11px;opacity:.65;">${hint}</div></div>
+          <button class="btn screens-toggle" data-role="${role}">Open</button>
+        </div>
+        <select class="input screens-display" data-role="${role}" style="width:100%;"></select>
+      </div>`
+    screensWrap.innerHTML = `
+      <button class="btn tooltip" id="toolbar-screens-btn" data-tooltip="Screen Configuration">
+        ${icon('monitor', 16).outerHTML}<span class="toolbar-btn-label">Screens</span>
+      </button>
+      <div id="toolbar-screens-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:200;background:var(--bg-toolbar);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-md);width:290px;padding:4px;">
+        ${roleRow('audience', 'Audience', 'Congregation screen / projector')}
+        ${roleRow('presenter', 'Presenter', 'Pastor: current + next slide, clock')}
+        ${roleRow('pa', 'PA Team', 'Sound desk: output check, cues, timers')}
+        <div id="screens-url-hint" style="padding:6px;font-size:11px;opacity:.65;">Presenter &amp; PA views also open in any browser on the venue Wi-Fi at <code>http://&lt;this-pc&gt;:8080/presenter</code> and <code>/pa</code>.</div>
+      </div>`
+    this.container.appendChild(screensWrap)
 
     // Library backup menu (export/import the whole library as .json)
     const libWrap = document.createElement('div')
@@ -244,15 +260,59 @@ export class Toolbar {
       createThemeEditor()
     })
 
-    // Screens: toggle the fullscreen audience output window
-    this.container.querySelector('#toolbar-screens-btn')?.addEventListener('click', async () => {
-      if (!window.electronAPI || !window.electronAPI.toggleAudienceOutput) {
+    // Screens menu: open/close each role's window on a chosen display
+    const screensBtn = this.container.querySelector('#toolbar-screens-btn')
+    const screensMenu = this.container.querySelector('#toolbar-screens-menu')
+    const openRoles = new Set()
+    const syncScreens = () => {
+      screensMenu.querySelectorAll('.screens-toggle').forEach((btn) => {
+        const open = openRoles.has(btn.dataset.role)
+        btn.textContent = open ? 'Close' : 'Open'
+        btn.classList.toggle('btn--primary', open)
+      })
+      screensBtn.classList.toggle('active', openRoles.size > 0)
+    }
+    const fillDisplays = async () => {
+      const displays = (await window.electronAPI.listDisplays?.()) || []
+      screensMenu.querySelectorAll('.screens-display').forEach((sel) => {
+        const keep = sel.value
+        sel.innerHTML =
+          `<option value="">Auto (next free display)</option>` +
+          displays.map((d) => `<option value="${d.id}">${d.label}</option>`).join('')
+        sel.value = keep
+      })
+    }
+
+    screensBtn?.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      if (!window.electronAPI || !window.electronAPI.toggleDisplay) {
         const { showToast } = await import('../../components/common/ToastManager.js')
-        showToast('Audience output requires the desktop app.', 'error')
+        showToast('Screens require the desktop app.', 'error')
         return
       }
-      const open = await window.electronAPI.toggleAudienceOutput()
-      this.container.querySelector('#toolbar-screens-btn')?.classList.toggle('active', open)
+      const opening = screensMenu.style.display === 'none'
+      if (opening) {
+        await fillDisplays()
+        openRoles.clear()
+        for (const r of (await window.electronAPI.openDisplays?.()) || []) openRoles.add(r)
+        syncScreens()
+      }
+      screensMenu.style.display = opening ? 'block' : 'none'
+    })
+    screensMenu?.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      const btn = e.target.closest('.screens-toggle')
+      if (!btn) return
+      const role = btn.dataset.role
+      const sel = screensMenu.querySelector(`.screens-display[data-role="${role}"]`)
+      const displayId = sel && sel.value ? Number(sel.value) : undefined
+      const open = await window.electronAPI.toggleDisplay(role, displayId)
+      if (open) openRoles.add(role)
+      else openRoles.delete(role)
+      syncScreens()
+    })
+    document.addEventListener('click', () => {
+      if (screensMenu) screensMenu.style.display = 'none'
     })
   }
 

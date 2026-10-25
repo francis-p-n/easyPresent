@@ -9,7 +9,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveLibrary: (json) => ipcRenderer.invoke('save-library', json),
   loadLibrary: () => ipcRenderer.invoke('load-library'),
   exportLibrary: (json) => ipcRenderer.invoke('export-library', json),
+  broadcastLiveState: (state) => ipcRenderer.send('broadcast-live-state', state),
   importLibrary: () => ipcRenderer.invoke('import-library'),
+
+  // Role displays: 'audience' | 'presenter' | 'pa'
+  listDisplays: () => ipcRenderer.invoke('list-displays'),
+  openDisplays: () => ipcRenderer.invoke('open-displays'),
+  toggleDisplay: (role, displayId) => ipcRenderer.invoke('toggle-display', role, displayId),
 
   // Audience output (fullscreen projection window)
   toggleAudienceOutput: () => ipcRenderer.invoke('toggle-audience-output'),

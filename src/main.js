@@ -9,6 +9,48 @@ import { storageManager } from './engine/StorageManager.js'
 import { goLive, goLiveNext, goLivePrev } from './engine/navigation.js'
 import { buildOutputPayload, payloadSignature } from './engine/outputSync.js'
 import { getActiveSequence } from './engine/arrangement.js'
+import { buildLiveState } from './engine/liveState.js'
+
+/**
+ * Every transient overlay that owns the keyboard while it's open. All of these
+ * are `.remove()`d on close, so presence in the DOM means "currently open".
+ */
+export const MODAL_SELECTOR = [
+  '.context-menu',
+  '.modal-overlay', // WelcomeModal, SongImporter, ThemeEditor
+  '#template-picker-overlay',
+  '#confirm-dialog-overlay',
+  '#rename-dialog-overlay',
+  '#playlist-prompt-overlay',
+  '#announcement-editor-overlay',
+  '#arrangement-editor-overlay',
+  '#theme-editor-overlay'
+].join(', ')
+
+/**
+ * Should this keydown be ignored by the global show shortcuts?
+ *
+ * The show shortcuts are bare keys (Escape/b/. blackout, arrows advance, 1-9
+ * jump) because that's what presentation clickers emit. Bare keys are also what
+ * everything else in the UI uses, so the guards matter more than the shortcuts:
+ * an unguarded Escape blacks out the audience screen when the operator only
+ * meant to dismiss a context menu.
+ *
+ * @param {KeyboardEvent} e
+ * @param {boolean} isEditing  slide editor open — it owns the keyboard
+ * @param {Document} doc       injectable for tests
+ */
+export function isShowShortcutBlocked(e, isEditing, doc = document) {
+  const t = e.target
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return true
+  if (isEditing) return true
+  // An OS/app chord (Ctrl+B, Alt+Left, Ctrl+1 …) must not blank the projector
+  // or jump the slide just because it shares a letter with a show shortcut.
+  if (e.ctrlKey || e.metaKey || e.altKey) return true
+  // A modal/menu owns the keyboard while it's open.
+  if (doc.querySelector(MODAL_SELECTOR)) return true
+  return false
+}
 
 /**
  * Main App Entry Point — Mounts core panels and lazy-loads optional modules
@@ -92,6 +134,27 @@ class App {
     state.on('showLogo', syncAudience)
     state.on('activeThemeId', syncAudience)
     state.on('timer_main', syncAudience) // live {timer} token in messages
+
+    // Feed the presenter / PA views (current + next slide, clock, message).
+    // Text-only, so a cheap JSON signature is enough to dedupe.
+    const syncLiveState = () => {
+      if (!window.electronAPI || !window.electronAPI.broadcastLiveState) return
+      const live = buildLiveState({
+        presentation: state.get('selectedPresentation'),
+        liveIndex: state.get('liveSlideIndex'),
+        layers: state.get('layers'),
+        showLogo: state.get('showLogo'),
+        timerValue: state.get('timer_main')
+      })
+      const sig = JSON.stringify(live)
+      if (sig === this._lastLiveSig) return
+      this._lastLiveSig = sig
+      window.electronAPI.broadcastLiveState(live)
+    }
+    for (const key of ['layers', 'liveSlideIndex', 'showLogo', 'timer_main', 'selectedPresentation']) {
+      state.on(key, syncLiveState)
+    }
+    syncLiveState()
 
     // Auto save data
     storageManager.initAutoSave()
@@ -257,10 +320,7 @@ class App {
 
   _setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-      // Don't handle if typing in an input
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
-      // Don't handle while the slide editor is open (it has its own key handling)
-      if (state.get('isEditing')) return
+      if (isShowShortcutBlocked(e, state.get('isEditing'))) return
 
       switch (e.key) {
         case 'F1':

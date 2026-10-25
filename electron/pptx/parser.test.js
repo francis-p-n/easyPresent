@@ -7,7 +7,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import AdmZip from 'adm-zip'
-import { parsePptx } from './pptx-parser.js'
+import { parsePptx } from './parser.js'
 
 // ---------------------------------------------------------------------------
 // Fixture builder — constructs a minimal but structurally-real .pptx on disk

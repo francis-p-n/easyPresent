@@ -17,15 +17,15 @@ function startServer(port = 8080) {
   // Serve static files for the stage display. public/stage is the source of
   // truth in the repo; packaged builds only ship dist/ (vite copies public/*
   // into it), so fall through to dist/stage when public/ isn't present.
-  app.use(express.static(path.join(__dirname, '../public/stage')));
-  app.use(express.static(path.join(__dirname, '../dist/stage')));
+  app.use(express.static(path.join(__dirname, '../../public/stage')));
+  app.use(express.static(path.join(__dirname, '../../dist/stage')));
 
   // Role views: /presenter (pastor: current + next + clock) and /pa (PA team:
   // output confirmation, cue list, timers). Both are read-only clients of the
   // same socket feed, so they work on any phone/laptop on the venue Wi-Fi.
   for (const view of ['presenter', 'pa']) {
-    app.use('/' + view, express.static(path.join(__dirname, '../public/' + view)));
-    app.use('/' + view, express.static(path.join(__dirname, '../dist/' + view)));
+    app.use('/' + view, express.static(path.join(__dirname, '../../public/' + view)));
+    app.use('/' + view, express.static(path.join(__dirname, '../../dist/' + view)));
   }
 
   io.on('connection', (socket) => {

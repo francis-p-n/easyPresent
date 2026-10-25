@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { startServer } from './server';
+import { startServer } from './stageServer';
 import { io as Client } from 'socket.io-client';
 
 describe('Stage Server Integration', () => {

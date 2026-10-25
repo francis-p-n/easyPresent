@@ -25,6 +25,7 @@ let createdWindows
 let displays
 let userDataDir
 let dialogMock
+let appListeners
 
 function makeFakeBrowserWindow(opts) {
   const win = {
@@ -62,7 +63,7 @@ function fakeElectron() {
     app: {
       whenReady: () => Promise.resolve(),
       getPath: () => userDataDir,
-      on: vi.fn(),
+      on: (evt, cb) => appListeners.push([evt, cb]),
       quit: vi.fn()
     },
     BrowserWindow: Object.assign(vi.fn().mockImplementation(makeFakeBrowserWindow), {
@@ -81,6 +82,7 @@ function fakeElectron() {
 }
 
 beforeEach(() => {
+  appListeners = []
   ipcHandlers = new Map()
   ipcListeners = new Map()
   createdWindows = []
@@ -91,13 +93,15 @@ beforeEach(() => {
   origLoad = Module._load
   Module._load = function (request, parent, isMain) {
     if (request === 'electron') return fakeElectron()
-    if (request === './pptx-parser') return { parsePptx: vi.fn() }
-    if (request === './server') return { startServer: vi.fn(() => ({ broadcastSlide: vi.fn() })) }
+    if (request.endsWith('pptx/parser')) return { parsePptx: vi.fn() }
+    if (request.endsWith('server/stageServer')) return { startServer: vi.fn(() => ({ broadcastSlide: vi.fn(), broadcastLiveState: vi.fn() })) }
     return origLoad.call(this, request, parent, isMain)
   }
 })
 
 afterEach(() => {
+  // release the SQLite file handle (Windows can't delete an open file)
+  appListeners.filter(([e]) => e === 'will-quit').forEach(([, cb]) => cb())
   Module._load = origLoad
   fs.rmSync(userDataDir, { recursive: true, force: true })
 })
@@ -106,6 +110,12 @@ async function loadMain() {
   // main.js registers its IPC handlers at load time via app.whenReady().then(...);
   // resetModules gives each test a fresh instance so handlers don't double-register
   vi.resetModules()
+  // main.js now pulls in its modules with plain require(), which Node caches
+  // across tests — drop them so each test gets a fresh set bound to its mocks
+  const here = path.resolve(__dirname).toLowerCase()
+  for (const key of Object.keys(Module._cache)) {
+    if (key.toLowerCase().startsWith(here) && !key.endsWith('.test.js')) delete Module._cache[key]
+  }
   await import('./main.js')
   // Let the whenReady().then(...) callback's microtasks flush
   await Promise.resolve()

@@ -9,7 +9,15 @@ function registerDisplayIpc({ displays, stageHub }) {
   ipcMain.handle('toggle-audience-output', () => displays.toggle('audience'))
 
   ipcMain.on('update-audience-output', (event, payload) => displays.updateAudience(payload))
-  ipcMain.on('create-stage-display', () => displays.openStageDisplay())
+  ipcMain.on('create-stage-display', () => displays.openStageDisplay().catch((e) => console.error(e.message)))
+
+  // "Share to phones & tablets": start the web server on request and report the
+  // addresses a phone on the same Wi-Fi can open
+  ipcMain.handle('stage-share-status', () => stageHub.status())
+  ipcMain.handle('stage-share-start', async () => {
+    await stageHub.start()
+    return stageHub.status()
+  })
 
   // Text feeds for the stage / presenter / PA web views
   ipcMain.on('broadcast-slide', (event, slide) => stageHub.broadcastSlide(slide))

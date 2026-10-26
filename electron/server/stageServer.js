@@ -7,6 +7,34 @@ let io;
 let currentSlideData = null;
 let currentLiveState = null;
 
+const PORT_ATTEMPTS = 10 // if 8080 is taken, try 8081 ... 8090 before giving up
+
+/** Listens on `port`, moving to the next port when one is in use. Resolves with the port actually bound. */
+function listenWithFallback(server, port, attemptsLeft = PORT_ATTEMPTS) {
+  return new Promise((resolve, reject) => {
+    const attempt = (p, left) => {
+      const onError = (err) => {
+        server.removeListener('listening', onListening)
+        if (err.code === 'EADDRINUSE' && left > 0) attempt(p + 1, left - 1)
+        else reject(err)
+      }
+      const onListening = () => {
+        server.removeListener('error', onError)
+        resolve(p)
+      }
+      server.once('error', onError)
+      server.once('listening', onListening)
+      server.listen(p)
+    }
+    attempt(port, attemptsLeft)
+  })
+}
+
+/**
+ * Starts the stage/presenter/PA web server. Returns the broadcast functions
+ * immediately plus `ready`, a promise for the port that was actually bound
+ * (it rejects, with the reason, if no port could be used).
+ */
 function startServer(port = 8080) {
   const app = express();
   const server = http.createServer(app);
@@ -40,11 +68,15 @@ function startServer(port = 8080) {
     });
   });
 
-  server.listen(port, () => {
-    console.log(`Live Stage Server running on http://localhost:${port}`);
+  const ready = listenWithFallback(server, port).then((bound) => {
+    console.log(`Live Stage Server running on http://localhost:${bound}`);
+    return bound;
   });
+  ready.catch(() => {}); // callers surface the error; this just prevents an unhandled-rejection warning
 
   return {
+    ready,
+    close: () => new Promise((resolve) => { io.close(); server.close(() => resolve()); }),
     broadcastSlide: (slideData) => {
       currentSlideData = slideData;
       if (io) {

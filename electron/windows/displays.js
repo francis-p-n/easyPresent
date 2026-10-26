@@ -12,9 +12,17 @@ const { BrowserWindow, screen } = require('electron')
 const { appIcon, publicPage, preload } = require('../paths')
 
 const ROLE_TITLES = { presenter: 'Presenter View', pa: 'PA View' }
-const WINDOWED_SIZE = { presenter: [1100, 650], pa: [1100, 650] }
 
-function createDisplayManager({ stageHub }) {
+// When there is no spare display the outputs open as ordinary windows. Each gets
+// its own cascade slot and a size smaller than the operator window, so none hides
+// another and the operator window stays reachable.
+const WINDOWED = {
+  audience: { x: 40, y: 40, width: 960, height: 540 },
+  presenter: { x: 110, y: 90, width: 900, height: 560 },
+  pa: { x: 180, y: 140, width: 900, height: 560 }
+}
+
+function createDisplayManager({ stageHub, getMainWindow = () => null }) {
   let audienceWindow = null
   let lastAudiencePayload = null
   const roleWindows = { presenter: null, pa: null }
@@ -49,6 +57,13 @@ function createDisplayManager({ stageHub }) {
     return [...(audienceWindow ? ['audience'] : []), ...Object.keys(roleWindows).filter((r) => roleWindows[r])]
   }
 
+  // Outputs must never take the keyboard from the operator: shortcuts only work
+  // while the operator window has focus.
+  function focusOperator() {
+    const main = getMainWindow()
+    if (main && !main.isDestroyed?.()) main.focus()
+  }
+
   function openAudience(requestedId) {
     const primary = screen.getPrimaryDisplay()
     const picked = pickDisplay(requestedId)
@@ -57,10 +72,10 @@ function createDisplayManager({ stageHub }) {
     const projecting = !!picked && picked.id !== primary.id
 
     audienceWindow = new BrowserWindow({
-      x: target.bounds.x + 40,
-      y: target.bounds.y + 40,
-      width: projecting ? target.bounds.width : 960,
-      height: projecting ? target.bounds.height : 540,
+      x: target.bounds.x + WINDOWED.audience.x,
+      y: target.bounds.y + WINDOWED.audience.y,
+      width: projecting ? target.bounds.width : WINDOWED.audience.width,
+      height: projecting ? target.bounds.height : WINDOWED.audience.height,
       fullscreen: projecting,
       frame: !projecting,
       autoHideMenuBar: true,
@@ -79,21 +94,33 @@ function createDisplayManager({ stageHub }) {
     audienceWindow.webContents.on('did-finish-load', () => {
       if (lastAudiencePayload) audienceWindow.webContents.send('audience-update', lastAudiencePayload)
     })
+    audienceWindow.once?.('ready-to-show', focusOperator)
     audienceWindow.on('closed', () => {
       audienceWindow = null
+      focusOperator()
     })
   }
 
-  function openRole(role, requestedId) {
-    stageHub.ensure()
+  const opening = new Set() // roles whose window is waiting on the server, so a double click can't open two
+
+  async function openRole(role, requestedId) {
+    opening.add(role)
+    try {
+      await stageHub.start()
+    } catch (err) {
+      const why = err.code === 'EADDRINUSE' ? 'no free network port (8080-8090 are all in use)' : err.message
+      throw new Error(`Couldn't start the screen server: ${why}`, { cause: err })
+    } finally {
+      opening.delete(role)
+    }
     const display = pickDisplay(requestedId)
     const target = display || screen.getPrimaryDisplay()
-    const [width, height] = WINDOWED_SIZE[role]
+    const slot = WINDOWED[role]
     const win = new BrowserWindow({
-      x: target.bounds.x + (display ? 0 : 60),
-      y: target.bounds.y + (display ? 0 : 60),
-      width: display ? target.bounds.width : width,
-      height: display ? target.bounds.height : height,
+      x: target.bounds.x + (display ? 0 : slot.x),
+      y: target.bounds.y + (display ? 0 : slot.y),
+      width: display ? target.bounds.width : slot.width,
+      height: display ? target.bounds.height : slot.height,
       fullscreen: !!display,
       autoHideMenuBar: true,
       backgroundColor: '#000000',
@@ -103,13 +130,16 @@ function createDisplayManager({ stageHub }) {
     })
     win.__displayId = target.id
     win.loadURL(stageHub.url(`/${role}/`))
+    win.once?.('ready-to-show', focusOperator)
     win.on('closed', () => {
       roleWindows[role] = null
+      focusOperator()
     })
     roleWindows[role] = win
+    return true
   }
 
-  /** Returns true when the window is now open, false when it was closed. */
+  /** Returns true when the window is now open, false when it was closed (a Promise for Presenter/PA, which wait for the server). */
   function toggle(role, displayId) {
     if (role === 'audience') {
       if (audienceWindow) {
@@ -126,8 +156,8 @@ function createDisplayManager({ stageHub }) {
       roleWindows[role] = null
       return false
     }
-    openRole(role, displayId)
-    return true
+    if (opening.has(role)) return Promise.resolve(true)
+    return openRole(role, displayId)
   }
 
   function updateAudience(payload) {
@@ -136,8 +166,8 @@ function createDisplayManager({ stageHub }) {
   }
 
   /** The classic stage display: chords + lyrics for the band, served by the stage server. */
-  function openStageDisplay() {
-    stageHub.ensure()
+  async function openStageDisplay() {
+    await stageHub.start()
     const win = new BrowserWindow({
       width: 1280,
       height: 720,

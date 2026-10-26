@@ -13,7 +13,7 @@ const getMainWindow = () => mainWindow
 app.whenReady().then(() => {
   const userDataDir = app.getPath('userData')
   const stageHub = createStageHub()
-  const displays = createDisplayManager({ stageHub })
+  const displays = createDisplayManager({ stageHub, getMainWindow })
 
   registerLibraryIpc({ userDataDir, getMainWindow })
   registerPptxIpc({ getMainWindow })

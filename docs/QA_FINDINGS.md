@@ -18,6 +18,10 @@ Status: all 25 reports are merged.
 | M3 | Escape closes an open dropdown menu first; only a bare Escape clears the output. | not run |
 | M4 | `Shift+Right/Down` or `]` = next song, `Shift+Left/Up` or `[` = previous song in the active setlist (starts at slide 1). | not run |
 | M5 | Digits typed in quick succession form one slide number (`1` then `2` = slide 12). | not run |
+| M13 | A damaged `library.json` is copied to `library.json.corrupt-<time>` before anything overwrites it, and a message says whether it was restored from a backup or started fresh. | not run |
+| M15 | Presenter/PA/Audience open as ordinary windows in separate cascade slots, smaller than the operator window, and focus returns to the operator window. | not run |
+| M22 | The web server tries ports 8080-8090 and reports a clear error (as a message in the app) if none can be used; it retries on the next attempt. | not run |
+| M24 | New "Phones & tablets" section in the Screens menu: Start sharing, then it lists the real LAN addresses (`http://<ip>:<port>/presenter` and `/pa`). Opening a Presenter/PA window also starts the server. | not run |
 | B6 | Stacked touch layout now touch-only; narrow desktop windows keep three columns and a compact toolbar. | not run |
 
 B5 (Bible text) is waiting on a decision.

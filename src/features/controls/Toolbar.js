@@ -106,7 +106,12 @@ export class Toolbar {
         ${roleRow('audience', 'Audience', 'Congregation screen / projector')}
         ${roleRow('presenter', 'Presenter', 'Pastor: current + next slide, clock')}
         ${roleRow('pa', 'PA Team', 'Sound desk: output check, cues, timers')}
-        <div id="screens-url-hint" style="padding:6px;font-size:11px;opacity:.65;">Presenter &amp; PA views also open in any browser on the venue Wi-Fi at <code>http://&lt;this-pc&gt;:8080/presenter</code> and <code>/pa</code>.</div>
+        <div style="padding:8px 6px 6px;border-top:1px solid var(--border-color);margin-top:4px;">
+          <div style="font-size:12px;font-weight:600;">Phones &amp; tablets</div>
+          <div style="font-size:11px;opacity:.65;margin:2px 0 6px;">Let people on the same Wi-Fi open the Presenter and PA screens in a web browser.</div>
+          <button class="btn" id="screens-share-btn" style="width:100%;">Start sharing</button>
+          <div id="screens-share-urls" style="font-size:11px;margin-top:6px;word-break:break-all;"></div>
+        </div>
       </div>`
     this.container.appendChild(screensWrap)
 
@@ -301,6 +306,28 @@ export class Toolbar {
       const label = screensBtn.querySelector('.toolbar-btn-label')
       if (label) label.textContent = openRoles.size ? `Screens ${openRoles.size}/3` : 'Screens'
     }
+    // "Phones & tablets": the web server only runs once someone asks for it (or opens an output window)
+    const shareBtn = screensMenu.querySelector('#screens-share-btn')
+    const shareUrls = screensMenu.querySelector('#screens-share-urls')
+    const renderShare = (status) => {
+      shareUrls.textContent = ''
+      if (!status?.running) {
+        shareBtn.textContent = 'Start sharing'
+        shareBtn.disabled = false
+        return
+      }
+      shareBtn.textContent = 'Sharing is on'
+      shareBtn.disabled = true
+      const addresses = status.urls || []
+      if (!addresses.length) shareUrls.textContent = 'No Wi-Fi/LAN connection found on this computer.'
+      for (const u of addresses) {
+        for (const [label, href] of [['Presenter', u.presenter], ['PA', u.pa]]) {
+          const line = document.createElement('div')
+          line.textContent = `${label}: ${href}`
+          shareUrls.appendChild(line)
+        }
+      }
+    }
     const fillDisplays = async () => {
       const displays = (await window.electronAPI.listDisplays?.()) || []
       screensMenu.querySelectorAll('.screens-display').forEach((sel) => {
@@ -321,6 +348,7 @@ export class Toolbar {
       }
       const opening = screensMenu.style.display === 'none'
       if (opening) {
+        window.electronAPI.stageShareStatus?.().then(renderShare)
         await fillDisplays()
         openRoles.clear()
         for (const r of (await window.electronAPI.openDisplays?.()) || []) openRoles.add(r)
@@ -330,14 +358,28 @@ export class Toolbar {
     })
     screensMenu?.addEventListener('click', async (e) => {
       e.stopPropagation()
+      if (e.target.closest('#screens-share-btn')) {
+        try {
+          renderShare(await window.electronAPI.stageShareStart())
+        } catch (err) {
+          showToast(`Couldn't start sharing: ${err.message}`, 'error')
+        }
+        return
+      }
       const btn = e.target.closest('.screens-toggle')
       if (!btn) return
       const role = btn.dataset.role
       const sel = screensMenu.querySelector(`.screens-display[data-role="${role}"]`)
       const displayId = sel && sel.value ? Number(sel.value) : undefined
-      const open = await window.electronAPI.toggleDisplay(role, displayId)
-      if (open) openRoles.add(role)
-      else openRoles.delete(role)
+      try {
+        const open = await window.electronAPI.toggleDisplay(role, displayId)
+        if (open) openRoles.add(role)
+        else openRoles.delete(role)
+        // Opening the Presenter/PA window starts the server, so show the addresses now
+        window.electronAPI.stageShareStatus?.().then(renderShare)
+      } catch (err) {
+        showToast(err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), 'error')
+      }
       syncScreens()
     })
     document.addEventListener('click', () => {

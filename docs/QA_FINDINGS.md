@@ -4,8 +4,7 @@ Each persona drove the real Electron app (own throwaway profile and port). This 
 removes duplicates, and ranks what is left. `Persona` numbers refer to the test personas (see the end).
 "Where" is the likely source location, not a confirmed root cause unless it says so.
 
-Status: 24 of 25 reports are merged. Persona 14 (library curator) had not reported when this was written;
-add its findings under the matching section.
+Status: all 25 reports are merged.
 
 ---
 
@@ -73,6 +72,11 @@ add its findings under the matching section.
 
 | M24 | A phone or laptop can't open `/presenter` or `/pa` until the operator has opened an output window, because the web server starts lazily. The guest gets "connection refused" with no hint. Start the server when the Screens menu opens (or on a "Share to devices" switch) and show the real LAN address. | 09, 05 | `electron/services/stageHub.js`, `Toolbar.js` |
 
+### Library integrity
+| ID | Problem | Seen by | Where |
+| --- | --- | --- | --- |
+| M25 | Deleting a song leaves a blank "ghost" row (empty, still 44 px tall, still counted) in every setlist that held it. No warning, and the delete dialog doesn't say the song is in a setlist. Remove the row (or show "missing song") and mention setlists in the dialog. | 14 | `PlaylistPanel.js` (`if (!pres) { el.innerHTML = '' }`), `LibraryPanel.js` |
+
 ### Messages, timers and preview
 | ID | Problem | Seen by | Where |
 | --- | --- | --- | --- |
@@ -113,6 +117,7 @@ add its findings under the matching section.
 - **GPU memory** reached ~1.2 GB with all three outputs open (24); "Stage display connected" console noise (24).
 - **LAN views:** the web server starts only when a screen is first opened, so a phone gets "connection refused" until then, and the app never shows the address to type (it shows the literal `<this-pc>`). No indicator of connected devices (05).
 - **Presenter page on a phone:** no "connected / waiting" cue (the offline note is ~7px grey text over the NEXT box); after CLEAR ALL the old song title stays; labels are 8-9px in landscape; no text-size control or keep-awake, so the phone dims mid-sermon (09).
+- **Delete:** no undo toast and Ctrl+Z does nothing ("This cannot be undone"); library list stays scrolled oddly with the top row half-clipped after a context-menu action (14).
 - **Welcome modal** wording could name the pencil icon and mention how to open the screens (25).
 - **Bible panel:** no Enter-to-send, no confirmation, "dummy data" in the error text (19).
 
@@ -124,6 +129,7 @@ add its findings under the matching section.
 - Three screens stay in sync: 200 rapid key presses, 100x Clear/Logo spam, 30x open/close with no desync or leaks (11, 24).
 - Update latency is about 3-50 ms; payloads to the web views are small; no image data goes over the network (11, 18, 24).
 - Hard kill right after a save loses nothing; library and songs-database export/import round-trip (15).
+- Library chips, search, empty state, duplicate and rename all work and reach the database; deleted starter songs stay deleted after a restart (14).
 - Unicode (CJK, Arabic, emoji, accents) displays correctly and survives SQLite (06, 23).
 - The Presenter page auto-fits at phone, tablet and landscape sizes with no horizontal scroll, and a reload restores the current slide at once (09).
 - Output windows, PA/Presenter pages and print sheet escape text safely (22).
@@ -132,6 +138,6 @@ add its findings under the matching section.
 ## Personas
 01 first-time PA volunteer, 02 senior pastor, 03 worship leader, 04 keyboard-only operator, 05 church IT admin,
 06 Indonesian-language operator, 07 low-vision volunteer at 150% zoom, 08 drummer reading prints, 09 guest speaker on a phone,
-10 youth leader (messages/timers), 11 sound engineer, 12 livestream operator, 13 songwriter importing charts, 14 librarian (pending),
+10 youth leader (messages/timers), 11 sound engineer, 12 livestream operator, 13 songwriter importing charts, 14 librarian,
 15 data-loss-paranoid admin, 16 accessibility auditor, 17 single-display small church, 18 PowerPoint user, 19 Bible reader,
 20 kids-ministry touch user, 21 worship planner, 22 security-minded admin, 23 multilingual text tester, 24 stress tester, 25 first-run secretary.

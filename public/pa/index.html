@@ -22,11 +22,16 @@
     #message-card { display: none; background: #4a1f1f; border-color: #8a3a3a; margin-bottom: 12px; }
     .bar { height: 6px; background: #2a2f37; border-radius: 3px; overflow: hidden; margin-top: 8px; }
     .bar > div { height: 100%; background: #3b82f6; width: 0; transition: width .2s; }
+    /* Lost the feed: what is on screen may no longer be true, so say so loudly and dim it */
+    #stale { display: none; background: #b42318; color: #fff; text-align: center; font-weight: 700; padding: 10px; border-radius: 8px; margin-bottom: 12px; }
+    body.stale #stale { display: block; }
+    body.stale .grid, body.stale #message-card { opacity: .3; filter: grayscale(1); }
     #conn.ok { color: #4ade80; } #conn.bad { color: #f87171; }
   </style>
 </head>
 <body>
   <h1><span>PA View — <span id="title">no presentation</span></span><span id="conn" class="bad">● offline</span></h1>
+  <div id="stale" role="alert">NO SIGNAL — reconnecting. What is shown below may be out of date.</div>
   <div class="card" id="message-card"><h2>Message overlay is live</h2><div id="message"></div></div>
   <div class="grid">
     <div class="card">
@@ -86,8 +91,10 @@
 
     const socket = io();
     const conn = $('conn');
-    socket.on('connect', () => { conn.className = 'ok'; conn.textContent = '● connected'; });
-    socket.on('disconnect', () => { conn.className = 'bad'; conn.textContent = '● offline'; });
+    socket.on('connect', () => { conn.className = 'ok'; conn.textContent = '● connected'; document.body.classList.remove('stale'); });
+    const lost = () => { conn.className = 'bad'; conn.textContent = '● offline'; document.body.classList.add('stale'); };
+    socket.on('disconnect', lost);
+    socket.on('connect_error', lost);
     socket.on('live-state', render);
   </script>
 </body>

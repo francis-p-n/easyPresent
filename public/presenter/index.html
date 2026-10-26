@@ -10,6 +10,9 @@
     header { display: flex; justify-content: space-between; align-items: baseline; padding: 1.5vh 3vw; color: #9aa; font-size: 2.4vh; }
     #clock { font-size: 5vh; color: #fff; font-variant-numeric: tabular-nums; }
     #timer { color: #ffcc00; font-size: 4vh; font-variant-numeric: tabular-nums; }
+    #stale-bar { display: none; background: #b42318; color: #fff; text-align: center; font-size: 3.4vh; font-weight: bold; padding: 1vh 2vw; }
+    body.stale #stale-bar { display: block; }
+    body.stale main { opacity: .3; filter: grayscale(1); }
     #logo-bar { display: none; background: #1f4f8f; color: #fff; text-align: center; font-size: 3.4vh; font-weight: bold; padding: 1vh 2vw; }
     #current.covered { opacity: .45; border-color: #1f4f8f; }
     #message { display: none; background: #c0392b; color: #fff; text-align: center; font-size: 4vh; font-weight: bold; padding: 1.2vh 2vw; }
@@ -33,6 +36,7 @@
     <div id="title">Waiting for presentation…</div>
     <div><span id="timer"></span> &nbsp; <span id="clock"></span></div>
   </header>
+  <div id="stale-bar" role="alert">NO SIGNAL — reconnecting. This screen may be out of date.</div>
   <div id="logo-bar">LOGO ON SCREEN — the congregation cannot see the slide</div>
   <div id="message"></div>
   <main>
@@ -105,8 +109,10 @@
 
     const socket = io();
     const conn = document.getElementById('conn');
-    socket.on('connect', () => { conn.textContent = ''; });
-    socket.on('disconnect', () => { conn.textContent = 'disconnected — retrying…'; });
+    socket.on('connect', () => { conn.textContent = ''; document.body.classList.remove('stale'); });
+    const lost = () => { conn.textContent = 'disconnected — retrying…'; document.body.classList.add('stale'); };
+    socket.on('disconnect', lost);
+    socket.on('connect_error', lost);
     socket.on('live-state', render);
   </script>
 </body>

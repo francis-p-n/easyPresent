@@ -36,7 +36,8 @@ class StorageManager {
     const playlists = lift(state.get('playlists'))
     const themes = lift(state.get('themes'))
 
-    return JSON.stringify({ version: SCHEMA_VERSION, presentations, playlists, themes, media })
+    const activePlaylistId = state.get('activePlaylist')?.id || null // so a restart reopens the same setlist
+    return JSON.stringify({ version: SCHEMA_VERSION, presentations, playlists, themes, media, activePlaylistId })
   }
 
   _applyData(data) {
@@ -50,7 +51,7 @@ class StorageManager {
       state.set('playlists', playlists)
       // Re-point activePlaylist at the loaded object — otherwise it keeps
       // referencing the pre-load sample and saved changes never show
-      const currentId = state.get('activePlaylist')?.id
+      const currentId = data.activePlaylistId || state.get('activePlaylist')?.id
       const match = playlists.find((p) => p.id === currentId) || playlists[0] || null
       state.set('activePlaylist', match)
     }

@@ -41,7 +41,7 @@ export class SlideView {
     const header = document.createElement('div')
     header.className = 'panel-header slide-view-header'
     header.innerHTML = `
-      <span class="panel-header__title">${pres ? pres.name : 'No Presentation Selected'}</span>
+      <span class="panel-header__title" id="slide-view-title"></span>
       <div class="panel-header__actions" style="display:flex; align-items:center; gap:10px;">
         ${
           pres && pres.linkedAudio
@@ -49,7 +49,7 @@ export class SlideView {
           <button class="btn btn--icon" id="play-rehearsal-audio" title="Play Rehearsal Audio" style="color: var(--primary-color);">
             ${icon('play', 14).outerHTML}
           </button>
-          <audio id="rehearsal-audio-player" src="${pres.linkedAudio}" style="display:none;"></audio>
+          <audio id="rehearsal-audio-player" style="display:none;"></audio>
         `
             : ''
         }
@@ -77,6 +77,9 @@ export class SlideView {
         ${pres ? `<span class="text-muted text-xs">${getActiveSequence(pres).length} slides</span>` : ''}
       </div>
     `
+    // Titles and file paths come from imported data: set them as text/properties, never as markup
+    header.querySelector('#slide-view-title').textContent = pres ? pres.name : 'No Presentation Selected'
+    if (pres && pres.linkedAudio) header.querySelector('#rehearsal-audio-player').src = pres.linkedAudio
     this.container.appendChild(header)
 
     // Slide grid

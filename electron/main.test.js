@@ -47,6 +47,9 @@ function makeFakeBrowserWindow(opts) {
     loadFile: vi.fn(),
     loadURL: vi.fn(),
     setMenuBarVisibility: vi.fn(),
+    focus: vi.fn(),
+    isDestroyed: () => false,
+    once() {}, // 'ready-to-show' never fires in these tests
     on(evt, cb) {
       if (evt === 'closed') this._closeCbs.push(cb)
     },
@@ -191,7 +194,7 @@ describe('update-audience-output', () => {
 describe('create-stage-display (regression: was loading a nonexistent file)', () => {
   it('loads the stage server URL, not a local file', async () => {
     await loadMain()
-    ipcListeners.get('create-stage-display')()
+    await ipcListeners.get('create-stage-display')() // opens asynchronously: it waits for the server
     const win = createdWindows.at(-1)
     expect(win.loadURL).toHaveBeenCalledWith('http://localhost:8080')
     expect(win.loadFile).not.toHaveBeenCalled()
@@ -324,7 +327,7 @@ describe('toggle-display — audience / presenter / PA roles', () => {
     await ipcHandlers.get('toggle-display')(null, 'pa')
     const opts = createdWindows.at(-1).opts
     expect(opts.fullscreen).toBe(false)
-    expect(opts.width).toBe(1100)
+    expect(opts.width).toBe(900) // windowed outputs are smaller than the operator window so they can't hide it
   })
 
   it('honours an explicit display id', async () => {

@@ -116,7 +116,7 @@ export class PreviewPanel {
 
       const overlay = document.createElement('div')
       overlay.id = 'preview-layout-overlay'
-      overlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;'
+      overlay.style.cssText = 'position:absolute;inset:0;overflow:hidden;pointer-events:none;'
       renderSlideLayout(overlay, slideLayer.content)
       screen.appendChild(overlay)
 

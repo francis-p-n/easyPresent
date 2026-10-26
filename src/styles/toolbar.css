@@ -315,7 +315,11 @@
   background: #111;
 }
 
+/* position: relative is what keeps an imported (PPTX) slide's absolutely
+   positioned layout overlay inside this box; without it the overlay anchors to
+   the window and covers the whole operator UI. */
 .preview-screen {
+  position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   background: #000;

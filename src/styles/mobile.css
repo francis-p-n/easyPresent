@@ -1,7 +1,9 @@
 /* ===== MOBILE / IPAD RESPONSIVE STYLES ===== */
 
-/* Tablet layout: stack panels vertically */
-@media (max-width: 1024px) {
+/* Tablet layout: stack panels vertically. Touch screens only: a mouse-driven
+   desktop window that is merely narrow (e.g. 1280px at 150% zoom) keeps its
+   three columns and uses the compact rules in toolbar.css instead. */
+@media (max-width: 1024px) and (pointer: coarse) {
   .app-main {
     flex-direction: column;
     overflow-y: auto;

@@ -138,6 +138,60 @@
   }
 }
 
+/* Narrow desktop windows (<=1024 CSS px, e.g. 1280px at 150% zoom): keep the
+   three columns and squeeze the toolbar so every control stays reachable.
+   (Touch screens get the stacked layout in mobile.css instead.) */
+@media (max-width: 1024px) and (pointer: fine) {
+  .app-toolbar {
+    gap: 4px;
+    padding: 0 4px;
+  }
+
+  .toolbar-logo,
+  .toolbar-separator {
+    display: none;
+  }
+
+  #toolbar-library-btn .toolbar-btn-label {
+    display: none;
+  }
+
+  .toolbar-search {
+    width: 90px;
+    min-width: 70px;
+  }
+
+  .toolbar-view-btn {
+    padding: 5px 6px;
+  }
+
+  .toolbar-clear-group {
+    gap: 3px;
+  }
+
+  .clear-btn {
+    min-width: 36px;
+    padding: 4px;
+  }
+
+  .clear-btn--all {
+    margin-right: 4px;
+  }
+
+  .panel-left {
+    width: 220px;
+    min-width: 180px;
+  }
+
+  .panel-right {
+    width: 250px;
+  }
+
+  .panel-center {
+    min-width: 220px;
+  }
+}
+
 /* ===== LIBRARY SPECIFIC ===== */
 
 .library-categories {

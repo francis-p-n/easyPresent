@@ -1,9 +1,11 @@
 import { state } from '../../core/StateManager.js'
+import { makeTransposer } from '../../songs/transpose.js'
 
 export function renderChordSheet(chordSheet) {
   chordSheet.innerHTML = ''
   const pres = state.get('selectedPresentation')
   if (!pres) return
+  const transpose = makeTransposer(pres) // chords shown in the key the singer asked for
 
   pres.slides.forEach((slide) => {
     const block = document.createElement('div')
@@ -34,11 +36,10 @@ export function renderChordSheet(chordSheet) {
 
           // Build chord line with spaces
           let chordLine = ''
-          let lastPos = 0
           line.chords.forEach((c) => {
-            const spaces = Math.max(0, c.pos - lastPos)
-            chordLine += ' '.repeat(spaces) + c.chord
-            lastPos = c.pos + c.chord.length
+            // at least one space between chords so neighbours never run together
+            const spaces = Math.max(chordLine.length > 0 ? 1 : 0, c.pos - chordLine.length)
+            chordLine += ' '.repeat(spaces) + transpose(c.chord)
           })
           chordsDiv.textContent = chordLine
           lineDiv.appendChild(chordsDiv)

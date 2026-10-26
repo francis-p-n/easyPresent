@@ -163,6 +163,22 @@ export function slidesToChordPro(slides) {
 
 const NEWLINE = String.fromCharCode(10)
 
+/**
+ * One slide as ChordPro text (`[G]word [C]word` per line). `mapChord` can change
+ * each chord on the way out, e.g. to the key the singer asked for.
+ */
+export function slideToChordProText(slide, mapChord = (chord) => chord) {
+  const lines =
+    slide.linesData && slide.linesData.length
+      ? slide.linesData
+      : String(slide.text || '')
+          .split(NEWLINE)
+          .map((text) => ({ text, chords: [] }))
+  return lines
+    .map((l) => withInlineChords(l.text, (l.chords || []).map((c) => ({ ...c, chord: mapChord(c.chord) }))))
+    .join(NEWLINE)
+}
+
 function withInlineChords(text, chords) {
   let out = ''
   let last = 0

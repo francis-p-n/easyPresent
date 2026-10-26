@@ -28,6 +28,8 @@ Status: all 25 reports are merged.
 | M9 | Chord-only lines (intro, interlude, instrumental) become their own slide with empty text: blank on the audience screen, chords kept for the chart and print. | real-app visual test |
 | B6 | Stacked touch layout now touch-only; narrow desktop windows keep three columns and a compact toolbar. | real-app visual test |
 
+| M11 | The band's Stage window now shows chords (sent as ChordPro in the song's current key); spacing no longer splits words where a chord falls mid-word. | real-app visual test |
+
 B5 (Bible text) is waiting on a decision.
 
 ### Visual test pass (real app, 33 checks + screenshots)

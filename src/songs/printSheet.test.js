@@ -73,3 +73,33 @@ describe('printing the real weekly setlist', () => {
     expect(html).toContain('Key of A')
   })
 })
+
+describe('printing a song in another key', () => {
+  const song = (extra) => ({
+    id: 's',
+    name: 'Test Song',
+    category: 'Worship',
+    key: 'G',
+    slides: [{ label: 'Verse 1', text: 'One two', linesData: [{ text: 'One two', chords: [{ pos: 0, chord: 'G' }, { pos: 4, chord: 'C/E' }] }] }],
+    ...extra
+  })
+  const html = (pres) => buildSetlistSheetHtml({ name: 'W', items: [{ type: 'presentation', id: 's' }] }, [pres])
+
+  it('prints the written chords and key when not transposed', () => {
+    const out = html(song())
+    expect(out).toContain('<div class="chords">G   C/E</div>')
+    expect(out).toContain('Key of G')
+  })
+
+  it('prints the chords in the new key and says where it came from', () => {
+    const out = html(song({ transpose: 2 }))
+    expect(out).toContain('<div class="chords">A   D/F#</div>')
+    expect(out).toContain('Key of A (written in G, +2)')
+  })
+
+  it('does not change the stored song', () => {
+    const pres = song({ transpose: 2 })
+    html(pres)
+    expect(pres.slides[0].linesData[0].chords[0].chord).toBe('G')
+  })
+})

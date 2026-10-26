@@ -7,6 +7,8 @@
  * PDF" in the print dialog covers handing the band a file).
  */
 
+import { makeTransposer, transposeKey, describeShift } from './transpose.js'
+
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 
@@ -46,19 +48,29 @@ function isSong(pres) {
   return (pres.slides || []).some((s) => (s.linesData || []).some((l) => l.chords && l.chords.length))
 }
 
+/** "Key of A (written in G, +2)" — the key to play in, and where it came from. */
+function keyLabel(pres) {
+  const shift = pres.transpose || 0
+  if (pres.key && shift) return `Key of ${transposeKey(pres.key, shift)} (written in ${pres.key}, ${describeShift(shift)})`
+  if (pres.key) return `Key of ${pres.key}`
+  if (shift) return `Transposed ${describeShift(shift)} from the written key`
+  return ''
+}
+
 function songHtml(pres, number, showChords) {
+  const transpose = makeTransposer(pres)
   const sections = (pres.slides || [])
     .map((slide) => {
       const lines = slideLines(slide)
         .map((l) => {
-          const row = showChords ? chordRow(l.chords || []) : ''
+          const row = showChords ? chordRow((l.chords || []).map((c) => ({ ...c, chord: transpose(c.chord) }))) : ''
           return (row ? `<div class="chords">${esc(row)}</div>` : '') + `<div class="lyric">${esc(l.text) || '&nbsp;'}</div>`
         })
         .join('')
       return `<section>${slide.label ? `<h3>${esc(slide.label)}</h3>` : ''}${lines}</section>`
     })
     .join('')
-  const meta = pres.key ? `<span class="key">Key of ${esc(pres.key)}</span>` : ''
+  const meta = keyLabel(pres) ? `<span class="key">${esc(keyLabel(pres))}</span>` : ''
   return `<article><h2><span class="num">${number}.</span> ${esc(pres.name)} ${meta}</h2>${sections}</article>`
 }
 
@@ -93,7 +105,7 @@ export function buildSetlistSheetHtml(playlist, presentations, opts = {}) {
     .map((it) => byId.get(it.id))
     .filter((p) => p && isSong(p))
 
-  const toc = songs.map((p) => `<li>${esc(p.name)}${p.key ? ` <small>(${esc(p.key)})</small>` : ''}</li>`).join('')
+  const toc = songs.map((p) => `<li>${esc(p.name)}${keyLabel(p) ? ` <small>(${esc(p.transpose && p.key ? transposeKey(p.key, p.transpose) : p.key || describeShift(p.transpose))})</small>` : ''}</li>`).join('')
   const body = songs.length ? songs.map((p, i) => songHtml(p, i + 1, showChords)).join('') : '<p class="empty">No songs in this setlist.</p>'
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(playlist?.name || 'Setlist')}</title><style>${CSS}</style></head><body>

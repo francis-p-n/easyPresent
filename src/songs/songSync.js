@@ -51,7 +51,8 @@ export function createSongSync({ state, api }) {
         presentations.push(fromRecord(rec))
         changed++
       } else if (prev && rec.updatedAt > prev.updatedAt && prev.sig !== signature(rec)) {
-        presentations[index.get(rec.id)] = fromRecord(rec) // newer copy arrived via import
+        const existing = presentations[index.get(rec.id)]
+        presentations[index.get(rec.id)] = { ...fromRecord(rec), ...(existing.transpose ? { transpose: existing.transpose } : {}) } // newer copy arrived via import; keep the chosen key
         changed++
       }
     }

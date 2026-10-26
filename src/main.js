@@ -11,6 +11,8 @@ import { buildOutputPayload, payloadSignature } from './core/outputSync.js'
 import { getActiveSequence } from './core/arrangement.js'
 import { initSongLibrary } from './songs/songLibrary.js'
 import { buildLiveState } from './core/liveState.js'
+import { makeTransposer } from './songs/transpose.js'
+import { slideToChordProText } from './songs/chordpro.js'
 
 /**
  * Every transient overlay that owns the keyboard while it's open. All of these
@@ -117,16 +119,24 @@ class App {
       // Slides can carry multi-MB base64 background data URLs — stringifying
       // and shipping those over IPC + Wi-Fi on every slide advance froze
       // navigation with imported PPTX decks.
-      const payload = { text: (slide && slide.text) || '' }
+      // Chords ride along as ChordPro ([G]word) in the key the singer asked for, so
+      // the band's Stage window can show them; the stage page strips them for lyrics-only use.
+      const liveId = state.get('livePresentationId')
+      const livePres = (state.get('presentations') || []).find((p) => p.id === liveId)
+      const text = slide && livePres ? slideToChordProText(slide, makeTransposer(livePres)) : (slide && slide.text) || ''
+      const payload = { text }
       const sig = payload.text
       if (sig === this._lastBroadcast) return
       this._lastBroadcast = sig
       window.electronAPI.broadcastSlide(payload)
     }
 
-    state.on('layers', (layers) => {
+    const broadcastLive = () => {
+      const layers = state.get('layers')
       broadcast(layers.slide.active ? layers.slide.content || { text: '' } : { text: '' })
-    })
+    }
+    state.on('layers', broadcastLive)
+    state.on('presentations', broadcastLive) // a key change while live must reach the band at once
 
     // Feed the audience output window. Deduped with a cheap signature so
     // multi-MB imported backgrounds aren't re-sent on every state event.

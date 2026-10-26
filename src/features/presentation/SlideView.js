@@ -2,6 +2,7 @@ import { state } from '../../core/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
 import NativeRender from '../../services/NativeRender.js'
 import { renderChordSheet } from './ChordSheet.js'
+import { createTransposeControl } from './TransposeControl.js'
 import { announcementEditor } from './AnnouncementEditor.js'
 import { goLive } from '../../core/navigation.js'
 import { getActiveSequence } from '../../core/arrangement.js'
@@ -101,10 +102,26 @@ export class SlideView {
     chordSheet.style.backgroundColor = 'var(--bg-panel)'
     this.container.appendChild(chordSheet)
 
+    // Key changer, next to "Show Chords": only songs that have chords get one
+    if (pres && header.querySelector('#toggle-chords-checkbox')) {
+      const actions = header.querySelector('.panel-header__actions')
+      const chordsLabel = header.querySelector('#toggle-chords-checkbox').closest('label')
+      actions.insertBefore(createTransposeControl(pres, (semitones) => this._setTranspose(semitones)), chordsLabel)
+    }
+
     // Checkbox event
     const checkbox = header.querySelector('#toggle-chords-checkbox')
     if (checkbox) {
+      // A key change rebuilds this view; keep showing the chord sheet if that is what was open
+      if (this._chordsShown && this._chordsFor === pres.id) {
+        checkbox.checked = true
+        grid.style.display = 'none'
+        chordSheet.style.display = 'block'
+        this._renderChordSheet()
+      }
       checkbox.addEventListener('change', (e) => {
+        this._chordsShown = e.target.checked
+        this._chordsFor = pres.id
         if (e.target.checked) {
           grid.style.display = 'none'
           chordSheet.style.display = 'block'
@@ -142,6 +159,23 @@ export class SlideView {
     }
 
     this._renderSlides()
+  }
+
+  /**
+   * Sets how many half steps the selected song's chords are moved from the written
+   * key (0 = back to the original). The song's own chords are never rewritten.
+   */
+  _setTranspose(semitones) {
+    const pres = state.get('selectedPresentation')
+    if (!pres) return
+    const updated = { ...pres }
+    if (semitones) updated.transpose = semitones
+    else delete updated.transpose
+    state.set(
+      'presentations',
+      (state.get('presentations') || []).map((p) => (p.id === pres.id ? updated : p))
+    )
+    state.set('selectedPresentation', updated)
   }
 
   _renderChordSheet() {

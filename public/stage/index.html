@@ -31,7 +31,6 @@
       position: relative;
       display: inline-flex;
       flex-direction: column;
-      margin-right: 0.3em;
       font-size: 4vw; /* Responsive font size */
     }
 
@@ -43,8 +42,11 @@
       margin-bottom: 0.1em;
     }
 
+    /* Keep the spaces that sit inside each chord chunk (and don't add any between chunks):
+       a chord can fall mid-word, and it must not split the word apart */
     .lyric {
       display: inline-block;
+      white-space: pre;
     }
 
     /* Controls */

@@ -33,6 +33,34 @@ export function slideLines(slide) {
     })
 }
 
+/** Wide (East Asian, fullwidth, emoji) characters take two columns in a monospace font; combining marks take none. */
+function charWidth(codePoint) {
+  if ((codePoint >= 0x300 && codePoint <= 0x36f) || (codePoint >= 0x200b && codePoint <= 0x200f) || codePoint === 0xfe0f) return 0
+  const wide =
+    (codePoint >= 0x1100 && codePoint <= 0x115f) || // Hangul Jamo
+    (codePoint >= 0x2e80 && codePoint <= 0xa4cf) || // CJK radicals .. Yi
+    (codePoint >= 0xac00 && codePoint <= 0xd7a3) || // Hangul syllables
+    (codePoint >= 0xf900 && codePoint <= 0xfaff) || // CJK compatibility
+    (codePoint >= 0xfe30 && codePoint <= 0xfe6f) ||
+    (codePoint >= 0xff00 && codePoint <= 0xff60) || // fullwidth forms
+    (codePoint >= 0xffe0 && codePoint <= 0xffe6) ||
+    (codePoint >= 0x1f300 && codePoint <= 0x1faff) || // emoji
+    (codePoint >= 0x20000 && codePoint <= 0x3fffd) // CJK extensions
+  return wide ? 2 : 1
+}
+
+/** How many monospace columns `text` takes up. */
+export function displayWidth(text) {
+  let width = 0
+  for (const ch of String(text)) width += charWidth(ch.codePointAt(0))
+  return width
+}
+
+/** The column a chord at character index `pos` of `text` belongs over. */
+export function columnOf(text, pos) {
+  return displayWidth(String(text).slice(0, pos))
+}
+
 /** Monospace chord row: each chord sits above the character it precedes. */
 export function chordRow(chords) {
   let row = ''
@@ -63,7 +91,9 @@ function songHtml(pres, number, showChords) {
     .map((slide) => {
       const lines = slideLines(slide)
         .map((l) => {
-          const row = showChords ? chordRow((l.chords || []).map((c) => ({ ...c, chord: transpose(c.chord) }))) : ''
+          const row = showChords
+            ? chordRow((l.chords || []).map((c) => ({ pos: columnOf(l.text, c.pos), chord: transpose(c.chord) })))
+            : ''
           return (row ? `<div class="chords">${esc(row)}</div>` : '') + `<div class="lyric">${esc(l.text) || '&nbsp;'}</div>`
         })
         .join('')
@@ -87,7 +117,7 @@ const CSS = `
   h2 .key { font-size: 10pt; font-weight: normal; color: #444; margin-left: 4mm; }
   h3 { font: bold 9pt Helvetica, Arial, sans-serif; text-transform: uppercase; letter-spacing: .08em; margin: 4mm 0 1mm; color: #333; }
   section { break-inside: avoid; margin-bottom: 3mm; }
-  .chords, .lyric { font-family: 'Courier New', monospace; white-space: pre; font-size: 11pt; line-height: 1.25; }
+  .chords, .lyric { font-family: 'Courier New', monospace; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11pt; line-height: 1.25; }
   .chords { font-weight: bold; }
   .empty { color: #888; font-style: italic; }
 `

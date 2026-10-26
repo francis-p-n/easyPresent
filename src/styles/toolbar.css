@@ -226,6 +226,7 @@
 }
 
 .library-cat-btn {
+  min-height: 28px;
   padding: 4px 10px;
   border: 1px solid transparent;
   border-radius: var(--radius-pill);
@@ -258,6 +259,7 @@
 /* ===== PLAYLIST SPECIFIC ===== */
 
 .playlist-name__select {
+  min-height: 28px;
   flex: 1;
   min-width: 0;
   background: transparent;

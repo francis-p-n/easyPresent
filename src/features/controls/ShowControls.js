@@ -121,7 +121,10 @@ export class ShowControls {
       const msgItem = e.target.closest('[data-msg]')
       if (msgItem) {
         const input = this.container.querySelector('#message-input')
-        if (input) input.value = msgItem.dataset.msg
+        if (input) {
+          input.value = msgItem.dataset.msg
+          input.dispatchEvent(new window.Event('input', { bubbles: true })) // keeps the draft in step
+        }
       }
 
       // Timer Actions

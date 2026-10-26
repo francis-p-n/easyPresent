@@ -14,6 +14,12 @@ export class PreviewPanel {
     state.on('liveSlideIndex', () => this._updatePreview())
     state.on('activeThemeId', () => this._updatePreview())
     state.on('themes', () => this._updatePreview())
+    // A message containing {timer} shows the running countdown, so the preview has
+    // to tick with it (it used to freeze at 00:00 while the real screens counted down)
+    state.on('timer_main', () => {
+      const message = state.get('layers')?.message
+      if (message?.active && String(message.content).includes('{timer}')) this._updatePreview()
+    })
   }
 
   render() {

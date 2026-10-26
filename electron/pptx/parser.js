@@ -156,6 +156,73 @@ function normalizeTarget(baseDir, target) {
 }
 
 /**
+ * A text box that is a placeholder (title, body, ...) usually has no position of
+ * its own: PowerPoint takes it from the matching placeholder on the slide's
+ * layout, then the master. Without this, every such box fell back to the same
+ * default rectangle and a slide's title and body were drawn on top of each other.
+ */
+function placeholderInfo(shapeXml) {
+  const m = shapeXml.match(/<p:ph\b([^>]*?)\/?>/);
+  if (!m) return null;
+  const type = (m[1].match(/\btype="([^"]+)"/) || [])[1] || null;
+  const idxRaw = (m[1].match(/\bidx="(\d+)"/) || [])[1];
+  return { type, idx: idxRaw !== undefined ? parseInt(idxRaw, 10) : null };
+}
+
+/** Every placeholder that has its own position in a layout/master part. */
+function placeholderBoxes(partXml) {
+  const tree = partXml.match(/<p:spTree\b[^>]*>([\s\S]*)<\/p:spTree>/);
+  const out = [];
+  for (const block of topLevelShapeBlocks(tree ? tree[1] : partXml)) {
+    if (block.kind === 'grpSp') continue;
+    const ph = placeholderInfo(block.xml);
+    const box = shapeGeometryEmu(block.xml);
+    if (ph && box) out.push({ ...ph, box });
+  }
+  return out;
+}
+
+const isTitleType = (t) => t === 'title' || t === 'ctrTitle';
+
+/**
+ * Returns ph => EMU box | null for one slide, looking in its layout first and
+ * then its master.
+ */
+function makePlaceholderResolver(zipEntries, slideEntryName) {
+  const read = (path) => {
+    const entry = zipEntries.find(e => e.entryName === path);
+    return entry ? entry.getData().toString('utf8') : null;
+  };
+
+  const slideFile = slideEntryName.split('/').pop();
+  const slideRels = readRelTargets(zipEntries, `ppt/slides/_rels/${slideFile}.rels`);
+  const layoutRel = [...slideRels.values()].find(r => /slideLayout/.test(r.target));
+  const layoutPath = layoutRel ? normalizeTarget('ppt/slides/', layoutRel.target) : null;
+  const layoutXml = layoutPath ? read(layoutPath) : null;
+  const layoutBoxes = layoutXml ? placeholderBoxes(layoutXml) : [];
+
+  let masterBoxes = [];
+  if (layoutPath) {
+    const layoutRels = readRelTargets(zipEntries, `ppt/slideLayouts/_rels/${layoutPath.split('/').pop()}.rels`);
+    const masterRel = [...layoutRels.values()].find(r => /slideMaster/.test(r.target));
+    const masterXml = masterRel ? read(normalizeTarget('ppt/slideLayouts/', masterRel.target)) : null;
+    if (masterXml) masterBoxes = placeholderBoxes(masterXml);
+  }
+
+  return (ph) => {
+    // Layout: same idx when the slide gives one, otherwise the same type
+    const inLayout =
+      (ph.idx !== null && layoutBoxes.find(b => b.idx === ph.idx)) ||
+      layoutBoxes.find(b => b.type === ph.type && b.type !== null);
+    if (inLayout) return inLayout.box;
+    // Master only defines a title and a body: titles take the title, everything else the body
+    const wantTitle = isTitleType(ph.type);
+    const inMaster = masterBoxes.find(b => (wantTitle ? isTitleType(b.type) : b.type === 'body'));
+    return inMaster ? inMaster.box : null;
+  };
+}
+
+/**
  * Resolves a slide's effective background color, walking the PPTX inheritance
  * chain: the slide's own <p:bg>, then its layout, then the master (which is
  * where most decks actually declare the page color, e.g. a white bgRef). This
@@ -642,7 +709,7 @@ function composeTransforms(parent, local) {
  * extend beyond the slide edges; their geometry is preserved as-is and the
  * renderers clip at the slide boundary, exactly like PowerPoint does.
  */
-function extractShapes(xmlData, theme, metrics, relMap, mediaByName) {
+function extractShapes(xmlData, theme, metrics, relMap, mediaByName, inheritBox = () => null) {
   const { sx, sy, ptToPx } = metrics;
   const elements = [];
   const images = [];
@@ -668,7 +735,9 @@ function extractShapes(xmlData, theme, metrics, relMap, mediaByName) {
       }
 
       const shapeXml = block.xml;
-      const raw = shapeGeometryEmu(shapeXml);
+      // Own position, else the one inherited from the layout/master placeholder
+      const ph = placeholderInfo(shapeXml);
+      const raw = shapeGeometryEmu(shapeXml) || (ph ? inheritBox(ph) : null);
       // Map through the accumulated group transform, then into design px.
       const geom = raw
         ? {
@@ -776,7 +845,8 @@ async function parsePptx(filePath) {
         const slideId = slideIdByEntry.get(entry.entryName);
 
         const { elements, images, background } = extractShapes(
-          xmlData, theme, metrics, relMap, mediaByName
+          xmlData, theme, metrics, relMap, mediaByName,
+          makePlaceholderResolver(zipEntries, entry.entryName)
         );
 
         // Flat text/style kept for search, stage display, and any surface that

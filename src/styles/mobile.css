@@ -110,6 +110,34 @@
     padding: 10px 14px;
   }
 
+  /* Everything else a finger has to hit: toolbar buttons, category chips, dropdowns, inputs, row controls */
+  .clear-btn,
+  .toolbar-view-btn,
+  .library-cat-btn,
+  .playlist-name__select,
+  select,
+  .input {
+    min-height: 44px;
+  }
+
+  .clear-btn {
+    min-width: 48px;
+  }
+
+  /* A mis-tap on CLEAR ALL blanks the congregation: keep it clear of LOGO and the other clears */
+  .toolbar-clear-group {
+    gap: 12px;
+  }
+
+  .clear-btn--all {
+    margin-right: 20px;
+  }
+
+  .playlist-item__controls .btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
   .slide-thumbnail {
     min-height: 100px;
   }

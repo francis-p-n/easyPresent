@@ -79,13 +79,14 @@ const SLIDE_EMPTY = sld('')
 
 const TINY_PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])
 
-function buildPptx(filePath, { slides, theme = THEME_XML, presentation = PRESENTATION_XML, media = {}, rels = {} } = {}) {
+function buildPptx(filePath, { slides, theme = THEME_XML, presentation = PRESENTATION_XML, media = {}, rels = {}, extra = {} } = {}) {
   const zip = new AdmZip()
   if (presentation) zip.addFile('ppt/presentation.xml', Buffer.from(presentation))
   if (theme) zip.addFile('ppt/theme/theme1.xml', Buffer.from(theme))
   Object.entries(slides).forEach(([name, xml]) => zip.addFile(`ppt/slides/${name}`, Buffer.from(xml)))
   Object.entries(media).forEach(([name, buf]) => zip.addFile(`ppt/media/${name}`, buf))
   Object.entries(rels).forEach(([name, xml]) => zip.addFile(`ppt/slides/_rels/${name}`, Buffer.from(xml)))
+  Object.entries(extra).forEach(([name, xml]) => zip.addFile(name, Buffer.from(xml)))
   zip.writeZip(filePath)
   return filePath
 }
@@ -590,5 +591,91 @@ describe.runIf(fs.existsSync(SESSION_DIR))('parsePptx — real session decks', (
         if (s.bgImage !== null) expect(s.bgImage, label).toMatch(/^data:image\/(png|jpeg|webp);base64,/)
       }
     }
+  })
+})
+
+
+// ---------------------------------------------------------------------------
+// Placeholders take their position from the layout, then the master
+// ---------------------------------------------------------------------------
+
+const placeholder = (ph, text) => `<p:sp>
+  <p:nvSpPr><p:cNvPr id="2" name="P"/><p:cNvSpPr/><p:nvPr><p:ph ${ph}/></p:nvPr></p:nvSpPr>
+  <p:spPr/>
+  <p:txBody><a:bodyPr/><a:p><a:r><a:rPr sz="3200"/><a:t>${text}</a:t></a:r></a:p></p:txBody>
+</p:sp>`
+
+const layoutShape = (ph, x, y, cx, cy) => `<p:sp>
+  <p:nvSpPr><p:cNvPr id="3" name="L"/><p:cNvSpPr/><p:nvPr><p:ph ${ph}/></p:nvPr></p:nvSpPr>
+  <p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm></p:spPr>
+</p:sp>`
+
+const part = (root, shapes) => `<?xml version="1.0"?>
+<${root} xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>${shapes}</p:spTree></p:cSld>
+</${root}>`
+
+const relsTo = (type, target) => `<?xml version="1.0"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${type}" Target="${target}"/>
+</Relationships>`
+
+describe('parsePptx — placeholder positions', () => {
+  let dir
+  beforeAll(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pptx-ph-'))
+  })
+  afterAll(() => fs.rmSync(dir, { recursive: true, force: true }))
+
+  const build = (name, slideShapes, layoutShapes, masterShapes) => {
+    const file = path.join(dir, name)
+    buildPptx(file, {
+      slides: { 'slide1.xml': sld(slideShapes) },
+      rels: { 'slide1.xml.rels': relsTo('slideLayout', '../slideLayouts/slideLayout1.xml') },
+      extra: {
+        'ppt/slideLayouts/slideLayout1.xml': part('p:sldLayout', layoutShapes),
+        'ppt/slideLayouts/_rels/slideLayout1.xml.rels': relsTo('slideMaster', '../slideMasters/slideMaster1.xml'),
+        'ppt/slideMasters/slideMaster1.xml': part('p:sldMaster', masterShapes)
+      }
+    })
+    return file
+  }
+
+  it('gives a title and a body their own layout positions instead of one shared box', async () => {
+    const file = build(
+      'layout.pptx',
+      placeholder('type="title"', 'The Title') + placeholder('idx="1"', 'The body'),
+      layoutShape('type="title"', 1000000, 500000, 10000000, 1000000) + layoutShape('idx="1"', 1000000, 2000000, 10000000, 3000000),
+      ''
+    )
+    const { slides } = await parsePptx(file)
+    const [title, body] = slides[0].elements
+    expect(title.text).toBe('The Title')
+    expect(body.text).toBe('The body')
+    expect(title.y).toBeLessThan(body.y) // no longer stacked in the same default rectangle
+    expect(title.y + title.height).toBeLessThanOrEqual(body.y)
+    expect(title.width).toBeGreaterThan(1000)
+  })
+
+  it('falls back to the master when the layout has no matching placeholder', async () => {
+    const file = build(
+      'master.pptx',
+      placeholder('type="title"', 'Master title') + placeholder('type="body" idx="1"', 'Master body'),
+      '',
+      layoutShape('type="title"', 600000, 300000, 11000000, 900000) + layoutShape('type="body" idx="1"', 600000, 1500000, 11000000, 4500000)
+    )
+    const { slides } = await parsePptx(file)
+    const [title, body] = slides[0].elements
+    expect(title.y).toBeLessThan(body.y)
+  })
+
+  it('a shape with its own position keeps it', async () => {
+    const own = `<p:sp><p:nvSpPr><p:cNvPr id="2" name="P"/><p:cNvSpPr/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>
+      <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="6096000" cy="1000000"/></a:xfrm></p:spPr>
+      <p:txBody><a:bodyPr/><a:p><a:r><a:rPr sz="3200"/><a:t>Own</a:t></a:r></a:p></p:txBody></p:sp>`
+    const file = build('own.pptx', own, layoutShape('type="title"', 5000000, 5000000, 1000000, 1000000), '')
+    const { slides } = await parsePptx(file)
+    expect(slides[0].elements[0].x).toBe(0)
+    expect(slides[0].elements[0].y).toBe(0)
   })
 })

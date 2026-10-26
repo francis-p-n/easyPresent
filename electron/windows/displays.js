@@ -64,6 +64,13 @@ function createDisplayManager({ stageHub, getMainWindow = () => null }) {
     if (main && !main.isDestroyed?.()) main.focus()
   }
 
+  // A new window grabs focus while it shows and again when its page finishes loading,
+  // so the operator window gets it back at both moments
+  function keepOperatorFocused(win) {
+    win.once?.('ready-to-show', focusOperator)
+    win.webContents?.once?.('did-finish-load', () => setTimeout(focusOperator, 150))
+  }
+
   function openAudience(requestedId) {
     const primary = screen.getPrimaryDisplay()
     const picked = pickDisplay(requestedId)
@@ -94,7 +101,7 @@ function createDisplayManager({ stageHub, getMainWindow = () => null }) {
     audienceWindow.webContents.on('did-finish-load', () => {
       if (lastAudiencePayload) audienceWindow.webContents.send('audience-update', lastAudiencePayload)
     })
-    audienceWindow.once?.('ready-to-show', focusOperator)
+    keepOperatorFocused(audienceWindow)
     audienceWindow.on('closed', () => {
       audienceWindow = null
       focusOperator()
@@ -130,7 +137,7 @@ function createDisplayManager({ stageHub, getMainWindow = () => null }) {
     })
     win.__displayId = target.id
     win.loadURL(stageHub.url(`/${role}/`))
-    win.once?.('ready-to-show', focusOperator)
+    keepOperatorFocused(win)
     win.on('closed', () => {
       roleWindows[role] = null
       focusOperator()

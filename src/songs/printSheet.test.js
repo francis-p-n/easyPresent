@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { chordRow, slideLines, buildSetlistSheetHtml } from './printSheet.js'
+import { chordRow, slideLines, buildSetlistSheetHtml, displayWidth, columnOf } from './printSheet.js'
 import { starterRecords } from './starterSongs.js'
 import { STARTER_SETLIST } from './starterCharts.js'
 import { fromRecord } from './songSync.js'
@@ -101,5 +101,37 @@ describe('printing a song in another key', () => {
     const pres = song({ transpose: 2 })
     html(pres)
     expect(pres.slides[0].linesData[0].chords[0].chord).toBe('G')
+  })
+})
+
+describe('print layout for wide characters and long words', () => {
+  it('counts CJK and Hangul as two columns, combining accents as none', () => {
+    expect(displayWidth('abc')).toBe(3)
+    expect(displayWidth('\u4f60\u597d')).toBe(4)
+    expect(displayWidth('\ud55c\uae00')).toBe(4)
+    expect(displayWidth('e\u0301')).toBe(1)
+  })
+
+  it('places a chord over the right column of a line containing wide characters', () => {
+    // "\u4f60\u597dab": a chord before "a" (index 2) belongs over column 4, not column 2
+    expect(columnOf('\u4f60\u597dab', 2)).toBe(4)
+    expect(columnOf('abcd', 2)).toBe(2)
+  })
+
+  it('prints the chord over the matching column in the sheet', () => {
+    const pres = {
+      id: 's',
+      name: 'Wide',
+      category: 'Worship',
+      slides: [{ label: 'V', text: '\u4f60\u597dab', linesData: [{ text: '\u4f60\u597dab', chords: [{ pos: 2, chord: 'G' }] }] }]
+    }
+    const html = buildSetlistSheetHtml({ name: 'W', items: [{ type: 'presentation', id: 's' }] }, [pres])
+    expect(html).toContain('<div class="chords">    G</div>') // four spaces: two wide characters
+  })
+
+  it('lets a very long word wrap instead of running off the page', () => {
+    const html = buildSetlistSheetHtml({ name: 'W', items: [] }, [])
+    expect(html).toMatch(/overflow-wrap:\s*anywhere/)
+    expect(html).toMatch(/white-space:\s*pre-wrap/)
   })
 })

@@ -30,6 +30,12 @@ Status: all 25 reports are merged.
 
 | M11 | The band's Stage window now shows chords (sent as ChordPro in the song's current key); spacing no longer splits words where a chord falls mid-word. | real-app visual test |
 
+| M10 | Imported PowerPoint title/body placeholders take their position from the slide layout, then the master (they used to share one default box and print on top of each other). | unit tests + real app |
+| M12 | Printed sheets place chords by display column (wide CJK/emoji count as 2, accents as 0) and wrap very long words; the audience screen and the operator preview wrap them too. | unit tests + real app |
+| M16 | The Messages tab explains `{timer}` and has a "+ Timer" button; the operator preview ticks with the countdown; a half-typed message survives switching tabs. | real app |
+| M17 | Category chips and the setlist dropdown are at least 28px tall; touch screens get 44px targets and a wider gap around CLEAR ALL; a swipe only changes slides when it starts on the slide area. | real app |
+| M15 (follow-up) | Focus returns to the operator window again once a new output window finishes loading (it was briefly nobody's). | real app |
+
 B5 (Bible text) is waiting on a decision.
 
 ### Visual test pass (real app, 33 checks + screenshots)

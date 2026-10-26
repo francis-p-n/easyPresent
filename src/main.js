@@ -447,13 +447,20 @@ class App {
   _setupTouchGestures() {
     let touchStartX = 0
     let touchStartY = 0
+    let swipeAllowed = false
 
     document.addEventListener('touchstart', (e) => {
       touchStartX = e.touches[0].clientX
       touchStartY = e.touches[0].clientY
+      // Only a swipe that begins on the slide area counts: sliding along the library or
+      // playlist, a dropdown, a text box or a dialog must never advance the live slide
+      const t = e.target
+      swipeAllowed =
+        !!t.closest?.('.panel-center') && !t.closest('input, select, textarea, .modal-overlay, .context-menu')
     }, { passive: true })
 
     document.addEventListener('touchend', (e) => {
+      if (!swipeAllowed) return
       const dx = e.changedTouches[0].clientX - touchStartX
       const dy = e.changedTouches[0].clientY - touchStartY
       // Only treat as horizontal swipe if dx dominates and is large enough

@@ -160,6 +160,7 @@ function renderSlideLayout(slide, root, scale) {
       textAlign: ['left', 'center', 'right'].includes(el.hAlign) ? el.hAlign : 'left',
       lineHeight: String(el.lineSpacing || 1.2),
       whiteSpace: 'pre-wrap',
+      overflowWrap: 'anywhere',
       wordBreak: 'break-word'
     })
     box.appendChild(text)
@@ -187,6 +188,7 @@ function renderSlideText(text, style, root, scale) {
     textAlign: ['left', 'center', 'right'].includes(style.hAlign) ? style.hAlign : 'center',
     padding: `${40 * scale}px ${60 * scale}px`,
     whiteSpace: 'pre-wrap',
+    overflowWrap: 'anywhere', // a very long word wraps instead of being clipped at the screen edge
     fontFamily: `"${style.fontFamily}", Inter, sans-serif`,
     fontSize: `${fontPx}px`,
     fontWeight: style.bold ? 'bold' : 'normal',

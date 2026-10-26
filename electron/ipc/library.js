@@ -8,6 +8,8 @@ function registerLibraryIpc({ userDataDir, getMainWindow }) {
 
   ipcMain.handle('save-library', (event, json) => store.save(json))
   ipcMain.handle('load-library', () => store.load())
+  // Set when load-library had to restore from a backup or start fresh because the file was damaged
+  ipcMain.handle('library-recovery', () => store.takeRecovery())
 
   ipcMain.handle('export-library', async (event, json) => {
     const { canceled, filePath } = await dialog.showSaveDialog(getMainWindow(), {

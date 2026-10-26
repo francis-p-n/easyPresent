@@ -126,6 +126,23 @@ class StorageManager {
     }
   }
 
+  /**
+   * If the library file was damaged at load, say so: it was either restored from
+   * the newest readable backup or (no backup) replaced by the sample library, and
+   * a copy of the damaged file was kept. Call once after load().
+   */
+  async reportRecovery() {
+    const recovery = await window.electronAPI?.libraryRecovery?.()
+    if (!recovery) return
+    const { showToast } = await import('../components/common/ToastManager.js')
+    showToast(
+      recovery.kind === 'backup'
+        ? 'Your library file was damaged and has been restored from the latest backup. A copy of the damaged file was kept.'
+        : 'Your library file was damaged and no backup was available, so EasyPresent started with a fresh library. A copy of the damaged file was kept.',
+      'error'
+    )
+  }
+
   /** Exports the library to a user-chosen .json file. Returns true on write. */
   async exportLibrary() {
     if (!window.electronAPI?.exportLibrary) return false

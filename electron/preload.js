@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   broadcastSlide: (slideData) => ipcRenderer.send('broadcast-slide', slideData),
   saveLibrary: (json) => ipcRenderer.invoke('save-library', json),
   loadLibrary: () => ipcRenderer.invoke('load-library'),
+  libraryRecovery: () => ipcRenderer.invoke('library-recovery'),
   exportLibrary: (json) => ipcRenderer.invoke('export-library', json),
   broadcastLiveState: (state) => ipcRenderer.send('broadcast-live-state', state),
   // Chart database (SQLite)
@@ -23,6 +24,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Role displays: 'audience' | 'presenter' | 'pa'
   listDisplays: () => ipcRenderer.invoke('list-displays'),
+  stageShareStatus: () => ipcRenderer.invoke('stage-share-status'),
+  stageShareStart: () => ipcRenderer.invoke('stage-share-start'),
   openDisplays: () => ipcRenderer.invoke('open-displays'),
   toggleDisplay: (role, displayId) => ipcRenderer.invoke('toggle-display', role, displayId),
 

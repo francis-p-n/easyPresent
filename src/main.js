@@ -82,6 +82,7 @@ class App {
   async init() {
     // Load persisted data before rendering (file-backed, so it's async)
     await storageManager.load()
+    storageManager.reportRecovery()
     if (await initSongLibrary()) storageManager.scheduleSave()
 
     // Mount core components synchronously

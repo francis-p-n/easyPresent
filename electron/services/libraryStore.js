@@ -13,6 +13,7 @@ const BACKUP_KEEP = 10
 function createLibraryStore(userDataDir) {
   const target = path.join(userDataDir, 'library.json')
   const backupsDir = path.join(userDataDir, 'backups')
+  let recovery = null // set when load() had to work around a damaged library file
 
   async function listBackups() {
     try {
@@ -74,18 +75,30 @@ function createLibraryStore(userDataDir) {
       } catch (err) {
         if (err.code === 'ENOENT') return null
         console.error('Library file unreadable, trying backups:', err.message)
+        // The next save would overwrite the damaged file; keep it for manual recovery
+        const corruptCopy = `${target}.corrupt-${Date.now()}`
+        await fs.promises.copyFile(target, corruptCopy).catch(() => {})
         for (const backup of (await listBackups()).reverse()) {
           try {
             const json = await fs.promises.readFile(backup, 'utf8')
             JSON.parse(json)
             console.error(`Recovered library from backup: ${path.basename(backup)}`)
+            recovery = { kind: 'backup', corruptCopy }
             return json
           } catch {
             /* try older backup */
           }
         }
+        recovery = { kind: 'reset', corruptCopy }
         return null
       }
+    },
+
+    /** What load() had to do about a damaged file ({ kind: 'backup' | 'reset', corruptCopy }), once; then null. */
+    takeRecovery() {
+      const r = recovery
+      recovery = null
+      return r
     },
 
     /** Replace the library with `json`, snapshotting whatever it replaces (ignores the rate limit). */

@@ -11,24 +11,38 @@ Status: all 25 reports are merged.
 | --- | --- | --- |
 | B1 | Corrupt `songs.db` is set aside as `.corrupt-<time>`, a fresh DB is created and refilled from the library, with a notice. Also fixes M14 (mirror runs at startup). | unit tests + real app |
 | B2 | Closing the operator window closes every output window and the app quits. | unit tests + real app |
-| B3 | Imported slide layout stays inside the Output Preview (`position: relative` on the preview screen). | not run |
-| B4 | Setlist create / rename / duplicate / delete, row up / down / remove, Add Song picker, working "Create Setlist" button. Also fixes M25 (ghost rows), the setlist half of M6 (names, headers, notes written as text), and the unconfirmed "active setlist resets after restart". | not run |
-| M1 | Navigation remembers which song is live (`livePresentationId`). Selecting another song no longer moves the live position; the next arrow starts that song at slide 1. Presenter/PA/Stage report the live song, not the selected one. | not run |
-| M2 | PA and Presenter pages dim and show a red NO SIGNAL banner when the feed drops. | not run |
-| M3 | Escape closes an open dropdown menu first; only a bare Escape clears the output. | not run |
-| M4 | `Shift+Right/Down` or `]` = next song, `Shift+Left/Up` or `[` = previous song in the active setlist (starts at slide 1). | not run |
-| M5 | Digits typed in quick succession form one slide number (`1` then `2` = slide 12). | not run |
-| M13 | A damaged `library.json` is copied to `library.json.corrupt-<time>` before anything overwrites it, and a message says whether it was restored from a backup or started fresh. | not run |
-| M15 | Presenter/PA/Audience open as ordinary windows in separate cascade slots, smaller than the operator window, and focus returns to the operator window. | not run |
-| M22 | The web server tries ports 8080-8090 and reports a clear error (as a message in the app) if none can be used; it retries on the next attempt. | not run |
-| M24 | New "Phones & tablets" section in the Screens menu: Start sharing, then it lists the real LAN addresses (`http://<ip>:<port>/presenter` and `/pa`). Opening a Presenter/PA window also starts the server. | not run |
-| M6 | The slide view title and rehearsal-audio path are set as text/properties, not markup (the setlist half was fixed with B4). | not run |
-| M7 | Import Song detects chords-above-lyrics, converts it (keeping intro/interlude lines), and tells the user. A `Title:` / `{title: ...}` line fills in the title, category and key. | not run |
-| M8 | Any `[Name]` line that isn't a chord is a section header, so `[Bait 1]`, `[Reff]`, `[副歌]` work and map to the right group. `Title:`/`Category:`/`Key:` lines and `{...}` directives no longer become lyrics. | not run |
-| M9 | Chord-only lines (intro, interlude, instrumental) become their own slide with empty text: blank on the audience screen, chords kept for the chart and print. | not run |
-| B6 | Stacked touch layout now touch-only; narrow desktop windows keep three columns and a compact toolbar. | not run |
+| B3 | Imported slide layout stays inside the Output Preview (`position: relative` on the preview screen). | real-app visual test |
+| B4 | Setlist create / rename / duplicate / delete, row up / down / remove, Add Song picker, working "Create Setlist" button. Also fixes M25 (ghost rows), the setlist half of M6 (names, headers, notes written as text), and the unconfirmed "active setlist resets after restart". | real-app visual test |
+| M1 | Navigation remembers which song is live (`livePresentationId`). Selecting another song no longer moves the live position; the next arrow starts that song at slide 1. Presenter/PA/Stage report the live song, not the selected one. | real-app visual test |
+| M2 | PA and Presenter pages dim and show a red NO SIGNAL banner when the feed drops. | real-app visual test |
+| M3 | Escape closes an open dropdown menu first; only a bare Escape clears the output. | real-app visual test |
+| M4 | `Shift+Right/Down` or `]` = next song, `Shift+Left/Up` or `[` = previous song in the active setlist (starts at slide 1). | real-app visual test |
+| M5 | Digits typed in quick succession form one slide number (`1` then `2` = slide 12). | real-app visual test |
+| M13 | A damaged `library.json` is copied to `library.json.corrupt-<time>` before anything overwrites it, and a message says whether it was restored from a backup or started fresh. | real-app visual test |
+| M15 | Presenter/PA/Audience open as ordinary windows in separate cascade slots, smaller than the operator window, and focus returns to the operator window. | real-app visual test |
+| M22 | The web server tries ports 8080-8090 and reports a clear error (as a message in the app) if none can be used; it retries on the next attempt. | real-app visual test |
+| M24 | New "Phones & tablets" section in the Screens menu: Start sharing, then it lists the real LAN addresses (`http://<ip>:<port>/presenter` and `/pa`). Opening a Presenter/PA window also starts the server. | real-app visual test |
+| M6 | The slide view title and rehearsal-audio path are set as text/properties, not markup (the setlist half was fixed with B4). | real-app visual test |
+| M7 | Import Song detects chords-above-lyrics, converts it (keeping intro/interlude lines), and tells the user. A `Title:` / `{title: ...}` line fills in the title, category and key. | real-app visual test |
+| M8 | Any `[Name]` line that isn't a chord is a section header, so `[Bait 1]`, `[Reff]`, `[副歌]` work and map to the right group. `Title:`/`Category:`/`Key:` lines and `{...}` directives no longer become lyrics. | real-app visual test |
+| M9 | Chord-only lines (intro, interlude, instrumental) become their own slide with empty text: blank on the audience screen, chords kept for the chart and print. | real-app visual test |
+| B6 | Stacked touch layout now touch-only; narrow desktop windows keep three columns and a compact toolbar. | real-app visual test |
 
 B5 (Bible text) is waiting on a decision.
+
+### Visual test pass (real app, 33 checks + screenshots)
+All fixed items above were exercised in the running app: narrow 853px window, busy-port fallback, window cascade and
+focus, share-to-phones addresses, song change while live, next-song keys, `1`,`2` = slide 12, Escape with a menu open,
+PA no-signal banner, setlist create / add / reorder / remove / duplicate / delete, Import Song with a chords-above-lyrics
+chart (Title line, other-language headers, intro line), a hostile song title, an imported PowerPoint in the preview,
+and a damaged `library.json`. 33 of 33 behaviour checks pass. Looking at the screenshots found four more problems,
+fixed in the same pass:
+- chord-only lines rendered as `DAG` instead of `D A G` (my M9 change);
+- the library list kept highlighting the old song when a song was picked from the playlist (existing bug);
+- at ~850px the "Playlist" title was squeezed to "P..." and the Messages/Macros tabs were clipped;
+- the song picker's "Added ..." toasts piled up over the timer controls.
+
+Not covered by the visual pass: real second/third monitors, a real printer, touch input, a screen reader.
 
 ---
 

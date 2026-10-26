@@ -55,10 +55,10 @@ export class PlaylistPanel {
       <span class="panel-header__title">Playlist</span>
       <div class="panel-header__actions">
         <button class="btn" id="playlist-print-btn" title="Print chord sheets for this setlist">
-          ${icon('file', 14).outerHTML} Print
+          ${icon('file', 14).outerHTML} <span class="playlist-btn-label">Print</span>
         </button>
         <div style="position:relative;">
-          <button class="btn" id="playlist-add-btn" title="Add Item">${icon('plus', 14).outerHTML} Add Item</button>
+          <button class="btn" id="playlist-add-btn" title="Add Item">${icon('plus', 14).outerHTML} <span class="playlist-btn-label">Add Item</span></button>
           <div class="playlist-menu" id="playlist-add-dropdown" style="${MENU_STYLE}">
             <div class="dropdown-item" data-add="song" style="${MENU_ITEM_STYLE}">Add Song…</div>
             <div class="dropdown-item" data-add="header" style="${MENU_ITEM_STYLE}">Add Header</div>
@@ -312,7 +312,6 @@ export class PlaylistPanel {
         row.textContent = p.name
         row.addEventListener('click', () => {
           this._addPlaylistItem({ type: 'presentation', id: p.id })
-          showToast(`Added ${p.name}`, 'success')
           overlay.remove()
         })
         list.appendChild(row)

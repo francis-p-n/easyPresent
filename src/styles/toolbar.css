@@ -190,6 +190,24 @@
   .panel-center {
     min-width: 220px;
   }
+
+  /* Icon-only playlist buttons so the "Playlist" title isn't squeezed to "P..." */
+  .playlist-btn-label {
+    display: none;
+  }
+
+  /* Show Controls tabs: drop the icons so "Messages" and "Macros" fit in 250px */
+  #show-controls-tabs .tab svg {
+    display: none;
+  }
+
+  /* .panel-right in the selector: the base #show-controls-tabs .tab rule comes later in the file */
+  .panel-right #show-controls-tabs .tab {
+    flex: 1 1 33%; /* three per row: every label gets room */
+    font-size: 10px;
+    letter-spacing: 0;
+    padding: 8px 2px;
+  }
 }
 
 /* ===== LIBRARY SPECIFIC ===== */

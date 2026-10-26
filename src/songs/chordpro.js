@@ -114,7 +114,14 @@ export function parseChordProSong(text, maxLines = 4) {
       if (chords.length && cleanText.trim() === '') {
         // Chords with no words under them: keep the chords, show no text
         currentTextLines.push('')
-        currentLineData.push({ text: '', chords: chords.map((c) => ({ pos: 0, chord: c.chord })) })
+        // No words to sit above, so lay the chords out left to right with a space between
+        let at = 0
+        const spaced = chords.map((c) => {
+          const placed = { pos: at, chord: c.chord }
+          at += c.chord.length + 1
+          return placed
+        })
+        currentLineData.push({ text: '', chords: spaced })
       } else {
         currentTextLines.push(cleanText)
         currentLineData.push({ text: cleanText, chords })

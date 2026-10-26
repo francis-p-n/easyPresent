@@ -15,6 +15,8 @@ export class LibraryPanel {
 
     // Re-render when search changes
     state.on('searchQuery', () => this._renderList())
+    // Picking a song from the playlist (or by keyboard) must move the highlight here too
+    state.on('selectedPresentation', () => this._syncSelection())
   }
 
   render() {
@@ -156,6 +158,11 @@ export class LibraryPanel {
 
       list.appendChild(item)
     })
+  }
+
+  _syncSelection() {
+    const id = state.get('selectedPresentation')?.id
+    this.container.querySelectorAll('.list-item[data-id]').forEach((el) => el.classList.toggle('active', el.dataset.id === id))
   }
 
   _bindEvents() {

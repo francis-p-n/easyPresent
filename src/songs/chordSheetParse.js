@@ -15,6 +15,11 @@
 const CHORD = /^[A-G][#b]?(?:maj|min|dim|aug|sus|add|m|M)?\d*(?:sus\d?|add\d+)?(?:\/[A-G][#b]?)?$/
 const REPEAT = /^[xX]\d+$/
 
+/** True for a single chord name such as Am7, F#m, G/B, Dsus4, C6/E. */
+export function isChordName(token) {
+  return CHORD.test(token)
+}
+
 export function isChordLine(line) {
   const tokens = line.trim().split(/\s+/).filter(Boolean)
   return tokens.length > 0 && tokens.every((t) => CHORD.test(t) || REPEAT.test(t))
@@ -57,7 +62,25 @@ function merge(chordLine, lyricLine) {
   return result + text.slice(last)
 }
 
-export function chordsOverLyricsToChordPro(source) {
+/** True when the text is the "chords on the line above the words" layout. */
+export function looksLikeChordsOverLyrics(source) {
+  const lines = source.split(/\r?\n/)
+  return lines.some(
+    (line, i) =>
+      isChordLine(line) &&
+      lines[i + 1] !== undefined &&
+      lines[i + 1].trim() !== '' &&
+      !isHeader(lines[i + 1]) &&
+      !isChordLine(lines[i + 1])
+  )
+}
+
+/**
+ * @param {string} source  chords-over-lyrics text
+ * @param {{ keepInstrumental?: boolean }} [options]  keep chord-only lines (intro, interlude)
+ *   as `[G] [D]` lines instead of dropping them
+ */
+export function chordsOverLyricsToChordPro(source, { keepInstrumental = false } = {}) {
   const lines = source.split(/\r?\n/)
   const out = []
   let pendingHeader = null
@@ -90,7 +113,15 @@ export function chordsOverLyricsToChordPro(source) {
         out.push(merge(line, next))
         i++
       }
-      // else: chord-only line (intro/interlude) — drop
+      else if (keepInstrumental) {
+        // a chord-only line (intro/interlude): keep it as bracketed chords
+        const chords = line.trim().split(/\s+/).filter((t) => !REPEAT.test(t))
+        if (chords.length) {
+          flushHeader()
+          sectionHasLyrics = true
+          out.push(chords.map((c) => `[${c}]`).join(' '))
+        }
+      }
       continue
     }
     flushHeader()

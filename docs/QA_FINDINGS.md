@@ -22,6 +22,10 @@ Status: all 25 reports are merged.
 | M15 | Presenter/PA/Audience open as ordinary windows in separate cascade slots, smaller than the operator window, and focus returns to the operator window. | not run |
 | M22 | The web server tries ports 8080-8090 and reports a clear error (as a message in the app) if none can be used; it retries on the next attempt. | not run |
 | M24 | New "Phones & tablets" section in the Screens menu: Start sharing, then it lists the real LAN addresses (`http://<ip>:<port>/presenter` and `/pa`). Opening a Presenter/PA window also starts the server. | not run |
+| M6 | The slide view title and rehearsal-audio path are set as text/properties, not markup (the setlist half was fixed with B4). | not run |
+| M7 | Import Song detects chords-above-lyrics, converts it (keeping intro/interlude lines), and tells the user. A `Title:` / `{title: ...}` line fills in the title, category and key. | not run |
+| M8 | Any `[Name]` line that isn't a chord is a section header, so `[Bait 1]`, `[Reff]`, `[副歌]` work and map to the right group. `Title:`/`Category:`/`Key:` lines and `{...}` directives no longer become lyrics. | not run |
+| M9 | Chord-only lines (intro, interlude, instrumental) become their own slide with empty text: blank on the audience screen, chords kept for the chart and print. | not run |
 | B6 | Stacked touch layout now touch-only; narrow desktop windows keep three columns and a compact toolbar. | not run |
 
 B5 (Bible text) is waiting on a decision.

@@ -1,7 +1,8 @@
 import { icon } from '../../components/common/Icons.js'
 import { state } from '../../core/StateManager.js'
 import { showToast } from '../../components/common/ToastManager.js'
-import { parseChordProToSlides } from '../../songs/chordpro.js'
+import { parseChordProSong } from '../../songs/chordpro.js'
+import { chordsOverLyricsToChordPro, looksLikeChordsOverLyrics } from '../../songs/chordSheetParse.js'
 
 export function createSongImporter(onImport) {
   // Create overlay
@@ -166,7 +167,7 @@ export function createSongImporter(onImport) {
   const lyricsArea = document.createElement('textarea')
   lyricsArea.className = 'input'
   lyricsArea.placeholder =
-    'Paste lyrics here...\n\n[Verse 1]\n[C]Amazing grace how [F]sweet the [C]sound\nThat saved a wretch like me'
+    'Paste lyrics here. Two chord layouts work:\n\n[Verse 1]\n[C]Amazing grace how [F]sweet the [C]sound\n\nor chords on the line above the words:\n\n[Verse 1]\nC        F      C\nAmazing grace how sweet the sound'
   Object.assign(lyricsArea.style, {
     height: '300px',
     resize: 'vertical',
@@ -196,22 +197,36 @@ export function createSongImporter(onImport) {
   importBtn.textContent = 'Import Song'
 
   importBtn.addEventListener('click', () => {
-    const rawText = lyricsArea.value
-    if (!rawText.trim() || !titleInput.value.trim()) {
-      showToast('Please enter a title and lyrics.', 'error')
+    let rawText = lyricsArea.value
+    if (!rawText.trim()) {
+      showToast('Please paste the lyrics.', 'error')
       return
     }
+
+    // Chord websites put the chords on the line above the words; turn that into
+    // inline chords first (keeping intro/interlude lines) so chord letters never
+    // end up on the screen as lyrics.
+    const converted = looksLikeChordsOverLyrics(rawText)
+    if (converted) rawText = chordsOverLyricsToChordPro(rawText, { keepInstrumental: true })
 
     const maxLines = parseInt(maxLinesInput.value, 10) || 4
     state.set('maxLinesPerSlide', maxLines)
 
-    const slides = parseChordProToSlides(rawText, maxLines)
+    // A `Title:` / `{title: ...}` line in the text fills in what the fields leave empty
+    const { meta, slides } = parseChordProSong(rawText, maxLines)
+    const name = titleInput.value.trim() || meta.title
+    if (!name) {
+      showToast('Please enter a title.', 'error')
+      return
+    }
     if (slides.length > 0) {
       onImport({
-        name: titleInput.value.trim(),
-        category: categoryInput.value.trim() || 'Worship',
+        name,
+        category: categoryInput.value.trim() || meta.category || 'Worship',
+        key: meta.key || undefined,
         slides: slides
       })
+      if (converted) showToast('Chords above the lyrics were converted to inline chords.', 'info')
       overlay.remove()
     } else {
       showToast('Could not parse any slides.', 'error')

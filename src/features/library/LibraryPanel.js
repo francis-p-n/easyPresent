@@ -229,6 +229,7 @@ export class LibraryPanel {
           id: 'song-' + Date.now(),
           name: songData.name,
           category: songData.category,
+          key: songData.key,
           slides: songData.slides.map((s) => ({ ...s, type: 'text' }))
         }
         const presentations = [...state.get('presentations'), newPres]

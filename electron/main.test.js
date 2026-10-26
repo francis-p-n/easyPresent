@@ -351,3 +351,28 @@ describe('toggle-display — audience / presenter / PA roles', () => {
     expect(() => ipcHandlers.get('toggle-display')(null, 'bogus')).toThrow(/Unknown display role/)
   })
 })
+
+describe('closing the operator window', () => {
+  it('closes every output window so the app can quit', async () => {
+    await loadMain()
+    const operator = createdWindows[0]
+    const toggle = ipcHandlers.get('toggle-display')
+    await toggle(null, 'audience')
+    await toggle(null, 'presenter')
+    await toggle(null, 'pa')
+    const outputs = createdWindows.slice(1)
+    expect(outputs).toHaveLength(3)
+
+    operator.close()
+
+    for (const w of outputs) expect(w.close).toHaveBeenCalled()
+  })
+
+  it('leaves the operator window alone when an output window is closed', async () => {
+    await loadMain()
+    const operator = createdWindows[0]
+    await ipcHandlers.get('toggle-display')(null, 'pa')
+    createdWindows[1].close()
+    expect(operator.close).not.toHaveBeenCalled()
+  })
+})

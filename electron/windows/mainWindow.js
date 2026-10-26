@@ -18,6 +18,15 @@ function createMainWindow() {
 
   win.setMenuBarVisibility(false) // cleaner look
 
+  // The operator window is the app: closing it must take the audience,
+  // presenter, PA and stage windows with it. Otherwise they keep the process
+  // alive (a stranded, framed audience window on the projector).
+  win.on('closed', () => {
+    for (const other of BrowserWindow.getAllWindows()) {
+      if (other !== win && !other.isDestroyed?.()) other.close()
+    }
+  })
+
   if (process.env.VITE_DEV_SERVER_URL) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL)
     win.webContents.openDevTools()

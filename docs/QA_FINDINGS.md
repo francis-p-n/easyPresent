@@ -6,6 +6,17 @@ removes duplicates, and ranks what is left. `Persona` numbers refer to the test 
 
 Status: all 25 reports are merged.
 
+## Fixed so far
+| ID | Fix | Checked |
+| --- | --- | --- |
+| B1 | Corrupt `songs.db` is set aside as `.corrupt-<time>`, a fresh DB is created and refilled from the library, with a notice. Also fixes M14 (mirror runs at startup). | unit tests + real app |
+| B2 | Closing the operator window closes every output window and the app quits. | unit tests + real app |
+| B3 | Imported slide layout stays inside the Output Preview (`position: relative` on the preview screen). | not run |
+| B4 | Setlist create / rename / duplicate / delete, row up / down / remove, Add Song picker, working "Create Setlist" button. Also fixes M25 (ghost rows), the setlist half of M6 (names, headers, notes written as text), and the unconfirmed "active setlist resets after restart". | not run |
+| B6 | Stacked touch layout now touch-only; narrow desktop windows keep three columns and a compact toolbar. | not run |
+
+B5 (Bible text) is waiting on a decision.
+
 ---
 
 ## BLOCKERS (fix first)

@@ -21,6 +21,7 @@ export class StateManager {
       slides: [],
       activeSlideIndex: -1,
       liveSlideIndex: -1,
+      livePresentationId: null, // which song liveSlideIndex belongs to (selecting another song must not move it)
 
       // Layers
       layers: {

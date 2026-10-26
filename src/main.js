@@ -6,7 +6,7 @@ import { PreviewPanel } from './features/stage/PreviewPanel.js'
 import { ShowControls } from './features/controls/ShowControls.js'
 import { state } from './core/StateManager.js'
 import { storageManager } from './services/StorageManager.js'
-import { goLive, goLiveNext, goLivePrev } from './core/navigation.js'
+import { goLiveNext, goLivePrev, goLiveSong, goLiveNumber } from './core/navigation.js'
 import { buildOutputPayload, payloadSignature } from './core/outputSync.js'
 import { getActiveSequence } from './core/arrangement.js'
 import { initSongLibrary } from './songs/songLibrary.js'
@@ -52,6 +52,24 @@ export function isShowShortcutBlocked(e, isEditing, doc = document) {
   if (doc.querySelector(MODAL_SELECTOR)) return true
   return false
 }
+
+/** Dropdown menus (toolbar Screens/Library, playlist Add/Manage) that Escape should close before it clears the screen. */
+const OPEN_MENU_SELECTOR = '#toolbar-screens-menu, #toolbar-library-menu, .playlist-menu'
+
+/** Closes any open dropdown menu; returns true if there was one. */
+export function closeOpenMenus(doc = document) {
+  let closed = false
+  doc.querySelectorAll(OPEN_MENU_SELECTOR).forEach((menu) => {
+    if (menu.style.display === 'block') {
+      menu.style.display = 'none'
+      closed = true
+    }
+  })
+  return closed
+}
+
+/** How long a typed slide number stays open for another digit ("1" then "2" = slide 12). */
+const SLIDE_NUMBER_WINDOW_MS = 700
 
 /**
  * Main App Entry Point — Mounts core panels and lazy-loads optional modules
@@ -105,12 +123,6 @@ class App {
       window.electronAPI.broadcastSlide(payload)
     }
 
-    state.on('liveSlideIndex', (idx) => {
-      const pres = state.get('selectedPresentation')
-      const sequence = pres ? getActiveSequence(pres) : []
-      broadcast(sequence[idx] ? sequence[idx] : { text: '' })
-    })
-
     state.on('layers', (layers) => {
       broadcast(layers.slide.active ? layers.slide.content || { text: '' } : { text: '' })
     })
@@ -141,8 +153,10 @@ class App {
     // Text-only, so a cheap JSON signature is enough to dedupe.
     const syncLiveState = () => {
       if (!window.electronAPI || !window.electronAPI.broadcastLiveState) return
+      // The live song, not the selected one: selecting another song must not change what Presenter/PA report
+      const liveId = state.get('livePresentationId')
       const live = buildLiveState({
-        presentation: state.get('selectedPresentation'),
+        presentation: (state.get('presentations') || []).find((p) => p.id === liveId) || state.get('selectedPresentation'),
         liveIndex: state.get('liveSlideIndex'),
         layers: state.get('layers'),
         showLogo: state.get('showLogo'),
@@ -153,7 +167,7 @@ class App {
       this._lastLiveSig = sig
       window.electronAPI.broadcastLiveState(live)
     }
-    for (const key of ['layers', 'liveSlideIndex', 'showLogo', 'timer_main', 'selectedPresentation']) {
+    for (const key of ['layers', 'liveSlideIndex', 'livePresentationId', 'showLogo', 'timer_main', 'presentations', 'selectedPresentation']) {
       state.on(key, syncLiveState)
     }
     syncLiveState()
@@ -352,6 +366,12 @@ class App {
 
         case 'ArrowRight':
         case 'ArrowDown':
+          e.preventDefault()
+          // Shift jumps a whole song; plain arrows step one slide
+          if (e.shiftKey) goLiveSong(1)
+          else goLiveNext()
+          break
+
         case 'PageDown':
         case ' ':
           e.preventDefault()
@@ -360,9 +380,24 @@ class App {
 
         case 'ArrowLeft':
         case 'ArrowUp':
+          e.preventDefault()
+          if (e.shiftKey) goLiveSong(-1)
+          else goLivePrev()
+          break
+
         case 'PageUp':
           e.preventDefault()
           goLivePrev()
+          break
+
+        case ']':
+          e.preventDefault()
+          goLiveSong(1)
+          break
+
+        case '[':
+          e.preventDefault()
+          goLiveSong(-1)
           break
 
         case 'b':
@@ -377,13 +412,23 @@ class App {
 
         case 'Escape':
           e.preventDefault()
-          document.getElementById('clear-btn-all')?.click()
+          // An open dropdown takes the Escape; only a bare Escape blanks the output
+          if (!closeOpenMenus()) document.getElementById('clear-btn-all')?.click()
           break
       }
 
-      // Number keys 1-9 to jump to slide
-      if (e.key >= '1' && e.key <= '9') {
-        goLive(parseInt(e.key, 10) - 1)
+      // Number keys jump to a slide; digits typed in quick succession form one
+      // number, so songs with 10+ slides are reachable ("1","2" -> slide 12)
+      if (e.key.length === 1 && e.key >= '0' && e.key <= '9') {
+        clearTimeout(this._slideNumberTimer)
+        let typed = (this._slideNumber || '') + e.key
+        if (!goLiveNumber(parseInt(typed, 10))) {
+          // no such slide: treat this digit as the start of a new number
+          typed = e.key
+          if (!goLiveNumber(parseInt(typed, 10))) typed = ''
+        }
+        this._slideNumber = typed
+        this._slideNumberTimer = setTimeout(() => (this._slideNumber = ''), SLIDE_NUMBER_WINDOW_MS)
       }
     })
   }

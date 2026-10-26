@@ -13,6 +13,11 @@ Status: all 25 reports are merged.
 | B2 | Closing the operator window closes every output window and the app quits. | unit tests + real app |
 | B3 | Imported slide layout stays inside the Output Preview (`position: relative` on the preview screen). | not run |
 | B4 | Setlist create / rename / duplicate / delete, row up / down / remove, Add Song picker, working "Create Setlist" button. Also fixes M25 (ghost rows), the setlist half of M6 (names, headers, notes written as text), and the unconfirmed "active setlist resets after restart". | not run |
+| M1 | Navigation remembers which song is live (`livePresentationId`). Selecting another song no longer moves the live position; the next arrow starts that song at slide 1. Presenter/PA/Stage report the live song, not the selected one. | not run |
+| M2 | PA and Presenter pages dim and show a red NO SIGNAL banner when the feed drops. | not run |
+| M3 | Escape closes an open dropdown menu first; only a bare Escape clears the output. | not run |
+| M4 | `Shift+Right/Down` or `]` = next song, `Shift+Left/Up` or `[` = previous song in the active setlist (starts at slide 1). | not run |
+| M5 | Digits typed in quick succession form one slide number (`1` then `2` = slide 12). | not run |
 | B6 | Stacked touch layout now touch-only; narrow desktop windows keep three columns and a compact toolbar. | not run |
 
 B5 (Bible text) is waiting on a decision.

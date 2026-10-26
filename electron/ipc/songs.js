@@ -1,7 +1,7 @@
 const { ipcMain, dialog } = require('electron')
 const fs = require('fs')
 const path = require('path')
-const { openSongDb } = require('../services/songDb')
+const { openSongDbSafe } = require('../services/songDb')
 
 /**
  * Chart storage. The renderer sends/receives plain song objects
@@ -9,7 +9,10 @@ const { openSongDb } = require('../services/songDb')
  * SQLite file and the export/import dialogs.
  */
 function registerSongsIpc({ userDataDir, getMainWindow }) {
-  const db = openSongDb(path.join(userDataDir, 'songs.db'))
+  const { db, recoveredFrom } = openSongDbSafe(path.join(userDataDir, 'songs.db'))
+
+  // Lets the renderer tell the user a damaged database was set aside
+  ipcMain.handle('songs-recovered', () => recoveredFrom)
 
   ipcMain.handle('songs-list', () => db.list())
   ipcMain.handle('songs-upsert', (event, songs) => db.upsertMany(songs))

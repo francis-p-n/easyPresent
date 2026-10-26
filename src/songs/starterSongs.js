@@ -15,6 +15,11 @@ export function starterRecords(now = Date.now()) {
   }))
 }
 
+/** Record that the starter set is spoken for, without adding it (used after a database rebuild). */
+export async function markStarterSeeded(api) {
+  await api.songsMetaSet(SEED_FLAG, '1')
+}
+
 /**
  * First-run seeding: put the bundled charts in the database once. A flag in
  * the database (not the library) records it, so a song the operator deletes

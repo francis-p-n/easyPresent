@@ -7,7 +7,8 @@
  */
 const { startServer } = require('../server/stageServer')
 
-const PORT = 8080
+// EASYPRESENT_PORT lets a second instance (testing, or a second church PC) run alongside
+const PORT = Number(process.env.EASYPRESENT_PORT) || 8080
 
 function createStageHub() {
   let server = null

@@ -9,6 +9,7 @@
  * module to rebuild per platform.
  */
 const { DatabaseSync } = require('node:sqlite')
+const fs = require('fs')
 
 const SCHEMA_VERSION = 1
 
@@ -60,8 +61,13 @@ const fromRow = (r) => ({
 
 function openSongDb(file) {
   const db = new DatabaseSync(file)
-  db.exec(SCHEMA)
-  db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`)
+  try {
+    db.exec(SCHEMA)
+    db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`)
+  } catch (err) {
+    db.close() // an open handle would keep the damaged file locked on Windows
+    throw err
+  }
 
   const inTransaction = (fn) => {
     db.exec('BEGIN')
@@ -119,4 +125,28 @@ function openSongDb(file) {
   }
 }
 
-module.exports = { openSongDb, SCHEMA_VERSION }
+/**
+ * Open the chart database, surviving a damaged file. A file SQLite can't read
+ * is moved aside as `<name>.corrupt-<time>` (kept for recovery, never deleted)
+ * and a fresh database is created; the renderer then re-fills it from the
+ * library. Returns `{ db, recoveredFrom }` (`recoveredFrom` is the moved-aside
+ * path, or null when the file opened normally).
+ */
+function openSongDbSafe(file) {
+  try {
+    return { db: openSongDb(file), recoveredFrom: null }
+  } catch (err) {
+    console.error('songs.db unreadable, starting a fresh one:', err.message)
+    const aside = `${file}.corrupt-${Date.now()}`
+    for (const suffix of ['', '-wal', '-shm', '-journal']) {
+      try {
+        fs.renameSync(file + suffix, aside + suffix)
+      } catch {
+        /* sidecar files may not exist */
+      }
+    }
+    return { db: openSongDb(file), recoveredFrom: aside }
+  }
+}
+
+module.exports = { openSongDb, openSongDbSafe, SCHEMA_VERSION }

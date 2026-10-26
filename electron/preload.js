@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   broadcastLiveState: (state) => ipcRenderer.send('broadcast-live-state', state),
   // Chart database (SQLite)
   songsList: () => ipcRenderer.invoke('songs-list'),
+  songsRecovered: () => ipcRenderer.invoke('songs-recovered'),
   songsUpsert: (songs) => ipcRenderer.invoke('songs-upsert', songs),
   songsRemove: (ids) => ipcRenderer.invoke('songs-remove', ids),
   songsMetaGet: (key) => ipcRenderer.invoke('songs-meta-get', key),

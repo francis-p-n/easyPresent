@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { openSongDb } from './songDb.js'
+import { openSongDb, openSongDbSafe } from './songDb.js'
 
 let dir
 let db
@@ -70,5 +70,28 @@ describe('songDb', () => {
     const junk = path.join(dir, 'junk.db')
     fs.writeFileSync(junk, 'not sqlite')
     expect(() => db.importFrom(junk)).toThrow()
+  })
+})
+
+describe('openSongDbSafe', () => {
+  it('opens a healthy database untouched', () => {
+    const file = path.join(dir, 'ok.db')
+    openSongDb(file).close()
+    const { db: opened, recoveredFrom } = openSongDbSafe(file)
+    expect(recoveredFrom).toBeNull()
+    opened.close()
+  })
+
+  it('sets a corrupt file aside, keeps it, and starts a working fresh database', () => {
+    const file = path.join(dir, 'songs.db')
+    fs.writeFileSync(file, 'this is not a sqlite database at all')
+
+    const { db: fresh, recoveredFrom } = openSongDbSafe(file)
+
+    expect(recoveredFrom).toMatch(/songs\.db\.corrupt-\d+$/)
+    expect(fs.readFileSync(recoveredFrom, 'utf8')).toBe('this is not a sqlite database at all')
+    fresh.upsertMany([song('a')])
+    expect(fresh.list()).toHaveLength(1)
+    fresh.close()
   })
 })

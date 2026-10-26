@@ -118,4 +118,16 @@ describe('createSongSync', () => {
     expect(await sync.pull()).toBe(1)
     expect(state.data.presentations[0].slides[0].text).toBe('newer text')
   })
+
+  it('after a database rebuild, mirror refills it with every song in the library', async () => {
+    const mk = (id) => ({ id, name: `T ${id}`, category: 'Worship', key: 'G', slides: parseChordProToSlides('[Verse 1]' + String.fromCharCode(10) + 'line') })
+    const state = fakeState({ presentations: [mk('a'), mk('b'), { id: 'x', name: 'Announce', category: 'Announcements', slides: [] }] })
+    const api = fakeApi([]) // brand-new, empty database
+    const sync = createSongSync({ state, api })
+
+    await sync.pull()
+    await sync.mirror()
+
+    expect(api.rows.map((r) => r.id).sort()).toEqual(['a', 'b']) // songs only
+  })
 })

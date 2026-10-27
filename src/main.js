@@ -194,9 +194,9 @@ class App {
     // Show welcome modal on first launch
     if (!localStorage.getItem('hasSeenWelcome')) {
       import('./components/common/WelcomeModal.js').then(({ WelcomeModal }) => {
-        new WelcomeModal(() => {
-          localStorage.setItem('hasSeenWelcome', 'true')
-        })
+        // Remembered as soon as it is shown: closing the app mid-tour must not bring it back every launch
+        localStorage.setItem('hasSeenWelcome', 'true')
+        new WelcomeModal(() => {})
       })
     }
 

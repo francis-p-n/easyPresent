@@ -51,7 +51,7 @@ export class WelcomeModal {
           <div style="color: var(--text-primary);">${icon('monitor', 24).outerHTML}</div>
           <div>
             <strong>4. Open the screens</strong><br>
-            <span style="color: var(--text-secondary); font-size: var(--font-size-sm);">Use "Screens" (the monitor icon) to open the Audience, Presenter and PA windows. Press ? any time for the keyboard shortcuts.</span>
+            <span style="color: var(--text-secondary); font-size: var(--font-size-sm);">Use "Screens" (the monitor icon) to open the Audience, Presenter and PA windows. To blank the screen press CLEAR ALL (or F1). Press ? any time for the keyboard shortcuts.</span>
           </div>
         </div>
       </div>

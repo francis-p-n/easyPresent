@@ -105,6 +105,27 @@ describe('installA11y', () => {
   })
 })
 
+describe('installA11y — focus returns after a dialog that focuses itself', () => {
+  it('puts focus back on the opener even if the dialog grabbed focus first', async () => {
+    stop = installA11y()
+    const opener = document.createElement('button')
+    opener.textContent = 'Shortcuts'
+    document.body.append(opener)
+    opener.focus()
+
+    const overlay = document.createElement('div')
+    overlay.id = 'shortcut-help-overlay'
+    overlay.innerHTML = '<h3>Keyboard shortcuts</h3><button id="close">Close</button>'
+    document.body.append(overlay)
+    document.getElementById('close').focus() // the dialog moves focus before the observer runs
+    await tick()
+
+    overlay.remove()
+    await tick()
+    expect(document.activeElement).toBe(opener)
+  })
+})
+
 describe('enhanceDialog', () => {
   const make = () => {
     document.body.innerHTML = '<div id="o"><input id="a"><button id="b">Save</button><button id="c">Cancel</button></div>'

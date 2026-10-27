@@ -29,8 +29,9 @@
     #current .text { font-size: 7vh; }
     #next .text { font-size: 3.6vh; color: #cfd6dd; }
     .fit { overflow: hidden; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
-    .empty { color: #667; font-style: italic; }
-    #conn { position: fixed; bottom: .8vh; right: 1vw; font-size: 1.8vh; color: #667; }
+    .sect { display: block; font-size: .6em; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8fb4ff; margin-bottom: .3em; }
+    .empty { color: #a3acb8; font-style: italic; }
+    #conn { position: fixed; bottom: .8vh; right: 1vw; font-size: 2.2vh; color: #a3acb8; }
   </style>
 </head>
 <body>
@@ -53,7 +54,8 @@
     function stripChords(text) { return (text || '').replace(/\[[^\]]*\]/g, ''); }
 
     function render(s) {
-      document.getElementById('title').textContent = s.title || 'Presenter View';
+      // After CLEAR ALL nothing is live, so don't leave the last song's name up as if it were
+      document.getElementById('title').textContent = (s.current && s.title) || 'Presenter View';
       document.getElementById('timer').textContent = s.timer ? 'Timer ' + s.timer : '';
       document.getElementById('current').classList.toggle('idle', !s.current);
 
@@ -81,7 +83,15 @@
       const nxt = document.getElementById('next-text');
       if (s.next) {
         nxt.className = 'text';
-        nxt.textContent = (s.next.label ? s.next.label + '\n' : '') + stripChords(s.next.text);
+        nxt.textContent = '';
+        if (s.next.label) {
+          // The section name is a heading, not a lyric line
+          const sect = document.createElement('span');
+          sect.className = 'sect';
+          sect.textContent = s.next.label;
+          nxt.appendChild(sect);
+        }
+        nxt.appendChild(document.createTextNode(stripChords(s.next.text)));
       } else {
         nxt.className = 'text empty';
         nxt.textContent = s.current ? 'End of presentation' : '';

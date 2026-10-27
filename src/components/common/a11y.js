@@ -96,6 +96,14 @@ const isVisible = (el) => !el.closest('[hidden]') && getComputedStyle(el).displa
 
 const openers = new Map() // dialog element -> the element that had focus before it opened
 
+// The last thing focused outside any dialog. A dialog often grabs focus itself before this layer
+// notices it, so by then document.activeElement is already inside the dialog and is no use for
+// returning focus afterwards.
+let lastOutsideFocus = null
+const noteFocus = (e) => {
+  if (e.target?.closest && !e.target.closest(DIALOG_SELECTOR)) lastOutsideFocus = e.target
+}
+
 /** Gives a dialog overlay dialog behaviour. */
 export function enhanceDialog(overlay) {
   if (overlay.dataset.a11y === 'dialog') return
@@ -106,7 +114,8 @@ export function enhanceDialog(overlay) {
     const heading = overlay.querySelector('h1, h2, h3, [class*="title"]')
     overlay.setAttribute('aria-label', heading ? text(heading) : 'Dialog')
   }
-  openers.set(overlay, document.activeElement)
+  const active = document.activeElement
+  openers.set(overlay, active && !overlay.contains(active) ? active : lastOutsideFocus)
 
   const focusables = () => [...overlay.querySelectorAll(FOCUSABLE)].filter(isVisible)
   if (!overlay.contains(document.activeElement)) {
@@ -176,8 +185,10 @@ export function installA11y(doc = document) {
     }
   }
   doc.addEventListener('keydown', onKey)
+  doc.addEventListener('focusin', noteFocus)
   return () => {
     observer.disconnect()
     doc.removeEventListener('keydown', onKey)
+    doc.removeEventListener('focusin', noteFocus)
   }
 }

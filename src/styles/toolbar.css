@@ -102,10 +102,7 @@
 /* Standard laptops (1366-1600px): drop view-tab and action-button labels,
    keeping icons + tooltips, so the clear group always fits */
 @media (max-width: 1600px) {
-  .toolbar-view-btn .toolbar-btn-label,
-  #toolbar-edit-btn .toolbar-btn-label,
-  #toolbar-theme-btn .toolbar-btn-label,
-  #toolbar-screens-btn .toolbar-btn-label {
+  .toolbar-view-btn .toolbar-btn-label {
     display: none;
   }
 
@@ -114,8 +111,15 @@
   }
 }
 
-/* Small laptops (~1280px): compact everything further */
+/* Small laptops (~1280px): compact everything further. Only now do Edit / Themes /
+   Screens lose their words — a first-time user needs them to find the Screens menu. */
 @media (max-width: 1280px) {
+  #toolbar-edit-btn .toolbar-btn-label,
+  #toolbar-theme-btn .toolbar-btn-label,
+  #toolbar-screens-btn .toolbar-btn-label {
+    display: none;
+  }
+
   .toolbar-logo__text {
     display: none;
   }

@@ -360,6 +360,14 @@
   top: calc(100% + 6px);
 }
 
+/* The clear buttons sit against the right edge of the window: a tooltip centred on them
+   ("SHOW LOGO (F6)") runs off-screen, so hang theirs from the button's right edge instead */
+.toolbar-clear-group .tooltip::after {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
 /* ===== MODAL ===== */
 .modal-overlay {
   position: fixed;

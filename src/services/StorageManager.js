@@ -166,6 +166,7 @@ class StorageManager {
     state.on('presentations', () => this.scheduleSave())
     state.on('playlists', () => this.scheduleSave())
     state.on('themes', () => this.scheduleSave())
+    state.on('activePlaylist', () => this.scheduleSave()) // switching setlists alone must survive a restart
 
     // Don't lose a pending debounced save when the window closes
     window.addEventListener('beforeunload', () => {

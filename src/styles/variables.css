@@ -21,11 +21,12 @@
   /* Text */
   --text-primary: #d6d8dd;
   --text-secondary: #8b909a;
-  --text-muted: #6b7079;
+  --text-muted: #8b919c; /* 4.5:1+ on the panel backgrounds */
   --text-highlight: #ffffff;
 
   /* Accents — indigo primary, red for LIVE, green for confirm, amber for warn */
   --accent-blue: #4f7cff;
+  --accent-blue-strong: #3a62e0; /* filled buttons: white text on this is 5:1 */
   --accent-hover: #6b91ff;
   --accent-blue-soft: rgba(79, 124, 255, 0.16);
   --accent-red: #e2464b;

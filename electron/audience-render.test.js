@@ -24,10 +24,12 @@ describe('renderAudienceState — cleared/logo states', () => {
     expect(root.style.background).toBe('rgb(0, 0, 0)')
   })
 
-  it('renders black when showLogo is true, even with a live slide', () => {
+  it('shows the logo (not the slide) when showLogo is true, even with a live slide', () => {
     const root = makeRoot()
     renderAudienceState({ showLogo: true, slide: { text: 'should not show' } }, root, 1)
-    expect(root.children).toHaveLength(0)
+    expect(root.textContent).not.toContain('should not show')
+    expect(root.querySelector('#output-logo')).not.toBeNull() // visible mark, so it never looks like a dead projector
+    expect(root.textContent).toContain('EasyPresent')
   })
 
   it('renders black when there is no slide', () => {

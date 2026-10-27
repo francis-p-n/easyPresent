@@ -12,7 +12,7 @@
     @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
     .card { background: #1d2026; border: 1px solid #2a2f37; border-radius: 8px; padding: 12px 14px; }
     .card h2 { margin: 0 0 8px; font-size: 12px; color: #8a93a0; text-transform: uppercase; letter-spacing: .1em; }
-    .status { display: inline-block; padding: 4px 10px; border-radius: 99px; font-weight: 700; font-size: 13px; margin-left: 8px; }
+    .status { color: #fff; display: inline-block; padding: 4px 10px; border-radius: 99px; font-weight: 700; font-size: 13px; margin-left: 8px; }
     .live { background: #1f6f3d; } .cleared { background: #444b55; } .logo { background: #1f4f8f; }
     .out { overflow: hidden; background: #000; border-radius: 6px; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; font-weight: 700; font-size: clamp(14px, 2.2vw, 28px); white-space: pre-wrap; }
     .out.dim { color: #556; font-weight: 400; font-style: italic; }
@@ -35,8 +35,8 @@
   <div class="card" id="message-card"><h2>Message overlay is live</h2><div id="message"></div></div>
   <div class="grid">
     <div class="card">
-      <h2>What the audience sees <span id="status" class="status cleared">CLEARED</span></h2>
-      <div class="out dim" id="out">Nothing on screen</div>
+      <h2>What the audience sees <span id="status" class="status cleared" role="status" aria-live="polite">CLEARED</span></h2>
+      <div class="out dim" id="out" aria-live="polite">Nothing on screen</div>
       <div class="bar"><div id="progress"></div></div>
       <div class="muted" id="pos" style="margin-top:6px;"></div>
     </div>

@@ -49,3 +49,15 @@ describe('SearchWorker (real module)', () => {
     expect(replies[0].ids).toEqual([])
   })
 })
+
+describe('SearchWorker — title matches rank first', () => {
+  it('lists songs whose title matches before songs that only contain the word in their text', () => {
+    const items = [
+      { id: 'lyrics-only', name: 'betapa hatiku', searchText: 'betapa hatiku\nkau rajaku in the words' },
+      { id: 'title-match', name: 'kau rajaku', searchText: 'kau rajaku\nanything' },
+      { id: 'none', name: 'other', searchText: 'other' }
+    ]
+    send('kau', items)
+    expect(replies[0].ids).toEqual(['title-match', 'lyrics-only'])
+  })
+})

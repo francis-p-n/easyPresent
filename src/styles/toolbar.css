@@ -72,7 +72,7 @@
 }
 
 .toolbar-view-btn.active {
-  background: var(--accent-blue);
+  background: var(--accent-blue-strong);
   color: #fff;
   box-shadow: var(--shadow-sm);
 }
@@ -250,8 +250,8 @@
 }
 
 .library-cat-btn.active {
-  background: var(--accent-blue);
-  border-color: var(--accent-blue);
+  background: var(--accent-blue-strong);
+  border-color: var(--accent-blue-strong);
   color: #fff;
   box-shadow: var(--shadow-sm);
 }

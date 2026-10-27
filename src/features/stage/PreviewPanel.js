@@ -14,6 +14,7 @@ export class PreviewPanel {
     state.on('liveSlideIndex', () => this._updatePreview())
     state.on('activeThemeId', () => this._updatePreview())
     state.on('themes', () => this._updatePreview())
+    state.on('showLogo', () => this._updatePreview())
     // A message containing {timer} shows the running countdown, so the preview has
     // to tick with it (it used to freeze at 00:00 while the real screens counted down)
     state.on('timer_main', () => {
@@ -67,6 +68,9 @@ export class PreviewPanel {
 
     const layers = state.get('layers')
     const slideLayer = layers.slide
+    // The logo covers the slide on the real screens, so the preview must not keep showing the slide
+    const logoOn = !!state.get('showLogo')
+    const slideOn = slideLayer.active && !logoOn
 
     const activeThemeId = state.get('activeThemeId')
     const themes = state.get('themes') || []
@@ -83,7 +87,8 @@ export class PreviewPanel {
         ])
       : ''
     const signature = JSON.stringify([
-      slideLayer.active,
+      slideOn,
+      logoOn,
       slideLayer.content?.text || '',
       slideLayer.content?.style || null, // per-slide style (e.g. PPTX import) changes the render even when text doesn't
       bgMarker,
@@ -99,9 +104,9 @@ export class PreviewPanel {
 
     // Background is CSS-layered behind the transparent PIXI canvas so image
     // backgrounds (imported PPTX designs) work without a GPU texture pipeline
-    if (slideLayer.active && bg?.mediaPath) {
+    if (slideOn && bg?.mediaPath) {
       screen.style.background = `#000 url(${bg.mediaPath}) center / cover no-repeat`
-    } else if (slideLayer.active && bg?.color) {
+    } else if (slideOn && bg?.color) {
       screen.style.background = bg.color
     } else if (activeTheme && activeTheme.styles.backgroundColor) {
       screen.style.background = activeTheme.styles.backgroundColor
@@ -113,7 +118,7 @@ export class PreviewPanel {
     const prevOverlay = screen.querySelector('#preview-layout-overlay')
     if (prevOverlay) prevOverlay.remove()
 
-    if (slideLayer.active && slideLayer.content && hasLayout(slideLayer.content)) {
+    if (slideOn && slideLayer.content && hasLayout(slideLayer.content)) {
       // Imported layout slide: the flat PIXI text layer can't represent
       // multiple positioned boxes + images, so clear it and overlay a faithful
       // DOM layout scaled to the (16:9) preview screen.
@@ -138,7 +143,7 @@ export class PreviewPanel {
       status.textContent = 'LIVE'
       status.className = 'preview-status preview-status--live'
       screen.classList.add('preview-screen--live')
-    } else if (slideLayer.active && slideLayer.content) {
+    } else if (slideOn && slideLayer.content) {
       // Base styles
       const styleOpts = {
         fontSize: 48,
@@ -209,7 +214,7 @@ export class PreviewPanel {
 
       NativeRender.compositeLayers()
 
-      status.textContent = 'IDLE'
+      status.textContent = logoOn ? 'LOGO' : 'IDLE'
       status.className = 'preview-status'
       screen.classList.remove('preview-screen--live')
     }

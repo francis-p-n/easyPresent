@@ -23,7 +23,7 @@ export class WelcomeModal {
     body.style.lineHeight = '1.6'
     body.innerHTML = `
       <p style="margin-bottom: 16px; color: var(--text-secondary);">
-        Get started quickly by following these three simple steps:
+        Get started quickly by following these simple steps:
       </p>
       <div style="display: flex; flex-direction: column; gap: 16px;">
         <div style="display: flex; gap: 12px; align-items: flex-start;">
@@ -44,7 +44,14 @@ export class WelcomeModal {
           <div style="color: var(--text-primary);">${icon('edit', 24).outerHTML}</div>
           <div>
             <strong>3. Edit Content</strong><br>
-            <span style="color: var(--text-secondary); font-size: var(--font-size-sm);">Click the "Edit" button in the top toolbar to modify your slides or create new ones.</span>
+            <span style="color: var(--text-secondary); font-size: var(--font-size-sm);">Click the pencil "Edit" button in the top toolbar to modify your slides or create new ones.</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="color: var(--text-primary);">${icon('monitor', 24).outerHTML}</div>
+          <div>
+            <strong>4. Open the screens</strong><br>
+            <span style="color: var(--text-secondary); font-size: var(--font-size-sm);">Use "Screens" (the monitor icon) to open the Audience, Presenter and PA windows. Press ? any time for the keyboard shortcuts.</span>
           </div>
         </div>
       </div>

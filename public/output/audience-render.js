@@ -17,6 +17,7 @@ function renderAudienceState(state, root, scale) {
   // soon...") must still show over the black screen, same as the operator's
   // own Output Preview.
   const showSlide = !state.showLogo && state.slide
+  if (state.showLogo) renderLogo(root, scale)
 
   const theme = state.themeStyles || {}
 
@@ -233,3 +234,40 @@ function renderMessage(message, root, scale) {
 
 // eslint-disable-next-line no-unused-vars -- consumed by audience.html glue script
 if (typeof module !== 'undefined' && module.exports) module.exports = { renderAudienceState }
+
+// The logo screen. With no custom logo it must still look deliberate, not like a dead
+// projector, so it shows a simple mark and the app name.
+function renderLogo(root, scale) {
+  const box = document.createElement('div')
+  box.id = 'output-logo'
+  Object.assign(box.style, {
+    position: 'absolute',
+    inset: '0',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: `${28 * scale}px`,
+    color: 'rgba(255,255,255,0.9)',
+    fontFamily: 'Inter, sans-serif'
+  })
+  const mark = document.createElement('div')
+  mark.textContent = 'EP'
+  Object.assign(mark.style, {
+    width: `${200 * scale}px`,
+    height: `${200 * scale}px`,
+    borderRadius: `${44 * scale}px`,
+    background: 'linear-gradient(135deg, #4f7cff, #7f6bff)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: `${84 * scale}px`,
+    fontWeight: '700'
+  })
+  const name = document.createElement('div')
+  name.textContent = 'EasyPresent'
+  Object.assign(name.style, { fontSize: `${56 * scale}px`, fontWeight: '600', letterSpacing: '0.02em' })
+  box.append(mark, name)
+  root.appendChild(box)
+}
+

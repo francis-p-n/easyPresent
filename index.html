@@ -16,28 +16,28 @@
   </head>
   <body>
     <div id="app" class="app-layout">
-      <header class="app-toolbar" id="toolbar"></header>
+      <header class="app-toolbar" id="toolbar" aria-label="EasyPresent toolbar"></header>
       
       <div class="app-main">
-        <div class="panel-left" id="panel-left">
+        <div class="panel-left" id="panel-left" role="complementary" aria-label="Library and setlist">
           <div class="library-panel" id="library-panel"></div>
           <div class="playlist-panel" id="playlist-panel"></div>
         </div>
         
         <div class="panel-resizer" id="resizer-left"></div>
         
-        <div class="panel-center" id="panel-center">
+        <main class="panel-center" id="panel-center" aria-label="Slides">
           <div class="slide-view" id="slide-view"></div>
           <div class="panel-resizer-horizontal" id="resizer-bottom" style="display: none; height: 4px; cursor: row-resize; background: transparent; flex-shrink: 0; z-index: 10;"></div>
           <div class="bottom-view" id="bottom-view" style="display: none; height: 250px; flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-color); overflow: hidden;">
             <div id="media-bin-container" style="height: 100%;"></div>
             <div id="audio-bin-container" style="display: none; height: 100%;"></div>
           </div>
-        </div>
+        </main>
         
         <div class="panel-resizer" id="resizer-right"></div>
         
-        <div class="panel-right" id="panel-right">
+        <div class="panel-right" id="panel-right" role="complementary" aria-label="Output preview and show controls">
           <div class="preview-panel" id="preview-panel"></div>
           <div class="show-controls" id="show-controls"></div>
         </div>

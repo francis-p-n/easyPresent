@@ -3,6 +3,7 @@ import { icon } from '../../components/common/Icons.js'
 import { storageManager } from '../../services/StorageManager.js'
 import { showToast } from '../../components/common/ToastManager.js'
 import { exportSongDatabase, importSongDatabase } from '../../songs/songLibrary.js'
+import { showShortcutHelp } from './ShortcutHelp.js'
 
 /**
  * Toolbar — Top toolbar with view tabs, search, edit toggle, and clear buttons
@@ -103,12 +104,13 @@ export class Toolbar {
         ${icon('monitor', 16).outerHTML}<span class="toolbar-btn-label">Screens</span>
       </button>
       <div id="toolbar-screens-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:200;background:var(--bg-toolbar);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-md);width:290px;padding:4px;">
+        <div style="padding:6px;font-size:11px;opacity:.7;line-height:1.4;">Each screen goes to its own display. "Auto" picks a free one; with a single display they open as windows you can move.</div>
         ${roleRow('audience', 'Audience', 'Congregation screen / projector')}
         ${roleRow('presenter', 'Presenter', 'Pastor: current + next slide, clock')}
         ${roleRow('pa', 'PA Team', 'Sound desk: output check, cues, timers')}
         <div style="padding:8px 6px 6px;border-top:1px solid var(--border-color);margin-top:4px;">
           <div style="font-size:12px;font-weight:600;">Phones &amp; tablets</div>
-          <div style="font-size:11px;opacity:.65;margin:2px 0 6px;">Let people on the same Wi-Fi open the Presenter and PA screens in a web browser.</div>
+          <div style="font-size:11px;opacity:.65;margin:2px 0 6px;">Let people on the same Wi-Fi open the Presenter and PA screens in a web browser. They are view-only, but anyone on that Wi-Fi can open them.</div>
           <button class="btn" id="screens-share-btn" style="width:100%;">Start sharing</button>
           <div id="screens-share-urls" style="font-size:11px;margin-top:6px;word-break:break-all;"></div>
         </div>
@@ -130,6 +132,16 @@ export class Toolbar {
         <button class="btn" id="songs-import-btn" style="width:100%;justify-content:flex-start;border:none;" title="Merge the charts from another EasyPresent songs .db file">Import Songs Database…</button>
       </div>`
     this.container.appendChild(libWrap)
+
+    // Keyboard shortcuts cheat sheet (also opens with the ? key)
+    const helpBtn = document.createElement('button')
+    helpBtn.className = 'btn tooltip toolbar-presenter-only'
+    helpBtn.id = 'toolbar-help-btn'
+    helpBtn.dataset.tooltip = 'Keyboard shortcuts (?)'
+    helpBtn.setAttribute('aria-label', 'Keyboard shortcuts')
+    helpBtn.textContent = '?'
+    helpBtn.addEventListener('click', showShortcutHelp)
+    this.container.appendChild(helpBtn)
 
     // Separator (presenter-only — hidden alongside the clear group in edit mode)
     const sepBeforeClears = this._sep()
@@ -333,7 +345,7 @@ export class Toolbar {
       screensMenu.querySelectorAll('.screens-display').forEach((sel) => {
         const keep = sel.value
         sel.innerHTML =
-          `<option value="">Auto (next free display)</option>` +
+          `<option value="">Auto (a free display, or a window)</option>` +
           displays.map((d) => `<option value="${d.id}">${d.label}</option>`).join('')
         sel.value = keep
       })

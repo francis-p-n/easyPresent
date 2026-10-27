@@ -111,6 +111,7 @@ export class ShowControls {
       const preset = e.target.closest('.timer-preset')
       if (preset) {
         const minutes = parseInt(preset.dataset.minutes, 10)
+        this._timerMinutes = minutes // Reset goes back to this, not always 5
         const display = this.container.querySelector('.timer-display__time')
         if (display) {
           display.textContent = `${String(minutes).padStart(2, '0')}:00`
@@ -136,7 +137,7 @@ export class ShowControls {
       } else if (e.target.id === 'timer-stop') {
         timerEngine.stop('main')
       } else if (e.target.id === 'timer-reset') {
-        timerEngine.reset('main', 5)
+        timerEngine.reset('main', this._timerMinutes ?? 5)
       }
 
       // Message Actions

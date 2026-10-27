@@ -103,6 +103,7 @@ export class LibraryPanel {
     ) {
       this._searchIndex = presentations.map((p) => ({
         id: p.id,
+        name: (p.name || '').toLowerCase(),
         searchText: [
           p.name || '',
           ...(p.tags || []),

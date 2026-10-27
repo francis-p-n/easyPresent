@@ -16,7 +16,10 @@ self.onmessage = function (e) {
   }
 
   const q = query.toLowerCase()
-  const ids = items.filter((i) => i.searchText.includes(q)).map((i) => i.id)
+  const hits = items.filter((i) => i.searchText.includes(q))
+  // A song whose title matches comes before one that only has the word somewhere in its lyrics
+  const inTitle = (i) => !!i.name && i.name.includes(q)
+  const ids = [...hits.filter(inTitle), ...hits.filter((i) => !inTitle(i))].map((i) => i.id)
 
   self.postMessage({ ids })
 }

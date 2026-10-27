@@ -8,6 +8,8 @@ export const ToastManager = {
     if (this.container) return
     this.container = document.createElement('div')
     this.container.className = 'toast-container'
+    this.container.setAttribute('role', 'status') // read out by screen readers
+    this.container.setAttribute('aria-live', 'polite')
     document.body.appendChild(this.container)
   },
 

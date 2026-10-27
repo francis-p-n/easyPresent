@@ -143,6 +143,7 @@ export function createSongImporter(onImport) {
   categoryInput.className = 'input'
   categoryInput.placeholder = 'Category (e.g. Worship)'
   categoryInput.style.flex = '1'
+  categoryInput.style.minWidth = '190px' // the placeholder was cut off at "Category (e.g. Wc"
 
   const maxLinesContainer = document.createElement('div')
   maxLinesContainer.style.display = 'flex'

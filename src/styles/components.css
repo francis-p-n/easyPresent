@@ -46,8 +46,8 @@
 }
 
 .btn--primary {
-  background: var(--accent-blue);
-  border-color: var(--accent-blue);
+  background: var(--accent-blue-strong);
+  border-color: var(--accent-blue-strong);
   color: #fff;
   font-weight: var(--font-weight-semibold);
   box-shadow: var(--shadow-sm);
@@ -161,8 +161,8 @@
 /* Clear All: the emergency stop. Bigger visual weight, subtle inner glow to
  * distinguish it from the row of quieter per-layer clears next to it. */
 .clear-btn--all {
-  background: var(--accent-red);
-  border-color: var(--accent-red);
+  background: #c42f36; /* white text 5:1; the panic button stays unmistakably red */
+  border-color: #c42f36;
   color: #fff;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),

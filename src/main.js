@@ -10,6 +10,8 @@ import { goLiveNext, goLivePrev, goLiveSong, goLiveNumber } from './core/navigat
 import { buildOutputPayload, payloadSignature } from './core/outputSync.js'
 import { getActiveSequence } from './core/arrangement.js'
 import { initSongLibrary } from './songs/songLibrary.js'
+import { installA11y } from './components/common/a11y.js'
+import { showShortcutHelp } from './features/controls/ShortcutHelp.js'
 import { buildLiveState } from './core/liveState.js'
 import { makeTransposer } from './songs/transpose.js'
 import { slideToChordProText } from './songs/chordpro.js'
@@ -94,6 +96,9 @@ class App {
     this.slideView = new SlideView(document.getElementById('slide-view'))
     this.preview = new PreviewPanel(document.getElementById('preview-panel'))
     this.showControls = new ShowControls(document.getElementById('show-controls'))
+
+    // Names for icon buttons, keyboard access to rows, and real dialog behaviour for every modal
+    installA11y()
 
     // Setup panel resizers
     this._setupResizer('resizer-left', 'panel-left', 'left')
@@ -404,6 +409,11 @@ class App {
         case ']':
           e.preventDefault()
           goLiveSong(1)
+          break
+
+        case '?':
+          e.preventDefault()
+          showShortcutHelp()
           break
 
         case '[':

@@ -112,7 +112,7 @@ const CSS = `
   .sub { color: #555; margin-bottom: 8mm; font-size: 10pt; }
   .toc { margin: 0 0 8mm; padding-left: 6mm; }
   .toc li { margin: 1mm 0; }
-  article { break-before: page; }
+  article { break-inside: avoid; margin-bottom: 9mm; } /* short songs share a page; a song never starts at the very bottom of one */
   h2 { font-size: 16pt; margin: 0 0 4mm; border-bottom: 1px solid #000; padding-bottom: 1mm; }
   h2 .key { font-size: 10pt; font-weight: normal; color: #444; margin-left: 4mm; }
   h3 { font: bold 9pt Helvetica, Arial, sans-serif; text-transform: uppercase; letter-spacing: .08em; margin: 4mm 0 1mm; color: #333; }

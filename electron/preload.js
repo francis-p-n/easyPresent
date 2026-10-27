@@ -11,6 +11,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   libraryRecovery: () => ipcRenderer.invoke('library-recovery'),
   exportLibrary: (json) => ipcRenderer.invoke('export-library', json),
   broadcastLiveState: (state) => ipcRenderer.send('broadcast-live-state', state),
+  // Bible translations (imported by the church; none are bundled)
+  bibleList: () => ipcRenderer.invoke('bible-list'),
+  bibleLoad: (id) => ipcRenderer.invoke('bible-load', id),
+  bibleSave: (translation) => ipcRenderer.invoke('bible-save', translation),
+  bibleRemove: (id) => ipcRenderer.invoke('bible-remove', id),
+  biblePickFile: () => ipcRenderer.invoke('bible-pick-file'),
+
   // Chart database (SQLite)
   songsList: () => ipcRenderer.invoke('songs-list'),
   songsRecovered: () => ipcRenderer.invoke('songs-recovered'),

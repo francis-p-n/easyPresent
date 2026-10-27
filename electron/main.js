@@ -5,6 +5,7 @@ const { createStageHub } = require('./services/stageHub')
 const { registerLibraryIpc } = require('./ipc/library')
 const { registerPptxIpc } = require('./ipc/pptx')
 const { registerSongsIpc } = require('./ipc/songs')
+const { registerBibleIpc } = require('./ipc/bible')
 const { registerDisplayIpc } = require('./ipc/displays')
 
 let mainWindow = null
@@ -18,6 +19,7 @@ app.whenReady().then(() => {
   registerLibraryIpc({ userDataDir, getMainWindow })
   registerPptxIpc({ getMainWindow })
   const songDb = registerSongsIpc({ userDataDir, getMainWindow })
+  registerBibleIpc({ userDataDir, getMainWindow })
   registerDisplayIpc({ displays, stageHub })
 
   mainWindow = createMainWindow()

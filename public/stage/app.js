@@ -1,6 +1,8 @@
 const socket = io();
 let currentText = '';
 let currentTransposition = 0;
+let currentChart = [];   // every section of the live song, chords inline
+let currentIndex = -1;   // which of them is on the audience screen
 
 // All standard chromatic notes
 const sharpKeys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -12,8 +14,20 @@ socket.on('slide-update', (slideData) => {
   } else {
     currentText = '';
   }
+  currentChart = slideData && Array.isArray(slideData.chart) ? slideData.chart : [];
+  currentIndex = slideData && typeof slideData.index === 'number' ? slideData.index : -1;
   renderSlide();
 });
+
+// Text size for the band, kept on this device only
+let textScale = 1;
+try { textScale = Number(localStorage.getItem('stageTextScale')) || 1; } catch (e) { /* private window */ }
+
+function changeTextSize(delta) {
+  textScale = Math.min(2, Math.max(0.6, Math.round((textScale + delta) * 10) / 10));
+  try { localStorage.setItem('stageTextScale', String(textScale)); } catch (e) { /* private window */ }
+  renderSlide();
+}
 
 function changeTransposition(delta) {
   currentTransposition += delta;
@@ -64,10 +78,35 @@ function transposeChord(chord, steps) {
 function renderSlide() {
   const container = document.getElementById('slide-content');
   container.innerHTML = '';
-  
-  if (!currentText) return;
+  container.style.fontSize = textScale + 'em';
 
-  const lines = currentText.split('\n');
+  // The whole song, with the live section lit and kept in view
+  if (currentChart.length && currentIndex >= 0) {
+    let liveEl = null;
+    currentChart.forEach((section, i) => {
+      const block = document.createElement('section');
+      block.className = 'section' + (i === currentIndex ? ' live' : i === currentIndex + 1 ? ' next' : i < currentIndex ? ' done' : '');
+      if (section.label) {
+        const head = document.createElement('div');
+        head.className = 'section-label';
+        head.textContent = section.label + (i === currentIndex ? '  ▶ LIVE' : i === currentIndex + 1 ? '  NEXT' : '');
+        block.appendChild(head);
+      }
+      renderLines(block, section.text);
+      container.appendChild(block);
+      if (i === currentIndex) liveEl = block;
+    });
+    // Keep the live section near the top so the band can read what is coming
+    if (liveEl && liveEl.scrollIntoView) liveEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    return;
+  }
+
+  if (!currentText) return;
+  renderLines(container, currentText);
+}
+
+function renderLines(container, text) {
+  const lines = String(text || '').split('\n');
 
   lines.forEach(lineText => {
     const lineDiv = document.createElement('div');

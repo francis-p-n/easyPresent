@@ -15,6 +15,7 @@ import { showShortcutHelp } from './features/controls/ShortcutHelp.js'
 import { buildLiveState } from './core/liveState.js'
 import { makeTransposer } from './songs/transpose.js'
 import { slideToChordProText } from './songs/chordpro.js'
+import { buildStageChart } from './songs/stageChart.js'
 
 /**
  * Every transient overlay that owns the keyboard while it's open. All of these
@@ -129,8 +130,11 @@ class App {
       const liveId = state.get('livePresentationId')
       const livePres = (state.get('presentations') || []).find((p) => p.id === liveId)
       const text = slide && livePres ? slideToChordProText(slide, makeTransposer(livePres)) : (slide && slide.text) || ''
-      const payload = { text }
-      const sig = payload.text
+      // The whole song and where we are in it: the band's chart scrolls with the slides.
+      // Rebuilt only while a song slide is live; the signature below keeps repeats from re-sending.
+      const chart = slide && livePres && state.get('layers').slide.active ? buildStageChart(livePres) : []
+      const payload = { text, chart, index: chart.length ? state.get('liveSlideIndex') : -1 }
+      const sig = JSON.stringify(payload)
       if (sig === this._lastBroadcast) return
       this._lastBroadcast = sig
       window.electronAPI.broadcastSlide(payload)

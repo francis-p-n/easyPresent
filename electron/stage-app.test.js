@@ -87,5 +87,9 @@ describe('stage display — renderSlide protocol', () => {
     // Text-only payloads (the slim broadcast shape) must not throw
     expect(() => handlers['slide-update']({ text: 'Hello [C]world' })).not.toThrow()
     expect(() => handlers['slide-update'](null)).not.toThrow()
+    // The whole-song chart with the live position
+    const chart = [{ label: 'Verse 1', text: '[C]Hello' }, { label: 'Chorus', text: '[G]World' }]
+    expect(() => handlers['slide-update']({ text: '[C]Hello', chart, index: 0 })).not.toThrow()
+    expect(() => handlers['slide-update']({ text: '', chart: [], index: -1 })).not.toThrow()
   })
 })

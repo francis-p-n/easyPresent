@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listDisplays: () => ipcRenderer.invoke('list-displays'),
   stageShareStatus: () => ipcRenderer.invoke('stage-share-status'),
   stageShareStart: () => ipcRenderer.invoke('stage-share-start'),
+  stageShareStop: () => ipcRenderer.invoke('stage-share-stop'),
   openDisplays: () => ipcRenderer.invoke('open-displays'),
   toggleDisplay: (role, displayId) => ipcRenderer.invoke('toggle-display', role, displayId),
 

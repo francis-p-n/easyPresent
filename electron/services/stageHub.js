@@ -1,16 +1,20 @@
 /**
  * stageHub — owns the lazily-started stage server.
  *
- * The server listens on every network interface with open CORS, which is
- * needless exposure (and startup work) until a stage/presenter/PA view is
- * actually opened or the operator chooses to share to phones. State pushed
- * before that is kept and replayed once the server starts.
+ * The server starts only when a stage/presenter/PA view is opened or the operator
+ * chooses to share to phones, and until they choose to share it listens on this
+ * computer only. "Start sharing" restarts it on every network interface so phones on
+ * the same Wi-Fi can connect; "Stop sharing" puts it back. State pushed before the
+ * server starts is kept and replayed once it does.
  */
 const os = require('os')
 const { startServer } = require('../server/stageServer')
 
 // EASYPRESENT_PORT lets a second instance (testing, or a second church PC) run alongside
 const PORT = Number(process.env.EASYPRESENT_PORT) || 8080
+
+const LOCAL_ONLY = 'localhost'
+const EVERYONE = '0.0.0.0'
 
 /** This computer's LAN IPv4 addresses (what a phone on the same Wi-Fi would type). */
 function lanAddresses() {
@@ -24,6 +28,7 @@ function createStageHub() {
   let server = null
   let starting = null // Promise<port> while starting / once running
   let port = PORT
+  let sharing = false
   let pendingSlide = null
   let pendingLiveState = null
 
@@ -34,11 +39,11 @@ function createStageHub() {
    */
   function start() {
     if (!starting) {
-      server = startServer(PORT)
+      server = startServer(port, sharing ? EVERYONE : LOCAL_ONLY)
       if (pendingSlide) server.broadcastSlide(pendingSlide)
       if (pendingLiveState) server.broadcastLiveState(pendingLiveState)
       starting = Promise.resolve(server.ready)
-        .then((bound) => (port = bound || PORT))
+        .then((bound) => (port = bound || port))
         .catch((err) => {
           server = null
           starting = null
@@ -48,18 +53,36 @@ function createStageHub() {
     return starting
   }
 
+  /** Rebinds on the same port (so windows that are already open reconnect by themselves). */
+  async function restart(shared) {
+    sharing = shared
+    if (server) {
+      const old = server
+      await starting.catch(() => {})
+      server = null
+      starting = null
+      await old.close()
+    }
+    return start()
+  }
+
   return {
     start,
+    share: () => (sharing && server ? start() : restart(true)),
+    unshare: () => (sharing ? restart(false) : Promise.resolve(port)),
     url: (route = '') => `http://localhost:${port}${route}`,
-    /** What the Screens menu shows: is it running, and the addresses a phone would use. */
+    /** What the Screens menu shows: is it running, is it shared, and the addresses a phone would use. */
     status() {
       return {
         running: !!server,
+        sharing: !!server && sharing,
         port,
-        urls: lanAddresses().map((ip) => ({
-          presenter: `http://${ip}:${port}/presenter`,
-          pa: `http://${ip}:${port}/pa`
-        }))
+        urls: sharing
+          ? lanAddresses().map((ip) => ({
+              presenter: `http://${ip}:${port}/presenter`,
+              pa: `http://${ip}:${port}/pa`
+            }))
+          : []
       }
     },
     broadcastSlide(slide) {

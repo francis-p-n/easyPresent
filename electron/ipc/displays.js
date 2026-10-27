@@ -15,7 +15,11 @@ function registerDisplayIpc({ displays, stageHub }) {
   // addresses a phone on the same Wi-Fi can open
   ipcMain.handle('stage-share-status', () => stageHub.status())
   ipcMain.handle('stage-share-start', async () => {
-    await stageHub.start()
+    await stageHub.share()
+    return stageHub.status()
+  })
+  ipcMain.handle('stage-share-stop', async () => {
+    await stageHub.unshare()
     return stageHub.status()
   })
 

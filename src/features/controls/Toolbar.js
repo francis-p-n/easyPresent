@@ -100,7 +100,7 @@ export class Toolbar {
         <select class="input screens-display" data-role="${role}" style="width:100%;"></select>
       </div>`
     screensWrap.innerHTML = `
-      <button class="btn tooltip" id="toolbar-screens-btn" data-tooltip="Screen Configuration">
+      <button class="btn tooltip" id="toolbar-screens-btn" data-tooltip="Screen Configuration" aria-label="Screens">
         ${icon('monitor', 16).outerHTML}<span class="toolbar-btn-label">Screens</span>
       </button>
       <div id="toolbar-screens-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:200;background:var(--bg-toolbar);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-md);width:290px;padding:4px;">
@@ -110,7 +110,7 @@ export class Toolbar {
         ${roleRow('pa', 'PA Team', 'Sound desk: output check, cues, timers')}
         <div style="padding:8px 6px 6px;border-top:1px solid var(--border-color);margin-top:4px;">
           <div style="font-size:12px;font-weight:600;">Phones &amp; tablets</div>
-          <div style="font-size:11px;opacity:.65;margin:2px 0 6px;">Let people on the same Wi-Fi open the Presenter and PA screens in a web browser. They are view-only, but anyone on that Wi-Fi can open them.</div>
+          <div id="screens-share-note" style="font-size:11px;opacity:.65;margin:2px 0 6px;">Let people on the same Wi-Fi open the Presenter and PA screens in a web browser. They are view-only, but anyone on that Wi-Fi can open them. Off until you start it.</div>
           <button class="btn" id="screens-share-btn" style="width:100%;">Start sharing</button>
           <div id="screens-share-urls" style="font-size:11px;margin-top:6px;word-break:break-all;"></div>
         </div>
@@ -121,7 +121,7 @@ export class Toolbar {
     const libWrap = document.createElement('div')
     libWrap.style.position = 'relative'
     libWrap.innerHTML = `
-      <button class="btn tooltip" id="toolbar-library-btn" data-tooltip="Library backup">
+      <button class="btn tooltip" id="toolbar-library-btn" data-tooltip="Library backup" aria-label="Library backup">
         ${icon('folder', 16).outerHTML}<span class="toolbar-btn-label">Library</span>
       </button>
       <div id="toolbar-library-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:200;background:var(--bg-toolbar);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-md);min-width:180px;padding:4px;">
@@ -323,13 +323,12 @@ export class Toolbar {
     const shareUrls = screensMenu.querySelector('#screens-share-urls')
     const renderShare = (status) => {
       shareUrls.textContent = ''
-      if (!status?.running) {
+      shareBtn.disabled = false
+      if (!status?.sharing) {
         shareBtn.textContent = 'Start sharing'
-        shareBtn.disabled = false
         return
       }
-      shareBtn.textContent = 'Sharing is on'
-      shareBtn.disabled = true
+      shareBtn.textContent = 'Stop sharing'
       const addresses = status.urls || []
       if (!addresses.length) shareUrls.textContent = 'No Wi-Fi/LAN connection found on this computer.'
       for (const u of addresses) {
@@ -371,10 +370,13 @@ export class Toolbar {
     screensMenu?.addEventListener('click', async (e) => {
       e.stopPropagation()
       if (e.target.closest('#screens-share-btn')) {
+        const stopping = shareBtn.textContent === 'Stop sharing'
+        shareBtn.disabled = true // the server restarts; don't let a second click race it
         try {
-          renderShare(await window.electronAPI.stageShareStart())
+          renderShare(await (stopping ? window.electronAPI.stageShareStop() : window.electronAPI.stageShareStart()))
         } catch (err) {
-          showToast(`Couldn't start sharing: ${err.message}`, 'error')
+          showToast(`Couldn't ${stopping ? 'stop' : 'start'} sharing: ${err.message}`, 'error')
+          window.electronAPI.stageShareStatus?.().then(renderShare)
         }
         return
       }

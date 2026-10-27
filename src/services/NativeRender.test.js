@@ -149,3 +149,50 @@ describe('PIXI-dependent guards', () => {
     expect(NativeRender.clearLayer(1)).toBe(true)
   })
 })
+
+describe('PIXI layers do not leak', () => {
+  // Minimal stand-in for PIXI: records which text objects were destroyed
+  const setUpFakePixi = () => {
+    const destroyed = []
+    class Text {
+      constructor(opts) {
+        this.text = opts.text
+        this.width = 100
+        this.height = 20
+      }
+      destroy(options) {
+        destroyed.push({ text: this.text, options })
+      }
+    }
+    const makeLayer = () => {
+      const layer = { children: [] }
+      layer.addChild = (c) => layer.children.push(c)
+      layer.removeChildren = () => layer.children.splice(0)
+      return layer
+    }
+    NativeRender.PIXI = { Text, TextStyle: class {} }
+    NativeRender.ready = true
+    NativeRender.width = 1920
+    NativeRender.height = 1080
+    NativeRender.layers = [makeLayer(), makeLayer(), makeLayer(), makeLayer()]
+    return destroyed
+  }
+
+  it('destroys the previous slide text (and its texture) when the slide changes', () => {
+    const destroyed = setUpFakePixi()
+    NativeRender.renderSlideText('first slide')
+    expect(destroyed).toHaveLength(0)
+    NativeRender.renderSlideText('second slide')
+    expect(destroyed.map((d) => d.text)).toEqual(['first slide'])
+    expect(destroyed[0].options).toMatchObject({ texture: true })
+    expect(NativeRender.layers[1].children.map((c) => c.text)).toEqual(['second slide'])
+  })
+
+  it('destroys what a cleared layer held', () => {
+    const destroyed = setUpFakePixi()
+    NativeRender.renderSlideText('on screen')
+    NativeRender.clearLayer(1)
+    expect(destroyed.map((d) => d.text)).toEqual(['on screen'])
+    expect(NativeRender.layers[1].children).toHaveLength(0)
+  })
+})

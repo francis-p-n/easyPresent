@@ -187,3 +187,41 @@ Not covered by the visual pass: real second/third monitors, a real printer, touc
 10 youth leader (messages/timers), 11 sound engineer, 12 livestream operator, 13 songwriter importing charts, 14 librarian,
 15 data-loss-paranoid admin, 16 accessibility auditor, 17 single-display small church, 18 PowerPoint user, 19 Bible reader,
 20 kids-ministry touch user, 21 worship planner, 22 security-minded admin, 23 multilingual text tester, 24 stress tester, 25 first-run secretary.
+
+## Regression run: 25 personas against the real app (27 Oct)
+
+All 25 personas were re-run against the built app. 24 reported; the stress tester's agent never got an
+app slot, so that pass was run directly (`stress` script: 400-key storm, 8 open/close cycles of all three
+screens, 31 rapid LOGO toggles, keys typed into a dialog, double-click, console errors, cross-screen check).
+
+### Fixed in this run
+
+| Finding | Fix |
+| --- | --- |
+| Opening any output window exposed the live slides to the whole Wi-Fi (M23) | Server listens on this computer only until "Start sharing"; new "Stop sharing"; addresses listed only while sharing |
+| GPU memory grew from 0.3 GB to 2.1 GB over a 400-key storm and never came back | Old PIXI text objects were detached but never destroyed; `NativeRender._empty()` now destroys them (storm now ends ~1.1 GB total) |
+| Port already held on all interfaces was not detected on Windows | Port is probed by connecting before binding |
+| Last-used setlist not remembered unless something else changed | `activePlaylist` change now triggers a save |
+| Edit / Themes / Screens were icon-only below 1600px (welcome tour told people to find "Screens") | Words stay down to 1366px; tour also explains CLEAR ALL / F1 |
+| Welcome tour came back every launch if closed early | Remembered when shown |
+| Bare `Bait 1` / `Reff:` / `Refrein` headings read as lyrics | Recognised (strictly) in the importer and the chords-above-lyrics converter |
+| Search missed accented text | Accent-insensitive |
+| Identical toasts stacked over the preview; long notices vanished before they could be read | Merged, max three, duration scales with length; removal no longer depends on transitions |
+| Focus lost to the page after some dialogs | Opener tracked from the last focus outside any dialog |
+| LOGO tooltip clipped at the right edge | Clear-group tooltips hang from the right edge |
+| Low contrast on Presenter/PA empty states; stale song title after CLEAR ALL; NEXT section name looked like a lyric | Contrast raised; title cleared; section styled as a heading |
+
+### Still open (known, not fixed)
+
+- Chords drift over wide CJK glyphs in the on-screen chord view and the printed sheet (Stage view is right).
+- Continuation slides of a long section repeat the same label ("Verse 1", "Verse 1"); printed continuation pages start with a bare section heading and no song title.
+- Printed setlist leaves out headers and notes, and silently skips songs with no chords.
+- No undo after deleting a library song; a deleted song still appears in an open setlist until restart.
+- Hari Ini Kurasa Bahagia has no key stored, so its printed sheet shows none.
+- Backups are limited to one per 10 minutes, so a restore can lose a few minutes of edits (the app says it restored, not what was lost).
+- 10–11px labels and 24px row buttons with a fine pointer; touch sizes apply only when Windows reports a coarse pointer.
+- Playlist titles truncate heavily at 854–1024px; Library filter chips clip at 854px.
+- Audience text size scales with width only (4:3 and portrait look sparse); faint specks in glyphs with stroke + shadow.
+- CLEAR ALL hides the message but leaves the countdown running (by design: it is a clock); nothing signals 00:00.
+- Presenter text is small in landscape on a phone; no text-size control; no "connected, waiting" idle cue.
+- Library export/import may not include the Bible store (unverified).

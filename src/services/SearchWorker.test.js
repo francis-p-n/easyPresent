@@ -50,6 +50,16 @@ describe('SearchWorker (real module)', () => {
   })
 })
 
+describe('SearchWorker — accents', () => {
+  it('finds accented text from an unaccented query and the other way round', () => {
+    const items = [{ id: 'a', name: 'café song', searchText: 'café song\nüber grace' }]
+    send('cafe', items)
+    send('UBER', items)
+    send('café', items)
+    expect(replies.map((r) => r.ids)).toEqual([['a'], ['a'], ['a']])
+  })
+})
+
 describe('SearchWorker — title matches rank first', () => {
   it('lists songs whose title matches before songs that only contain the word in their text', () => {
     const items = [

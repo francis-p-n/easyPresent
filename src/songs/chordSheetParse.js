@@ -25,7 +25,9 @@ export function isChordLine(line) {
   return tokens.length > 0 && tokens.every((t) => CHORD.test(t) || REPEAT.test(t))
 }
 
-const isHeader = (line) => /^\s*\[[^\]]+\]\s*$/.test(line)
+// "[Chorus]", or a bare "Verse 2:" / "Bait 1" / "Reff:" on its own line
+const BARE_HEADER = /^\s*(Verse|Chorus|Bridge|Pre-?\s?Chorus|Intro|Outro|Tag|Interlude|Instrumental|Refrain|Ending|Coda|Bait|Reff|Refrein|Pra-?\s?Reff|Jembatan|Akhir)(?:[\s:]+(\d+|[a-z]))?:?\s*$/i
+const isHeader = (line) => /^\s*\[[^\]]+\]\s*$/.test(line) || BARE_HEADER.test(line)
 
 /** Collapse " - " (and " -" at word joins) between letters; returns text + old→new column map. */
 function collapseSyllables(text) {

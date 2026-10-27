@@ -12,6 +12,10 @@ import { isChordName } from './chordSheetParse.js'
 const SECTION_WORD =
   /^\[?(Verse|Chorus|Bridge|Pre-Chorus|Intro|Outro|Tag|Interlude|Instrumental|Refrain|Ending|Coda)(?:[\s:]+(.+))?\]?:?$/i
 
+// Indonesian headings written bare ("Bait 1", "Reff:"). Stricter than the English list — only an
+// optional number or letter may follow — so a lyric line that starts with "Bait" is not mistaken for a header.
+const LOCAL_SECTION_WORD = /^\[?(Bait|Reff|Refrein|Pra-?\s?Reff|Jembatan|Akhir)(?:[\s:]+(\d+|[a-z]))?\]?:?$/i
+
 // Names in other languages that map onto the same groups, so "[Bait 1]" / "[Reff]" / "[副歌]" sort and colour like their English twins
 const GROUP_HINTS = [
   [/pre-?\s?chorus|pra-?\s?reff/i, 'pre-chorus'],
@@ -87,8 +91,12 @@ export function parseChordProSong(text, maxLines = 4) {
     // Header: a known section word, or any line that is just one bracket that isn't a chord
     const wordMatch = trimmed.match(SECTION_WORD)
     const lone = trimmed.match(/^\[([^\]]+)\]$/)
+    const localMatch = !wordMatch && trimmed.match(LOCAL_SECTION_WORD)
     if (wordMatch) {
       startSection(wordMatch[1].toLowerCase(), wordMatch[0].replace(/[[\]]/g, ''))
+    } else if (localMatch) {
+      const label = trimmed.replace(/[[\]]/g, '').replace(/:$/, '').trim()
+      startSection(groupFor(label), label)
     } else if (lone && !isChordName(lone[1].trim())) {
       startSection(groupFor(lone[1]), lone[1].trim())
     } else if (trimmed === '') {

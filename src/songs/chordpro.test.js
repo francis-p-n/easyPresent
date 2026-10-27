@@ -40,6 +40,26 @@ describe('parseChordProToSlides — section headers', () => {
   })
 })
 
+describe('parseChordProToSlides — bare Indonesian headings', () => {
+  const text = ['Bait 1', 'Satu dua tiga', '', 'Reff:', 'Empat lima enam', '', 'Bait 2:', 'Tujuh delapan'].join('\n')
+
+  it('recognises Bait / Reff written without brackets, with the right groups and labels', () => {
+    const slides = parseChordProToSlides(text)
+    expect(slides.map((s) => [s.group, s.label])).toEqual([
+      ['verse', 'Bait 1'],
+      ['chorus', 'Reff'],
+      ['verse', 'Bait 2']
+    ])
+    expect(slides.map((s) => s.text)).toEqual(['Satu dua tiga', 'Empat lima enam', 'Tujuh delapan'])
+  })
+
+  it('does not mistake a lyric line that merely starts with the word for a heading', () => {
+    const slides = parseChordProToSlides(['[Verse 1]', 'Bait yang indah bagi kita'].join('\n'))
+    expect(slides).toHaveLength(1)
+    expect(slides[0].text).toBe('Bait yang indah bagi kita')
+  })
+})
+
 describe('parseChordProToSlides — slide splitting', () => {
   it('splits slides on blank lines within a section', () => {
     const slides = parseChordProToSlides('[Verse 1]\nline a\nline b\n\nline c')

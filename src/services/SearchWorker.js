@@ -7,6 +7,9 @@
  * clone cost per keystroke small even for large libraries.
  */
 
+// Lowercase and drop accents so "cafe" finds "café" and "uber" finds "Über"
+const fold = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+
 self.onmessage = function (e) {
   const { query, items } = e.data
 
@@ -15,10 +18,10 @@ self.onmessage = function (e) {
     return
   }
 
-  const q = query.toLowerCase()
-  const hits = items.filter((i) => i.searchText.includes(q))
+  const q = fold(query)
+  const hits = items.filter((i) => fold(i.searchText).includes(q))
   // A song whose title matches comes before one that only has the word somewhere in its lyrics
-  const inTitle = (i) => !!i.name && i.name.includes(q)
+  const inTitle = (i) => !!i.name && fold(i.name).includes(q)
   const ids = [...hits.filter(inTitle), ...hits.filter((i) => !inTitle(i))].map((i) => i.id)
 
   self.postMessage({ ids })

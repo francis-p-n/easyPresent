@@ -211,10 +211,16 @@ screens, 31 rapid LOGO toggles, keys typed into a dialog, double-click, console 
 | LOGO tooltip clipped at the right edge | Clear-group tooltips hang from the right edge |
 | Low contrast on Presenter/PA empty states; stale song title after CLEAR ALL; NEXT section name looked like a lyric | Contrast raised; title cleared; section styled as a heading |
 
+### Fixed afterwards
+
+| Finding | Fix |
+| --- | --- |
+| Chords drifted over wide CJK / Hangul / Arabic text, on screen and in print | Chords are no longer lined up with padded spaces (which assumes every glyph is one monospace column). Each line is cut into segments, a chord over the words it precedes, so alignment holds in any font and script (`src/songs/chordLayout.js`) |
+| A long section repeated the same label ("Verse 1", "Verse 1") | Continuation slides read "Verse 1 (cont.)" on the slide grid, the chord view and the print; saved charts write one header per section |
+| Printed continuation pages began with a bare heading and no song title | Each song's title and key sit in a table header row, which printing repeats on every page the song runs onto (page count unchanged: 13 for the weekly setlist) |
+
 ### Still open (known, not fixed)
 
-- Chords drift over wide CJK glyphs in the on-screen chord view and the printed sheet (Stage view is right).
-- Continuation slides of a long section repeat the same label ("Verse 1", "Verse 1"); printed continuation pages start with a bare section heading and no song title.
 - Printed setlist leaves out headers and notes, and silently skips songs with no chords.
 - No undo after deleting a library song; a deleted song still appears in an open setlist until restart.
 - Hari Ini Kurasa Bahagia has no key stored, so its printed sheet shows none.

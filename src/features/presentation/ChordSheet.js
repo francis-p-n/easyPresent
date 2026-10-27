@@ -1,5 +1,6 @@
 import { state } from '../../core/StateManager.js'
 import { makeTransposer } from '../../songs/transpose.js'
+import { lineSegments, sectionLabel, markContinuations } from '../../songs/chordLayout.js'
 
 export function renderChordSheet(chordSheet) {
   chordSheet.innerHTML = ''
@@ -7,7 +8,7 @@ export function renderChordSheet(chordSheet) {
   if (!pres) return
   const transpose = makeTransposer(pres) // chords shown in the key the singer asked for
 
-  pres.slides.forEach((slide) => {
+  markContinuations(pres.slides).forEach((slide) => {
     const block = document.createElement('div')
     block.style.marginBottom = '24px'
 
@@ -16,7 +17,8 @@ export function renderChordSheet(chordSheet) {
       label.style.fontWeight = 'bold'
       label.style.color = 'var(--primary-color)'
       label.style.marginBottom = '12px'
-      label.textContent = slide.label
+      label.textContent = sectionLabel(slide)
+      if (slide.cont) label.style.opacity = '0.65'
       block.appendChild(label)
     }
 
@@ -28,27 +30,33 @@ export function renderChordSheet(chordSheet) {
         lineDiv.style.lineHeight = '1.4'
 
         if (line.chords && line.chords.length > 0) {
-          const chordsDiv = document.createElement('div')
-          chordsDiv.style.color = '#4ea8de' // blueish chords
-          chordsDiv.style.fontWeight = 'bold'
-          chordsDiv.style.height = '1.2em'
-          chordsDiv.style.whiteSpace = 'pre'
-
-          // Build chord line with spaces
-          let chordLine = ''
-          line.chords.forEach((c) => {
-            // at least one space between chords so neighbours never run together
-            const spaces = Math.max(chordLine.length > 0 ? 1 : 0, c.pos - chordLine.length)
-            chordLine += ' '.repeat(spaces) + transpose(c.chord)
+          // Each chord sits on top of the words it precedes: aligned in any font or script, unlike space padding
+          lineDiv.style.display = 'flex'
+          lineDiv.style.flexWrap = 'wrap'
+          lineDiv.style.alignItems = 'flex-end'
+          lineSegments(line, transpose).forEach((seg) => {
+            const col = document.createElement('div')
+            col.style.display = 'flex'
+            col.style.flexDirection = 'column'
+            const chordDiv = document.createElement('div')
+            chordDiv.style.color = '#4ea8de' // blueish chords
+            chordDiv.style.fontWeight = 'bold'
+            chordDiv.style.minHeight = '1.2em'
+            chordDiv.style.paddingRight = '0.5em' // neighbouring chords never run together
+            chordDiv.style.whiteSpace = 'pre'
+            chordDiv.textContent = seg.chord || ' '
+            const wordsDiv = document.createElement('div')
+            wordsDiv.style.whiteSpace = 'pre-wrap'
+            wordsDiv.textContent = seg.text
+            col.append(chordDiv, wordsDiv)
+            lineDiv.appendChild(col)
           })
-          chordsDiv.textContent = chordLine
-          lineDiv.appendChild(chordsDiv)
+        } else {
+          const textDiv = document.createElement('div')
+          textDiv.style.whiteSpace = 'pre-wrap'
+          textDiv.textContent = line.text || ' ' // keep space if empty
+          lineDiv.appendChild(textDiv)
         }
-
-        const textDiv = document.createElement('div')
-        textDiv.style.whiteSpace = 'pre'
-        textDiv.textContent = line.text || ' ' // keep space if empty
-        lineDiv.appendChild(textDiv)
 
         block.appendChild(lineDiv)
       })

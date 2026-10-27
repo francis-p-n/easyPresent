@@ -6,6 +6,7 @@ import { createTransposeControl } from './TransposeControl.js'
 import { announcementEditor } from './AnnouncementEditor.js'
 import { goLive } from '../../core/navigation.js'
 import { getActiveSequence } from '../../core/arrangement.js'
+import { sectionLabel, markContinuations } from '../../songs/chordLayout.js'
 import { hasLayout, renderSlideLayout } from '../../core/slideLayout.js'
 
 /**
@@ -219,6 +220,7 @@ export class SlideView {
     // a repeated chorus), so `index` here is a position in that sequence,
     // matching what goLive()/goLiveNext() navigate over.
     let lastSection = null
+    markContinuations(pres.slides) // a verse split over several slides reads "Verse 1", "Verse 1 (cont.)"
     getActiveSequence(pres).forEach((slide, index) => {
       // Insert a section header when the PPTX section changes between slides
       if (slide.section && slide.section !== lastSection) {
@@ -242,7 +244,7 @@ export class SlideView {
       if (slide.label) {
         const label = document.createElement('div')
         label.className = `slide-thumbnail__label slide-thumbnail__label--${slide.group || 'intro'}`
-        label.textContent = slide.label
+        label.textContent = sectionLabel(slide)
         thumb.appendChild(label)
       }
 

@@ -8,6 +8,7 @@
  */
 
 import { makeTransposer, transposeKey, describeShift } from './transpose.js'
+import { lineSegments, sectionLabel, markContinuations } from './chordLayout.js'
 
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
@@ -33,44 +34,6 @@ export function slideLines(slide) {
     })
 }
 
-/** Wide (East Asian, fullwidth, emoji) characters take two columns in a monospace font; combining marks take none. */
-function charWidth(codePoint) {
-  if ((codePoint >= 0x300 && codePoint <= 0x36f) || (codePoint >= 0x200b && codePoint <= 0x200f) || codePoint === 0xfe0f) return 0
-  const wide =
-    (codePoint >= 0x1100 && codePoint <= 0x115f) || // Hangul Jamo
-    (codePoint >= 0x2e80 && codePoint <= 0xa4cf) || // CJK radicals .. Yi
-    (codePoint >= 0xac00 && codePoint <= 0xd7a3) || // Hangul syllables
-    (codePoint >= 0xf900 && codePoint <= 0xfaff) || // CJK compatibility
-    (codePoint >= 0xfe30 && codePoint <= 0xfe6f) ||
-    (codePoint >= 0xff00 && codePoint <= 0xff60) || // fullwidth forms
-    (codePoint >= 0xffe0 && codePoint <= 0xffe6) ||
-    (codePoint >= 0x1f300 && codePoint <= 0x1faff) || // emoji
-    (codePoint >= 0x20000 && codePoint <= 0x3fffd) // CJK extensions
-  return wide ? 2 : 1
-}
-
-/** How many monospace columns `text` takes up. */
-export function displayWidth(text) {
-  let width = 0
-  for (const ch of String(text)) width += charWidth(ch.codePointAt(0))
-  return width
-}
-
-/** The column a chord at character index `pos` of `text` belongs over. */
-export function columnOf(text, pos) {
-  return displayWidth(String(text).slice(0, pos))
-}
-
-/** Monospace chord row: each chord sits above the character it precedes. */
-export function chordRow(chords) {
-  let row = ''
-  for (const c of chords) {
-    const pad = Math.max(row.length > 0 ? 1 : 0, c.pos - row.length) // never touch the previous chord
-    row += ' '.repeat(pad) + c.chord
-  }
-  return row
-}
-
 function isSong(pres) {
   if (SONG_CATEGORIES.has(String(pres.category || '').toLowerCase())) return true
   return (pres.slides || []).some((s) => (s.linesData || []).some((l) => l.chords && l.chords.length))
@@ -85,23 +48,28 @@ function keyLabel(pres) {
   return ''
 }
 
+/** One line: each chord sits on top of the words it precedes (see chordLayout) — correct in any font or script. */
+function lineHtml(line, transpose, showChords) {
+  if (!showChords || !(line.chords && line.chords.length)) return `<div class="lyric">${esc(line.text) || '&nbsp;'}</div>`
+  const segments = lineSegments(line, transpose)
+    .map((seg) => `<span class="seg"><span class="chords">${esc(seg.chord) || '&nbsp;'}</span><span class="t">${esc(seg.text)}</span></span>`)
+    .join('')
+  return `<div class="ln">${segments}</div>`
+}
+
 function songHtml(pres, number, showChords) {
   const transpose = makeTransposer(pres)
-  const sections = (pres.slides || [])
+  const slides = markContinuations([...(pres.slides || [])].map((s) => ({ ...s })))
+  const sections = slides
     .map((slide) => {
-      const lines = slideLines(slide)
-        .map((l) => {
-          const row = showChords
-            ? chordRow((l.chords || []).map((c) => ({ pos: columnOf(l.text, c.pos), chord: transpose(c.chord) })))
-            : ''
-          return (row ? `<div class="chords">${esc(row)}</div>` : '') + `<div class="lyric">${esc(l.text) || '&nbsp;'}</div>`
-        })
-        .join('')
-      return `<section>${slide.label ? `<h3>${esc(slide.label)}</h3>` : ''}${lines}</section>`
+      const lines = slideLines(slide).map((l) => lineHtml(l, transpose, showChords)).join('')
+      const heading = slide.label ? `<h3${slide.cont ? ' class="cont"' : ''}>${esc(sectionLabel(slide))}</h3>` : ''
+      return `<tr><td><section>${heading}${lines}</section></td></tr>`
     })
     .join('')
   const meta = keyLabel(pres) ? `<span class="key">${esc(keyLabel(pres))}</span>` : ''
-  return `<article><h2><span class="num">${number}.</span> ${esc(pres.name)} ${meta}</h2>${sections}</article>`
+  // The title row is a table header, which the print engine repeats at the top of every page the song runs onto
+  return `<article><table class="song"><thead><tr><td><h2><span class="num">${number}.</span> ${esc(pres.name)} ${meta}</h2></td></tr></thead><tbody>${sections}</tbody></table></article>`
 }
 
 const CSS = `
@@ -112,13 +80,21 @@ const CSS = `
   .sub { color: #555; margin-bottom: 8mm; font-size: 10pt; }
   .toc { margin: 0 0 8mm; padding-left: 6mm; }
   .toc li { margin: 1mm 0; }
-  article { break-inside: avoid; margin-bottom: 9mm; } /* short songs share a page; a song never starts at the very bottom of one */
-  h2 { font-size: 16pt; margin: 0 0 4mm; border-bottom: 1px solid #000; padding-bottom: 1mm; }
+  article { break-inside: avoid; margin-bottom: 6mm; } /* short songs share a page; a song never starts at the very bottom of one */
+  h2 { font-size: 14pt; margin: 0 0 2mm; border-bottom: 1px solid #000; padding-bottom: 1mm; }
   h2 .key { font-size: 10pt; font-weight: normal; color: #444; margin-left: 4mm; }
-  h3 { font: bold 9pt Helvetica, Arial, sans-serif; text-transform: uppercase; letter-spacing: .08em; margin: 4mm 0 1mm; color: #333; }
-  section { break-inside: avoid; margin-bottom: 3mm; }
-  .chords, .lyric { font-family: 'Courier New', monospace; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11pt; line-height: 1.25; }
-  .chords { font-weight: bold; }
+  h3 { font: bold 9pt Helvetica, Arial, sans-serif; text-transform: uppercase; letter-spacing: .08em; margin: 2.5mm 0 .5mm; color: #333; }
+  table.song { width: 100%; border-collapse: collapse; }
+  table.song td { padding: 0; }
+  thead { display: table-header-group; } /* repeats the song title and key on each page of a long song */
+  tr { break-inside: avoid; }
+  section { margin-bottom: 1.5mm; }
+  h3.cont { color: #777; font-weight: normal; }
+  .lyric { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11pt; line-height: 1.2; }
+  .ln { display: flex; flex-wrap: wrap; align-items: flex-end; }
+  .seg { display: inline-flex; flex-direction: column; }
+  .chords { font: bold 10pt Helvetica, Arial, sans-serif; white-space: pre; padding-right: .5em; min-height: 1.1em; line-height: 1.1; }
+  .t { white-space: pre-wrap; font-size: 11pt; line-height: 1.2; }
   .empty { color: #888; font-style: italic; }
 `
 

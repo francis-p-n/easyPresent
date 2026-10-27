@@ -7,6 +7,7 @@
  */
 
 import { isChordName } from './chordSheetParse.js'
+import { markContinuations, continuesSection } from './chordLayout.js'
 
 // Section names written in plain text ("Verse 1:" or "[Chorus]"); the matched word is the slide group
 const SECTION_WORD =
@@ -143,6 +144,7 @@ export function parseChordProSong(text, maxLines = 4) {
   })
 
   commitSlide()
+  markContinuations(slides)
   return { meta, slides }
 }
 
@@ -158,12 +160,14 @@ export function parseChordProToSlides(text, maxLines = 4) {
  */
 export function slidesToChordPro(slides) {
   return (slides || [])
-    .map((slide) => {
+    .map((slide, i, all) => {
       const source = slide.linesData && slide.linesData.length
         ? slide.linesData
         : String(slide.text || '').split(NEWLINE).map((text) => ({ text, chords: [] }))
       const lines = source.map((l) => withInlineChords(l.text, l.chords || []))
-      const header = slide.label ? `[${slide.label}]${NEWLINE}` : ''
+      // A slide that carries on the section above has no header of its own: the blank line is enough,
+      // and it reads back as a continuation rather than a second section with the same name
+      const header = slide.label && !continuesSection(all, i) ? `[${slide.label}]${NEWLINE}` : ''
       return header + lines.join(NEWLINE)
     })
     .join(NEWLINE + NEWLINE)

@@ -1,13 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { chordRow, slideLines, buildSetlistSheetHtml, displayWidth, columnOf } from './printSheet.js'
+import { slideLines, buildSetlistSheetHtml } from './printSheet.js'
 import { starterRecords } from './starterSongs.js'
 import { STARTER_SETLIST } from './starterCharts.js'
 import { fromRecord } from './songSync.js'
 
 describe('print sheet', () => {
-  it('chordRow aligns chords above their positions without touching', () => {
-    expect(chordRow([{ pos: 0, chord: 'G' }, { pos: 1, chord: 'Am' }])).toBe('G Am')
-    expect(chordRow([{ pos: 4, chord: 'C' }])).toBe('    C')
+  it('puts each chord on a segment with the words it precedes, never on padded spaces', () => {
+    const html = buildSetlistSheetHtml(
+      { name: 'W', items: [{ type: 'presentation', id: 'a' }] },
+      [{ id: 'a', name: 'S', category: 'Worship', slides: [{ label: 'V', text: '[G]Hi [Am]you' }] }]
+    )
+    expect(html).toContain('<span class="seg"><span class="chords">G</span><span class="t">Hi </span></span>')
+    expect(html).toContain('<span class="seg"><span class="chords">Am</span><span class="t">you</span></span>')
   })
 
   it('slideLines falls back to inline markup', () => {
@@ -36,7 +40,7 @@ describe('print sheet', () => {
     expect(html.indexOf('Song C')).toBeLessThan(html.indexOf('Song &lt;A&gt;'))
     expect(html).not.toContain('Welcome')
     expect(html).toContain('Key of G')
-    expect(html).toContain('<div class="chords">G</div>')
+    expect(html).toContain('<span class="chords">G</span>')
   })
 
   it('can omit chords for lyric-only handouts', () => {
@@ -87,13 +91,15 @@ describe('printing a song in another key', () => {
 
   it('prints the written chords and key when not transposed', () => {
     const out = html(song())
-    expect(out).toContain('<div class="chords">G   C/E</div>')
+    expect(out).toContain('<span class="chords">G</span><span class="t">One </span>')
+    expect(out).toContain('<span class="chords">C/E</span><span class="t">two</span>')
     expect(out).toContain('Key of G')
   })
 
   it('prints the chords in the new key and says where it came from', () => {
     const out = html(song({ transpose: 2 }))
-    expect(out).toContain('<div class="chords">A   D/F#</div>')
+    expect(out).toContain('<span class="chords">A</span><span class="t">One </span>')
+    expect(out).toContain('<span class="chords">D/F#</span><span class="t">two</span>')
     expect(out).toContain('Key of A (written in G, +2)')
   })
 
@@ -105,28 +111,39 @@ describe('printing a song in another key', () => {
 })
 
 describe('print layout for wide characters and long words', () => {
-  it('counts CJK and Hangul as two columns, combining accents as none', () => {
-    expect(displayWidth('abc')).toBe(3)
-    expect(displayWidth('\u4f60\u597d')).toBe(4)
-    expect(displayWidth('\ud55c\uae00')).toBe(4)
-    expect(displayWidth('e\u0301')).toBe(1)
+  it('keeps a chord with its own syllable in Japanese, Korean and Arabic, whatever the font', () => {
+    const html = buildSetlistSheetHtml(
+      { name: 'W', items: [{ type: 'presentation', id: 's' }] },
+      [{
+        id: 's',
+        name: 'Wide',
+        category: 'Worship',
+        slides: [
+          { label: 'V', text: 'x', linesData: [{ text: '你好ab', chords: [{ pos: 2, chord: 'G' }] }] },
+          { label: 'W', text: 'x', linesData: [{ text: '한글사랑', chords: [{ pos: 0, chord: 'Am' }, { pos: 2, chord: 'D' }] }] },
+          { label: 'X', text: 'x', linesData: [{ text: 'مرحبا بك', chords: [{ pos: 6, chord: 'C' }] }] }
+        ]
+      }]
+    )
+    // the chord is paired with the characters it precedes, so nothing depends on how wide a glyph is drawn
+    expect(html).toContain('<span class="t">你好</span>')
+    expect(html).toContain('<span class="chords">G</span><span class="t">ab</span>')
+    expect(html).toContain('<span class="chords">Am</span><span class="t">한글</span>')
+    expect(html).toContain('<span class="chords">D</span><span class="t">사랑</span>')
+    expect(html).toContain('<span class="chords">C</span><span class="t">بك</span>')
   })
 
-  it('places a chord over the right column of a line containing wide characters', () => {
-    // "\u4f60\u597dab": a chord before "a" (index 2) belongs over column 4, not column 2
-    expect(columnOf('\u4f60\u597dab', 2)).toBe(4)
-    expect(columnOf('abcd', 2)).toBe(2)
-  })
-
-  it('prints the chord over the matching column in the sheet', () => {
-    const pres = {
-      id: 's',
-      name: 'Wide',
-      category: 'Worship',
-      slides: [{ label: 'V', text: '\u4f60\u597dab', linesData: [{ text: '\u4f60\u597dab', chords: [{ pos: 2, chord: 'G' }] }] }]
-    }
-    const html = buildSetlistSheetHtml({ name: 'W', items: [{ type: 'presentation', id: 's' }] }, [pres])
-    expect(html).toContain('<div class="chords">    G</div>') // four spaces: two wide characters
+  it('marks a slide that carries on the section above, and repeats the song title on every page', () => {
+    const slide = (text) => ({ label: 'Verse 1', group: 'verse', text, linesData: [{ text, chords: [] }] })
+    const html = buildSetlistSheetHtml(
+      { name: 'W', items: [{ type: 'presentation', id: 'a' }] },
+      [{ id: 'a', name: 'Long Song', category: 'Worship', key: 'C', slides: [slide('one'), slide('two')] }]
+    )
+    expect(html).toContain('<h3>Verse 1</h3>')
+    expect(html).toContain('<h3 class="cont">Verse 1 (cont.)</h3>')
+    // the title and key sit in a table header, which printing repeats on each page the song runs onto
+    expect(html).toMatch(/<thead>[\s\S]*Long Song[\s\S]*Key of C[\s\S]*<\/thead>/)
+    expect(html).toMatch(/thead\s*\{\s*display:\s*table-header-group/)
   })
 
   it('lets a very long word wrap instead of running off the page', () => {

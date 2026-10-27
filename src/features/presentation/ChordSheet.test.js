@@ -15,7 +15,7 @@ describe('renderChordSheet', () => {
     expect(container.children).toHaveLength(0)
   })
 
-  it('aligns chords above their lyric positions with padding', () => {
+  it('puts each chord on top of the words it precedes', () => {
     state.set('selectedPresentation', {
       id: 'p',
       slides: [
@@ -36,12 +36,39 @@ describe('renderChordSheet', () => {
     })
     renderChordSheet(container)
 
-    // The chord row is the div ChordSheet styles with pre whitespace + bold
-    const chordLine = [...container.querySelectorAll('div')].find(
-      (d) => d.style.whiteSpace === 'pre' && d.style.fontWeight === 'bold'
-    )
-    // 'C' at column 0, then spaces to column 8 for 'F'
-    expect(chordLine.textContent).toBe('C       F')
+    // Two columns, each a chord over its own words - alignment does not depend on padded spaces
+    const columns = [...container.querySelectorAll('div')].filter((d) => d.children.length === 2 && d.style.flexDirection === 'column')
+    expect(columns.map((c) => [c.children[0].textContent, c.children[1].textContent])).toEqual([
+      ['C', 'Amazing '],
+      ['F', 'grace']
+    ])
+  })
+
+  it('keeps a chord over its own syllable in wide scripts', () => {
+    state.set('selectedPresentation', {
+      id: 'p',
+      slides: [{ label: 'V', text: 'x', linesData: [{ text: '你好ab', chords: [{ pos: 2, chord: 'G' }] }] }]
+    })
+    renderChordSheet(container)
+    const columns = [...container.querySelectorAll('div')].filter((d) => d.children.length === 2 && d.style.flexDirection === 'column')
+    expect(columns.map((c) => [c.children[0].textContent.trim(), c.children[1].textContent])).toEqual([
+      ['', '你好'],
+      ['G', 'ab']
+    ])
+  })
+
+  it('labels a slide that carries on a section "(cont.)"', () => {
+    state.set('selectedPresentation', {
+      id: 'p',
+      slides: [
+        { label: 'Verse 1', group: 'verse', text: 'a' },
+        { label: 'Verse 1', group: 'verse', text: 'b' },
+        { label: 'Chorus', group: 'chorus', text: 'c' }
+      ]
+    })
+    renderChordSheet(container)
+    const labels = [...container.querySelectorAll('div')].filter((d) => d.style.fontWeight === 'bold' && d.children.length === 0).map((d) => d.textContent)
+    expect(labels).toEqual(['Verse 1', 'Verse 1 (cont.)', 'Chorus'])
   })
 
   it('falls back to plain slide text when no linesData exists', () => {

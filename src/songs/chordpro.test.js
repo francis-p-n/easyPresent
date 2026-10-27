@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseChordProToSlides } from './chordpro.js'
+import { parseChordProToSlides, slidesToChordPro } from './chordpro.js'
 
 describe('parseChordProToSlides — section headers', () => {
   it('starts a new slide at bracketed headers and uses them as group/label', () => {
@@ -57,6 +57,34 @@ describe('parseChordProToSlides — bare Indonesian headings', () => {
     const slides = parseChordProToSlides(['[Verse 1]', 'Bait yang indah bagi kita'].join('\n'))
     expect(slides).toHaveLength(1)
     expect(slides[0].text).toBe('Bait yang indah bagi kita')
+  })
+})
+
+describe('continuation slides', () => {
+  const long = ['[Verse 1]', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', '', '[Chorus]', 'c1'].join(String.fromCharCode(10))
+
+  it('flags the slides that carry on a section split over several slides', () => {
+    const slides = parseChordProToSlides(long, 4)
+    expect(slides.map((s) => [s.label, s.cont])).toEqual([
+      ['Verse 1', false],
+      ['Verse 1', true],
+      ['Chorus', false]
+    ])
+  })
+
+  it('writes one header for the whole section and reads back the same slides', () => {
+    const slides = parseChordProToSlides(long, 4)
+    const text = slidesToChordPro(slides)
+    expect(text.match(/\[Verse 1\]/g)).toHaveLength(1)
+    const again = parseChordProToSlides(text, 4)
+    expect(again.map((s) => [s.label, s.cont, s.text])).toEqual(slides.map((s) => [s.label, s.cont, s.text]))
+  })
+
+  it('keeps a header when a label was changed by hand, even if the old flag says "continues"', () => {
+    const slides = parseChordProToSlides(long, 4)
+    slides[1].label = 'Bridge'
+    slides[1].group = 'bridge'
+    expect(slidesToChordPro(slides)).toContain('[Bridge]')
   })
 })
 

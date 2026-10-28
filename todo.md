@@ -33,9 +33,10 @@
 - `[x]` PPTX import: underline kept, gradient backgrounds use the mean of their stops
 - `[x]` Imported media is deduplicated at the persistence boundary (`mediaStore.js`); app icon exists (`resources/icon.*`)
 
+- `[x]` Imported media is stored as binary files in userData/media (content-addressed); library.json and its backups stay small
+
 ## Active Development
 - `[ ]` Audience output has no video backgrounds (needs the C++ DirectX addon wired in; `native/src/video_decoder.cc:137` TODO)
-- `[ ]` Store imported media as separate files on disk (dedupe done, still inline in library.json)
 - `[ ]` Rasterize SVG-based PPTX slides (shape-heavy templates import text-only)
 - `[ ]` PPTX custom/decorative fonts aren't embedded; per-run color/size variation within one text box not read
 - `[ ]` Code signing for distribution builds (needs a certificate)

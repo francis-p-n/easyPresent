@@ -218,9 +218,9 @@
 
 .library-categories {
   display: flex;
+  flex-wrap: wrap; /* a narrow panel wraps the chips onto a second row instead of hiding the ones past the edge */
   padding: var(--spacing-xs) var(--spacing-sm);
   gap: var(--spacing-xs);
-  overflow-x: auto;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-panel);
   scrollbar-width: none;
@@ -307,6 +307,22 @@
 
 .playlist-header-item:first-child {
   margin-top: 0;
+}
+
+/* The reorder/remove buttons take a third of a narrow row, so a fine pointer only sees them on the
+   row it is over (or has focused, or that is selected). Touch screens keep them always visible. */
+.playlist-item__controls {
+  display: none;
+}
+.list-item:hover .playlist-item__controls,
+.list-item:focus-within .playlist-item__controls,
+.list-item.active .playlist-item__controls {
+  display: flex;
+}
+@media (pointer: coarse) {
+  .playlist-item__controls {
+    display: flex;
+  }
 }
 
 .playlist-item__grip {

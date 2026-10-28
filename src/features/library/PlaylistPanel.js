@@ -392,7 +392,7 @@ export class PlaylistPanel {
   _controls(index, count) {
     const wrap = document.createElement('span')
     wrap.className = 'playlist-item__controls'
-    wrap.style.cssText = 'display:flex;gap:2px;margin-left:auto;flex-shrink:0;'
+    wrap.style.cssText = 'gap:2px;margin-left:auto;flex-shrink:0;' // display comes from toolbar.css (hover/focus/touch)
     const make = (action, glyph, label, disabled) => {
       const b = document.createElement('button')
       b.className = 'btn btn--icon'

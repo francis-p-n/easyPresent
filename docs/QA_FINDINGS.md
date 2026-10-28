@@ -229,10 +229,10 @@ screens, 31 rapid LOGO toggles, keys typed into a dialog, double-click, console 
 - Hari Ini Kurasa Bahagia has its key (G).
 - Library export now includes installed Bible translations; import restores them.
 - 10-11px labels raised to 12px.
+- Playlist rows show their reorder/remove buttons only on hover, focus or selection (always on touch screens), so titles are no longer cut to 3 letters; Library category chips wrap instead of clipping. Checked in the browser at 900px.
 
 ### Still open (known, not fixed)
 
 - Row buttons are 24px with a fine pointer; touch sizes apply only when Windows reports a coarse pointer.
-- Playlist titles truncate heavily at 854-1024px; Library filter chips clip at 854px.
 - Faint specks in glyphs with stroke + shadow.
 - CLEAR ALL hides the message but leaves the countdown running (by design: it is a clock); nothing signals 00:00.

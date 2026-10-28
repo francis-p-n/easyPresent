@@ -103,6 +103,21 @@ function resolveFontFamily(typeface, theme) {
 }
 
 /**
+ * A gradient background has no single colour, but falling through to the
+ * theme default throws the whole look away. The mean of its stops keeps the
+ * overall tone (a navy-to-black gradient stays dark navy). Null if no stop resolves.
+ */
+function averageGradientColor(gradInner, theme) {
+  const stops = [...gradInner.matchAll(/<a:gs\b[^>]*>([\s\S]*?)<\/a:gs>/g)]
+    .map((m) => resolveFillColor(m[1], theme))
+    .filter((c) => c && /^#[0-9a-f]{6}$/i.test(c));
+  if (!stops.length) return null;
+  const sum = [0, 0, 0];
+  for (const c of stops) for (let i = 0; i < 3; i++) sum[i] += parseInt(c.slice(1 + i * 2, 3 + i * 2), 16);
+  return '#' + sum.map((v) => Math.round(v / stops.length).toString(16).padStart(2, '0')).join('');
+}
+
+/**
  * Extracts the slide's own background color from <p:bg>. Returns a hex color or
  * null when there's no color background (picture fill or nothing declared).
  */
@@ -113,6 +128,8 @@ function extractSlideBgColor(xmlData, theme) {
   if (/<(?:a|p):blipFill\b/.test(bg)) return null; // picture-fill background — handled as an image
   const solid = bg.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
   if (solid) return resolveFillColor(solid[1], theme);
+  const grad = bg.match(/<a:gradFill\b[^>]*>([\s\S]*?)<\/a:gradFill>/);
+  if (grad) return averageGradientColor(grad[1], theme);
   const bgRef = bg.match(/<p:bgRef\b[^>]*>([\s\S]*?)<\/p:bgRef>/);
   if (bgRef) {
     const scheme = bgRef[1].match(/<a:schemeClr val="(\w+)"/);
@@ -473,6 +490,7 @@ function styleFromBody(body, theme, ptToPx, cap) {
         }
         if (/\bb="1"/.test(attrs) && style.bold === undefined) style.bold = true;
         if (/\bi="1"/.test(attrs) && style.italic === undefined) style.italic = true;
+        if (/\bu="(?!none)\w+"/.test(attrs) && style.underline === undefined) style.underline = true;
 
         if (!style.color) {
           const fillMatch = inner.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
@@ -767,6 +785,7 @@ function extractShapes(xmlData, theme, metrics, relMap, mediaByName, inheritBox 
           color: style.color || '#000000',
           bold: style.bold || false,
           italic: style.italic || false,
+          underline: style.underline || false,
           hAlign: style.hAlign || 'left',
           vAlign: style.vAlign || 'top',
           lineSpacing: style.lineSpacing,

@@ -27,6 +27,15 @@
       min-height: 3em; /* Ensure space for chords even if none */
     }
 
+    /* Chord-free lines wrap as ordinary text instead of one word per column */
+    .line.plain {
+      display: block;
+      min-height: 0;
+      font-size: 3vw;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
     .chord-word {
       position: relative;
       display: inline-flex;

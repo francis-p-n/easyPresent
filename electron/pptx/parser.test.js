@@ -679,3 +679,38 @@ describe('parsePptx — placeholder positions', () => {
     expect(slides[0].elements[0].y).toBe(0)
   })
 })
+
+describe('parsePptx — gradient background + underline', () => {
+  const SLIDE_GRADIENT = `<?xml version="1.0"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg><p:bgPr><a:gradFill><a:gsLst>
+      <a:gs pos="0"><a:srgbClr val="000000"/></a:gs>
+      <a:gs pos="100000"><a:srgbClr val="2040A0"/></a:gs>
+    </a:gsLst></a:gradFill></p:bgPr></p:bg>
+    <p:spTree>
+      <p:sp>
+        <p:spPr><a:xfrm><a:off x="1000000" y="2000000"/><a:ext cx="9000000" cy="3000000"/></a:xfrm></p:spPr>
+        <p:txBody><a:bodyPr/><a:p><a:r><a:rPr sz="2400" u="sng"/><a:t>Underlined</a:t></a:r></a:p></p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:spPr><a:xfrm><a:off x="1000000" y="5000000"/><a:ext cx="9000000" cy="1000000"/></a:xfrm></p:spPr>
+        <p:txBody><a:bodyPr/><a:p><a:r><a:rPr sz="2400" u="none"/><a:t>Plain</a:t></a:r></a:p></p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>`
+
+  it('uses the mean of the gradient stops as the background colour instead of dropping it', async () => {
+    const file = buildPptx(path.join(tmpDir, 'grad.pptx'), { slides: { 'slide1.xml': SLIDE_GRADIENT } })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].bgColor).toBe('#102050')
+  })
+
+  it('carries underline onto the text element, but not u="none"', async () => {
+    const file = buildPptx(path.join(tmpDir, 'underline.pptx'), { slides: { 'slide1.xml': SLIDE_GRADIENT } })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].elements[0].underline).toBe(true)
+    expect(slides[0].elements[1].underline).toBe(false)
+  })
+})

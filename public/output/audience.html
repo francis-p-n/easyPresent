@@ -28,11 +28,12 @@
 
     let lastState = null
     const paint = () => renderAudienceState(lastState, root, scale())
+    const paintWithTransition = () => transitionAudience(lastState, root, scale(), lastState && lastState.transition)
 
     if (window.electronAPI && window.electronAPI.onAudienceUpdate) {
       window.electronAPI.onAudienceUpdate((state) => {
         lastState = state
-        paint()
+        paintWithTransition()
       })
     }
     window.addEventListener('resize', paint)

@@ -101,6 +101,16 @@ export function createSlideEditor(container) {
         </div>
 
         <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);">
+          Transition into this slide
+          <select id="prop-transition" class="input">
+            <option value="">Default</option>
+            <option value="cut">Cut</option>
+            <option value="dissolve">Dissolve</option>
+            <option value="wipe">Wipe</option>
+          </select>
+        </label>
+
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);">
           Built-in Backgrounds
           <div id="builtin-bg-strip" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;">
             ${BUILTIN_BACKGROUNDS.map(
@@ -178,6 +188,11 @@ export function createSlideEditor(container) {
           <input type="text" id="prop-rehearsal-audio" class="input" placeholder="e.g. /path/to/click.mp3" />
         </label>
 
+        <div style="display:flex;gap:6px;">
+          <button class="btn" id="editor-undo-btn" title="Undo (Ctrl+Z)" style="flex:1;font-size:11px;" disabled>&#8630; Undo</button>
+          <button class="btn" id="editor-redo-btn" title="Redo (Ctrl+Shift+Z)" style="flex:1;font-size:11px;" disabled>Redo &#8631;</button>
+        </div>
+
         <div style="margin-top:auto;display:flex;gap:10px;">
           <button class="btn btn--primary" id="editor-save-btn" style="flex:1;">Save</button>
           <button class="btn" id="editor-close-btn" style="flex:1;">Close</button>
@@ -211,6 +226,9 @@ export function createSlideEditor(container) {
   const addBoxBtn = container.querySelector('#add-textbox-btn')
   const dupBoxBtn = container.querySelector('#dup-textbox-btn')
   const delBoxBtn = container.querySelector('#del-textbox-btn')
+  const transitionSelect = container.querySelector('#prop-transition')
+  const undoBtn = container.querySelector('#editor-undo-btn')
+  const redoBtn = container.querySelector('#editor-redo-btn')
   const boxProps = container.querySelector('#box-props')
   const selectedBoxLabel = container.querySelector('#selected-box-label')
 
@@ -220,6 +238,99 @@ export function createSlideEditor(container) {
   let selectedId = null
   let scale = 1
   let editingId = null // box currently in inline text-edit mode
+
+  // ── Undo / redo ────────────────────────────────────────────────────────────
+  // Snapshots of everything the editor can change on the slide. Large strings
+  // (image data URLs) are shared by reference, never copied, so 100 steps stay cheap.
+  const HISTORY_LIMIT = 100
+  let history = []
+  let historyIdx = -1
+  let checkpointTimer = null
+
+  function takeSnapshot() {
+    return {
+      elements: elements.map((e) => e.toJSON()),
+      images: images.map((im) => ({ ...im })),
+      bgColor: bgColorInput.value,
+      bgImage: bgImageDataUrl,
+      templateId: templateSelect.value,
+      type: slideTypeSelect.value,
+      transition: transitionSelect.value,
+    }
+  }
+  // Cheap equality key: long strings are abbreviated so a data URL isn't re-serialised each time
+  const snapshotKey = (snap) =>
+    JSON.stringify(snap, (k, v) =>
+      typeof v === 'string' && v.length > 500 ? `${v.length}:${v.slice(0, 40)}${v.slice(-40)}` : v)
+
+  function updateHistoryButtons() {
+    undoBtn.disabled = historyIdx <= 0
+    redoBtn.disabled = historyIdx >= history.length - 1
+  }
+
+  function resetHistory() {
+    clearTimeout(checkpointTimer)
+    checkpointTimer = null
+    const snap = takeSnapshot()
+    history = [{ snap, key: snapshotKey(snap) }]
+    historyIdx = 0
+    updateHistoryButtons()
+  }
+
+  // Records the current state as an undo step if it differs from the last one
+  function checkpoint() {
+    clearTimeout(checkpointTimer)
+    checkpointTimer = null
+    if (historyIdx < 0) return
+    const snap = takeSnapshot()
+    const key = snapshotKey(snap)
+    if (key === history[historyIdx].key) return
+    history = history.slice(0, historyIdx + 1)
+    history.push({ snap, key })
+    if (history.length > HISTORY_LIMIT) history.shift()
+    historyIdx = history.length - 1
+    updateHistoryButtons()
+  }
+
+  // Coalesces bursts (typing, colour drags, nudging) into one step
+  function scheduleCheckpoint() {
+    clearTimeout(checkpointTimer)
+    checkpointTimer = setTimeout(checkpoint, 400)
+    undoBtn.disabled = false // a pending edit is already undoable
+  }
+
+  function restoreSnapshot({ snap }) {
+    stopInlineEdit()
+    elements = snap.elements.map((e) => new TextElement(e))
+    images = snap.images.map((im) => ({ ...im }))
+    bgColorInput.value = snap.bgColor
+    bgImageDataUrl = snap.bgImage
+    bgImageClearBtn.style.display = bgImageDataUrl ? 'block' : 'none'
+    canvas.style.background = bgImageDataUrl
+      ? `${snap.bgColor} url("${bgImageDataUrl}") center / cover no-repeat`
+      : snap.bgColor
+    templateSelect.value = snap.templateId
+    slideTypeSelect.value = snap.type
+    transitionSelect.value = snap.transition || ''
+    if (!findObj(selectedId)) selectedId = null
+    renderBoxes()
+    syncPropsPanel()
+    updateHistoryButtons()
+  }
+
+  function undo() {
+    checkpoint() // fold any pending edit in first so it isn't lost
+    if (historyIdx <= 0) return
+    historyIdx--
+    restoreSnapshot(history[historyIdx])
+  }
+
+  function redo() {
+    checkpoint()
+    if (historyIdx >= history.length - 1) return
+    historyIdx++
+    restoreSnapshot(history[historyIdx])
+  }
 
   // Selection can be a text element OR an image layer — both carry x/y/w/h.
   function findObj(id) {
@@ -340,7 +451,7 @@ export function createSlideEditor(container) {
         width:100%; padding:8px; outline:none;
         font-family:${el.fontFamily || 'Inter'}, sans-serif;
         font-size:${el.fontSize}px; color:${el.color};
-        font-weight:${el.bold ? 700 : 400}; font-style:${el.italic ? 'italic' : 'normal'};
+        font-weight:${el.bold ? 700 : 400}; font-style:${el.italic ? 'italic' : 'normal'}; text-decoration:${el.underline ? 'underline' : 'none'};
         text-align:${el.hAlign}; line-height:${el.lineSpacing || 1.35};
         white-space:pre-wrap; word-break:break-word; overflow:hidden;
         ${el.hasShadow ? `text-shadow:${el.shadowOffsetX || 3}px ${el.shadowOffsetY || 3}px 6px ${el.shadowColor || 'rgba(0,0,0,0.6)'};` : ''}
@@ -444,6 +555,7 @@ export function createSlideEditor(container) {
       node.style.cursor = 'move'
     }
     editingId = null
+    checkpoint()
   }
 
   // ── Drag & resize with snapping (rAF-throttled) ───────────────────────────
@@ -561,6 +673,7 @@ export function createSlideEditor(container) {
     drag = null
     hideSnaps()
     document.body.style.userSelect = ''
+    checkpoint()
   }
 
   document.addEventListener('mousemove', onDragMove)
@@ -582,6 +695,11 @@ export function createSlideEditor(container) {
       return
     }
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return
+    if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+      const k = e.key.toLowerCase()
+      if (k === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return }
+      if (k === 'y') { e.preventDefault(); redo(); return }
+    }
     const el = getSelected()
     if (!el) return
     const step = e.shiftKey ? 10 : 2
@@ -596,6 +714,7 @@ export function createSlideEditor(container) {
         elements = elements.filter((b) => b.id !== el.id)
         images = images.filter((b) => b.id !== el.id)
         selectBox(null)
+        checkpoint()
         return
       case 'Escape': selectBox(null); return
       default: handled = false
@@ -604,6 +723,7 @@ export function createSlideEditor(container) {
       e.preventDefault()
       const node = boxNode(el.id)
       if (node) { node.style.left = `${el.x}px`; node.style.top = `${el.y}px` }
+      scheduleCheckpoint()
     }
   }
   document.addEventListener('keydown', onKeyDown)
@@ -615,6 +735,7 @@ export function createSlideEditor(container) {
     fn(el)
     renderBoxes()
     syncPropsPanel()
+    scheduleCheckpoint()
   }
 
   fontFamilyInput.addEventListener('input', () => withSelected((el) => {
@@ -639,6 +760,7 @@ export function createSlideEditor(container) {
   }))
   italicBtn.addEventListener('click', () => withSelected((el) => { el.italic = !el.italic }))
   bgColorInput.addEventListener('input', () => {
+    scheduleCheckpoint()
     if (bgImageDataUrl) {
       canvas.style.background = `${bgColorInput.value} url(${bgImageDataUrl}) center / cover no-repeat`
     } else {
@@ -656,6 +778,7 @@ export function createSlideEditor(container) {
       bgImageDataUrl = ev.target.result
       canvas.style.background = `${bgColorInput.value} url(${bgImageDataUrl}) center / cover no-repeat`
       bgImageClearBtn.style.display = 'block'
+      checkpoint()
     }
     reader.readAsDataURL(file)
     bgImageFile.value = ''
@@ -665,6 +788,7 @@ export function createSlideEditor(container) {
     bgImageDataUrl = null
     bgImageClearBtn.style.display = 'none'
     canvas.style.background = bgColorInput.value
+    checkpoint()
   })
 
   // Built-in background gallery — clicking a swatch applies it like an
@@ -677,6 +801,7 @@ export function createSlideEditor(container) {
     bgImageDataUrl = bg.dataUrl
     canvas.style.background = `${bgColorInput.value} url("${bg.dataUrl}") center / cover no-repeat`
     bgImageClearBtn.style.display = 'block'
+    checkpoint()
   })
 
   addBoxBtn.addEventListener('click', () => {
@@ -688,6 +813,7 @@ export function createSlideEditor(container) {
     })
     elements.push(el)
     selectBox(el.id)
+    checkpoint()
   })
 
   dupBoxBtn.addEventListener('click', () => {
@@ -697,6 +823,7 @@ export function createSlideEditor(container) {
       const copy = { ...im, id: crypto.randomUUID(), x: im.x + 40, y: im.y + 40 }
       images.push(copy)
       selectBox(copy.id)
+      checkpoint()
       return
     }
     const el = getSelected()
@@ -704,6 +831,7 @@ export function createSlideEditor(container) {
     const copy = new TextElement({ ...el.toJSON(), id: undefined, x: el.x + 40, y: el.y + 40 })
     elements.push(copy)
     selectBox(copy.id)
+    checkpoint()
   })
 
   delBoxBtn.addEventListener('click', () => {
@@ -711,7 +839,14 @@ export function createSlideEditor(container) {
     elements = elements.filter((b) => b.id !== selectedId)
     images = images.filter((b) => b.id !== selectedId)
     selectBox(null)
+    checkpoint()
   })
+
+  undoBtn.addEventListener('click', undo)
+  redoBtn.addEventListener('click', redo)
+  templateSelect.addEventListener('change', checkpoint)
+  slideTypeSelect.addEventListener('change', checkpoint)
+  transitionSelect.addEventListener('change', checkpoint)
 
   // Template: stamps the layout onto the slide, preserving existing text where possible
   templateSelect.addEventListener('change', () => {
@@ -735,6 +870,7 @@ export function createSlideEditor(container) {
     }))
     elements.forEach(applyAutosize)
     selectBox(elements[0]?.id || null)
+    checkpoint()
   })
 
   // ── Load slide into editor ─────────────────────────────────────────────────
@@ -750,6 +886,7 @@ export function createSlideEditor(container) {
     currentSlideIndex = idx
     const slide = pres.slides[idx]
     rehearsalAudioInput.value = pres.linkedAudio || ''
+    transitionSelect.value = slide.transition || ''
     if (slide.type && [...slideTypeSelect.options].some((o) => o.value === slide.type)) {
       slideTypeSelect.value = slide.type
     }
@@ -807,6 +944,7 @@ export function createSlideEditor(container) {
           vAlign: importedStyle.vAlign,
           bold: importedStyle.bold,
           italic: importedStyle.italic,
+          underline: importedStyle.underline,
           lineSpacing: importedStyle.lineSpacing,
           textScaling: 'scaleToFit',
         }),
@@ -814,6 +952,7 @@ export function createSlideEditor(container) {
       elements.forEach(applyAutosize)
     }
     selectBox(elements[0]?.id || null)
+    resetHistory()
   }
 
   state.on('activeSlideIndex', loadSlide)
@@ -833,6 +972,8 @@ export function createSlideEditor(container) {
       slide.text = elements.map((e) => e.text).filter((s) => s.trim()).join('\n')
       slide.type = slideTypeSelect.value
       slide.templateId = templateSelect.value
+      if (transitionSelect.value) slide.transition = transitionSelect.value
+      else delete slide.transition
       // Preserve the existing background type + mediaPath (e.g. an imported
       // PPTX background image). Previously this forced type: 'color', which
       // silently dropped the imported bg image the first time the operator
@@ -875,6 +1016,7 @@ export function createSlideEditor(container) {
       document.removeEventListener('mouseup', onDragEnd)
       document.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('resize', updateScale)
+      clearTimeout(checkpointTimer)
       measurer.remove()
     },
   }

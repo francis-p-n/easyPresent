@@ -112,6 +112,14 @@ function renderLines(container, text) {
     const lineDiv = document.createElement('div');
     lineDiv.className = 'line';
 
+    // No chords on this line: one wrapping text run, not a column per word with a reserved chord row
+    if (lineText.indexOf('[') === -1) {
+      lineDiv.className = 'line plain';
+      lineDiv.textContent = lineText === '' ? ' ' : lineText;
+      container.appendChild(lineDiv);
+      return;
+    }
+
     // Regex to match [Chord]LyricWord
     // It splits by `[` and `]` to separate chords from lyrics.
     // E.g. "[C]Amazing " -> "", "C", "Amazing "

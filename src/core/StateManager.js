@@ -45,6 +45,9 @@ export class StateManager {
       isEditing: false,
       searchQuery: '',
       showLogo: false,
+      outputTransition: 'cut', // 'cut' | 'dissolve' | 'wipe' — audience screen, per-slide override wins
+      outputTransitionMs: 400,
+      hideAudienceSlide: false, // Look: keep slide text off the audience screen (stage/presenter unaffected)
       maxLinesPerSlide: 4,
 
       // Themes

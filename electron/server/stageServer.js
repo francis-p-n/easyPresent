@@ -2,7 +2,19 @@ const express = require('express');
 const http = require('http');
 const net = require('net');
 const { Server } = require('socket.io');
+const crypto = require('crypto');
 const { staticDirs } = require('../paths');
+
+// What a phone remote may ask the operator window to do — nothing else is relayed
+const REMOTE_COMMANDS = ['next', 'prev', 'clear', 'logo'];
+const MAX_BAD_PINS = 5; // per connection, then it is dropped
+
+function pinMatches(expected, given) {
+  if (!expected || typeof given !== 'string') return false;
+  const a = Buffer.from(expected);
+  const b = Buffer.from(given);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 let io;
 let currentSlideData = null;
@@ -56,7 +68,7 @@ function listenWithFallback(server, port, host, attemptsLeft = PORT_ATTEMPTS) {
  * `host` decides who can connect: 'localhost' (the default) keeps it to this computer's own
  * windows; '0.0.0.0' also lets phones and tablets on the same Wi-Fi in.
  */
-function startServer(port = 8080, host = 'localhost') {
+function startServer(port = 8080, host = 'localhost', remote = {}) {
   const app = express();
   const server = http.createServer(app);
   io = new Server(server, {
@@ -71,7 +83,7 @@ function startServer(port = 8080, host = 'localhost') {
   // Role views: /presenter (pastor: current + next + clock) and /pa (PA team:
   // output confirmation, cue list, timers). Both are read-only clients of the
   // same socket feed, so they work on any phone/laptop on the venue Wi-Fi.
-  for (const view of ['presenter', 'pa']) {
+  for (const view of ['presenter', 'pa', 'remote']) {
     for (const dir of staticDirs(view)) app.use('/' + view, express.static(dir));
   }
 
@@ -83,6 +95,23 @@ function startServer(port = 8080, host = 'localhost') {
     if (currentLiveState) {
       socket.emit('live-state', currentLiveState);
     }
+
+    // Phone remote: every command carries the PIN shown in the operator's Screens menu
+    let badPins = 0;
+    socket.on('remote-command', (msg, ack) => {
+      const reply = typeof ack === 'function' ? ack : () => {};
+      const pin = remote.getPin ? remote.getPin() : null;
+      if (!pinMatches(pin, msg && msg.pin)) {
+        if (++badPins >= MAX_BAD_PINS) socket.disconnect(true);
+        return reply({ ok: false, error: 'bad-pin' });
+      }
+      badPins = 0;
+      const cmd = msg && msg.cmd;
+      if (cmd === 'check') return reply({ ok: true });
+      if (!REMOTE_COMMANDS.includes(cmd) || !remote.onCommand) return reply({ ok: false, error: 'bad-command' });
+      remote.onCommand(cmd);
+      reply({ ok: true });
+    });
 
     socket.on('disconnect', () => {
       console.log('Stage display disconnected');
@@ -114,4 +143,4 @@ function startServer(port = 8080, host = 'localhost') {
   };
 }
 
-module.exports = { startServer };
+module.exports = { startServer, REMOTE_COMMANDS };

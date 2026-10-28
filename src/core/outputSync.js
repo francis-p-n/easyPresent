@@ -7,8 +7,24 @@
  * overlay, the logo/clear state, and the active theme's base styles.
  */
 
-/** Assemble the render payload from app state. */
-export function buildOutputPayload(layers, activeTheme, showLogo, timerValue) {
+export const TRANSITION_TYPES = ['cut', 'dissolve', 'wipe']
+
+/**
+ * Resolves the transition into the slide now going live: a per-slide override
+ * wins over the global default; unknown values degrade to a hard cut.
+ */
+export function resolveTransition(slide, globalType, globalMs) {
+  const type = TRANSITION_TYPES.includes(slide?.transition) ? slide.transition : globalType
+  const ms = Number.isFinite(globalMs) ? Math.min(3000, Math.max(0, globalMs)) : 400
+  return TRANSITION_TYPES.includes(type) && type !== 'cut' && ms > 0 ? { type, ms } : { type: 'cut', ms: 0 }
+}
+
+/**
+ * Assemble the render payload from app state.
+ * `options.hideSlide` is the audience "Look" that keeps slide text off this
+ * screen (e.g. during the sermon) without clearing it for the other outputs.
+ */
+export function buildOutputPayload(layers, activeTheme, showLogo, timerValue, options = {}) {
   const slideLayer = layers?.slide || { active: false, content: null }
   const messageLayer = layers?.message || { active: false, content: null }
 
@@ -36,6 +52,8 @@ export function buildOutputPayload(layers, activeTheme, showLogo, timerValue) {
       : null,
     message,
     showLogo: !!showLogo,
+    hideSlide: !!options.hideSlide,
+    transition: resolveTransition(content, options.transition, options.transitionMs),
     themeStyles: activeTheme?.styles || null
   }
 }
@@ -66,6 +84,8 @@ export function payloadSignature(payload) {
     imgMarker,
     payload.message,
     payload.showLogo,
+    payload.hideSlide,
+    payload.transition,
     payload.themeStyles
   ])
 }

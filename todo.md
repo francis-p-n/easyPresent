@@ -24,20 +24,24 @@
 - `[x]` Fixed "can't change fonts": the Slide Editor's Text Box panel had a Font Size control but no Font (family) control at all — there was no UI path to change a text box's font. Added one (`#prop-font-family`, with a `<datalist>` of common fonts including ones the PPTX importer produces, e.g. Calibri). Also fixed `SlideEditor.loadSlide()` silently discarding an imported PPTX slide's captured style (fontFamily/color/bold/italic/hAlign/lineSpacing) the moment it was opened for editing — it only ever applied generic template defaults. Root-caused a second, deeper bug behind the same symptom: neither `SlideView` (thumbnail grid) nor `PreviewPanel` (live output) had any reactive listener for theme changes at all — they only repainted incidentally when something else also changed, and even then `PreviewPanel`'s repaint-dedup signature keyed on the theme's *id*, not its style content, so editing the currently-active theme in place (the common case — one theme, tweak it) silently did nothing. Both panels now listen for `activeThemeId`/`themes` directly. 25 new tests; verified in a fully repackaged Windows build (not just dev) that font changes now show up on thumbnails and live output.
 - `[x]` Investigated "screen config doesn't work" — the Screens/audience-output toggle (see above) works correctly in both dev and a freshly packaged build; the earlier packaged-build test that seemed to show it and the theme editor failing was traced to stale `dist/` output from packaging without re-running `vite build` after a source change, not a product bug. Worth remembering for future packaged-build testing: `npm run build` (not `electron-builder` alone) to avoid this exact false alarm.
 
+## Completed (Oct 2026 pass)
+- `[x]` Stage display: chord-free lines render as one wrapping run (no one-word-per-row)
+- `[x]` Arrangement editor: drag-and-drop reordering, and Master's slide order is editable (persisted on Save)
+- `[x]` Undo/redo in the slide editor (Ctrl+Z / Ctrl+Shift+Z / buttons, 100 steps, coalesced typing)
+- `[x]` Audience output: multi-text-box layouts (already rendered), transitions (cut/dissolve/wipe) with per-slide override, "hide slide text on audience" Look
+- `[x]` Phone remote at `/remote` on the stage server (next/back/clear/logo), PIN-gated, PIN shown in the Screens menu
+- `[x]` PPTX import: underline kept, gradient backgrounds use the mean of their stops
+- `[x]` Imported media is deduplicated at the persistence boundary (`mediaStore.js`); app icon exists (`resources/icon.*`)
+
 ## Active Development
-- `[ ]` Audience output currently renders plain text only (no multi-text-box layout, no video backgrounds, no transitions) — see Future Ideas
-- `[ ]` Arrangement editor has no drag-and-drop reordering (up/down buttons only) and Master's own slide order can't be edited from within it
-- `[ ]` Store imported media as files on disk instead of inline data URLs (library size)
+- `[ ]` Audience output has no video backgrounds (needs the C++ DirectX addon wired in; `native/src/video_decoder.cc:137` TODO)
+- `[ ]` Store imported media as separate files on disk (dedupe done, still inline in library.json)
 - `[ ]` Rasterize SVG-based PPTX slides (shape-heavy templates import text-only)
-- `[ ]` PPTX-imported custom/decorative fonts (e.g. Canva typefaces) aren't embedded — imported `fontFamily` only renders correctly if that font happens to be installed locally
-- `[ ]` PPTX import doesn't yet read gradient fills, underline, or per-run color/size variation within a single text box (only a representative style per slide is extracted)
-- `[ ]` Stage display layout: long chord-free lyric lines render one word per row with large chord-space gaps (public/stage CSS) — needs a no-chords compact mode
-- `[ ]` App icon + code signing for distribution builds
+- `[ ]` PPTX custom/decorative fonts aren't embedded; per-run color/size variation within one text box not read
+- `[ ]` Code signing for distribution builds (needs a certificate)
+- `[ ]` Not yet verified in the real Electron app: transitions, Looks, phone remote, editor undo/redo (unit/integration tests only)
 
 ## Future Ideas
-- `[ ]` Remote-control web page served by the stage server (operate from phone/iPad on venue Wi-Fi)
-- `[ ]` Wire the C++ DirectX addon path into the render pipeline (video backgrounds)
-- `[ ]` Undo/redo for slide editing
-- `[ ]` Multi-text-box rendering on stage display and audience output (currently plain text)
-- `[ ]` Transitions (dissolve/cut/wipe) between live slides on the audience output, with per-slide override
-- `[ ]` Looks: per-output layer visibility (e.g. hide lyrics on audience during sermon, keep visible on stage/confidence monitor)
+- `[ ]` Multi-text-box rendering on the stage display (currently chart/text)
+- `[ ]` Per-output Looks beyond the audience slide toggle (message/props per output)
+- `[ ]` Remote: slide list / jump-to-slide

@@ -8,6 +8,7 @@
  * server starts is kept and replayed once it does.
  */
 const os = require('os')
+const crypto = require('crypto')
 const { startServer } = require('../server/stageServer')
 
 // EASYPRESENT_PORT lets a second instance (testing, or a second church PC) run alongside
@@ -31,6 +32,9 @@ function createStageHub() {
   let sharing = false
   let pendingSlide = null
   let pendingLiveState = null
+  let remoteHandler = null
+  const newPin = () => String(crypto.randomInt(0, 10000)).padStart(4, '0')
+  let pin = newPin() // gates the phone remote; changes every time sharing starts
 
   /**
    * Starts the server if needed. Resolves with the bound port (which can be
@@ -39,7 +43,10 @@ function createStageHub() {
    */
   function start() {
     if (!starting) {
-      server = startServer(port, sharing ? EVERYONE : LOCAL_ONLY)
+      server = startServer(port, sharing ? EVERYONE : LOCAL_ONLY, {
+        getPin: () => pin,
+        onCommand: (cmd) => remoteHandler && remoteHandler(cmd)
+      })
       if (pendingSlide) server.broadcastSlide(pendingSlide)
       if (pendingLiveState) server.broadcastLiveState(pendingLiveState)
       starting = Promise.resolve(server.ready)
@@ -68,7 +75,15 @@ function createStageHub() {
 
   return {
     start,
-    share: () => (sharing && server ? start() : restart(true)),
+    share: () => {
+      if (sharing && server) return start()
+      pin = newPin()
+      return restart(true)
+    },
+    /** Where phone-remote commands (next/prev/clear/logo) are delivered. */
+    setRemoteHandler(fn) {
+      remoteHandler = fn
+    },
     unshare: () => (sharing ? restart(false) : Promise.resolve(port)),
     url: (route = '') => `http://localhost:${port}${route}`,
     /** What the Screens menu shows: is it running, is it shared, and the addresses a phone would use. */
@@ -77,10 +92,12 @@ function createStageHub() {
         running: !!server,
         sharing: !!server && sharing,
         port,
+        pin,
         urls: sharing
           ? lanAddresses().map((ip) => ({
               presenter: `http://${ip}:${port}/presenter`,
-              pa: `http://${ip}:${port}/pa`
+              pa: `http://${ip}:${port}/pa`,
+              remote: `http://${ip}:${port}/remote`
             }))
           : []
       }

@@ -92,4 +92,22 @@ describe('stage display — renderSlide protocol', () => {
     expect(() => handlers['slide-update']({ text: '[C]Hello', chart, index: 0 })).not.toThrow()
     expect(() => handlers['slide-update']({ text: '', chart: [], index: -1 })).not.toThrow()
   })
+
+  it('renders chord-free lines as one plain run, chorded lines per word', () => {
+    const src = fs.readFileSync(path.join(__dirname, '../public/stage/app.js'), 'utf8')
+    const mk = () => ({ children: [], className: '', textContent: '', style: {},
+      appendChild(c) { this.children.push(c) }, addEventListener() {} })
+    const ctx = { io: () => ({ on() {} }), document: { getElementById: mk, createElement: mk, addEventListener() {} },
+      window: {}, console }
+    vm.createContext(ctx)
+    vm.runInContext(src, ctx)
+    const box = mk()
+    ctx.renderLines(box, 'Plain words here\n\n[C]Chorded line')
+    expect(box.children[0].className).toBe('line plain')
+    expect(box.children[0].textContent).toBe('Plain words here')
+    expect(box.children[0].children.length).toBe(0)
+    expect(box.children[1].className).toBe('line plain')
+    expect(box.children[2].className).toBe('line')
+    expect(box.children[2].children.length).toBeGreaterThan(0)
+  })
 })

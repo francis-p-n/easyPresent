@@ -16,7 +16,7 @@ function renderAudienceState(state, root, scale) {
   // showLogo/no-slide only blank the SLIDE — a message (e.g. "Starting
   // soon...") must still show over the black screen, same as the operator's
   // own Output Preview.
-  const showSlide = !state.showLogo && state.slide
+  const showSlide = !state.showLogo && !state.hideSlide && state.slide
   if (state.showLogo) renderLogo(root, scale)
 
   const theme = state.themeStyles || {}
@@ -59,6 +59,46 @@ function renderAudienceState(state, root, scale) {
   }
 
   renderMessage(state.message, root, scale)
+}
+
+// Paints a new frame, optionally easing out of the previous one. The old frame
+// is lifted into an overlay that fades (dissolve) or slides away (wipe) over
+// the freshly painted one, then removes itself. A cut just paints.
+function transitionAudience(state, root, scale, transition) {
+  const type = transition && transition.type
+  const ms = (transition && transition.ms) || 0
+  // A frame arriving mid-transition: drop the stale overlay instead of nesting it
+  root.querySelectorAll('.output-transition-old').forEach((n) => n.remove())
+  const hadFrame = root.children.length > 0
+  if ((type !== 'dissolve' && type !== 'wipe') || !ms || !hadFrame) {
+    renderAudienceState(state, root, scale)
+    return
+  }
+
+  const old = document.createElement('div')
+  old.className = 'output-transition-old'
+  Object.assign(old.style, {
+    position: 'absolute',
+    inset: '0',
+    zIndex: '1000',
+    pointerEvents: 'none',
+    overflow: 'hidden',
+    background: root.style.background
+  })
+  while (root.firstChild) old.appendChild(root.firstChild)
+
+  renderAudienceState(state, root, scale)
+  root.appendChild(old)
+
+  const done = () => old.parentNode && old.parentNode.removeChild(old)
+  const from = type === 'dissolve' ? { opacity: 1 } : { clipPath: 'inset(0 0 0 0)' }
+  const to = type === 'dissolve' ? { opacity: 0 } : { clipPath: 'inset(0 0 0 100%)' }
+  if (typeof old.animate === 'function') {
+    const anim = old.animate([from, to], { duration: ms, easing: 'ease-in-out', fill: 'forwards' })
+    anim.onfinish = done
+  }
+  // Backstop: also covers environments without the Web Animations API
+  setTimeout(done, ms + 50)
 }
 
 // PPTX <a:fillRect> insets (1000ths of a percent) → inner image box as % of the
@@ -158,6 +198,7 @@ function renderSlideLayout(slide, root, scale) {
       color: el.color || '#ffffff',
       fontWeight: el.bold ? '700' : '400',
       fontStyle: el.italic ? 'italic' : 'normal',
+      textDecoration: el.underline ? 'underline' : 'none',
       textAlign: ['left', 'center', 'right'].includes(el.hAlign) ? el.hAlign : 'left',
       lineHeight: String(el.lineSpacing || 1.2),
       whiteSpace: 'pre-wrap',
@@ -233,7 +274,7 @@ function renderMessage(message, root, scale) {
 }
 
 // eslint-disable-next-line no-unused-vars -- consumed by audience.html glue script
-if (typeof module !== 'undefined' && module.exports) module.exports = { renderAudienceState }
+if (typeof module !== 'undefined' && module.exports) module.exports = { renderAudienceState, transitionAudience }
 
 // The logo screen. With no custom logo it must still look deliberate, not like a dead
 // projector, so it shows a simple mark and the app name.

@@ -49,3 +49,22 @@ describe('stageHub sharing', () => {
     expect(await reachable('localhost', hub.status().port)).toBe(true)
   })
 })
+
+describe('stageHub phone remote', () => {
+  it('reports a 4-digit PIN and delivers PIN-checked commands to the handler', async () => {
+    const { io: Client } = await import('socket.io-client')
+    const port = await hub.start()
+    const pin = hub.status().pin
+    expect(pin).toMatch(/^\d{4}$/)
+
+    const got = []
+    hub.setRemoteHandler((cmd) => got.push(cmd))
+    const c = Client(`http://localhost:${port}`)
+    await new Promise((resolve) => c.on('connect', resolve))
+    const ask = (msg) => new Promise((resolve) => c.emit('remote-command', msg, resolve))
+    expect((await ask({ cmd: 'next', pin: pin === '0000' ? '1111' : '0000' })).ok).toBe(false)
+    expect((await ask({ cmd: 'prev', pin })).ok).toBe(true)
+    expect(got).toEqual(['prev'])
+    c.disconnect()
+  })
+})

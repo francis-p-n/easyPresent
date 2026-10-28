@@ -108,9 +108,23 @@ export class Toolbar {
         ${roleRow('audience', 'Audience', 'Congregation screen / projector')}
         ${roleRow('presenter', 'Presenter', 'Pastor: current + next slide, clock')}
         ${roleRow('pa', 'PA Team', 'Sound desk: output check, cues, timers')}
+        <div style="padding:8px 6px 6px;border-top:1px solid var(--border-color);margin-top:4px;display:flex;flex-direction:column;gap:6px;">
+          <div style="font-size:12px;font-weight:600;">Audience look</div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+            <input type="checkbox" id="screens-hide-slide" /> Hide slide text on audience (stage keeps it)
+          </label>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+            Transition
+            <select id="screens-transition" class="input" style="flex:1;">
+              <option value="cut">Cut</option>
+              <option value="dissolve">Dissolve</option>
+              <option value="wipe">Wipe</option>
+            </select>
+          </div>
+        </div>
         <div style="padding:8px 6px 6px;border-top:1px solid var(--border-color);margin-top:4px;">
           <div style="font-size:12px;font-weight:600;">Phones &amp; tablets</div>
-          <div id="screens-share-note" style="font-size:11px;opacity:.65;margin:2px 0 6px;">Let people on the same Wi-Fi open the Presenter and PA screens in a web browser. They are view-only, but anyone on that Wi-Fi can open them. Off until you start it.</div>
+          <div id="screens-share-note" style="font-size:11px;opacity:.65;margin:2px 0 6px;">Let people on the same Wi-Fi open the Presenter and PA screens in a web browser. Presenter and PA are view-only, but anyone on that Wi-Fi can open them. The Remote page can advance slides and needs the PIN shown here. Off until you start it.</div>
           <button class="btn" id="screens-share-btn" style="width:100%;">Start sharing</button>
           <div id="screens-share-urls" style="font-size:11px;margin-top:6px;word-break:break-all;"></div>
         </div>
@@ -225,6 +239,18 @@ export class Toolbar {
       state.set('searchQuery', e.target.value)
     })
 
+    // Audience look + transition
+    const hideSlideBox = this.container.querySelector('#screens-hide-slide')
+    const transitionSel = this.container.querySelector('#screens-transition')
+    if (hideSlideBox) {
+      hideSlideBox.checked = !!state.get('hideAudienceSlide')
+      hideSlideBox.addEventListener('change', () => state.set('hideAudienceSlide', hideSlideBox.checked))
+    }
+    if (transitionSel) {
+      transitionSel.value = state.get('outputTransition') || 'cut'
+      transitionSel.addEventListener('change', () => state.set('outputTransition', transitionSel.value))
+    }
+
     // Library backup menu
     const libraryBtn = this.container.querySelector('#toolbar-library-btn')
     const libraryMenu = this.container.querySelector('#toolbar-library-menu')
@@ -331,8 +357,16 @@ export class Toolbar {
       shareBtn.textContent = 'Stop sharing'
       const addresses = status.urls || []
       if (!addresses.length) shareUrls.textContent = 'No Wi-Fi/LAN connection found on this computer.'
+      if (addresses.length && status.pin) {
+        const pin = document.createElement('div')
+        pin.id = 'screens-remote-pin'
+        pin.style.cssText = 'font-weight:600;margin-bottom:4px;'
+        pin.textContent = `Remote PIN: ${status.pin}`
+        shareUrls.appendChild(pin)
+      }
       for (const u of addresses) {
-        for (const [label, href] of [['Presenter', u.presenter], ['PA', u.pa]]) {
+        for (const [label, href] of [['Presenter', u.presenter], ['PA', u.pa], ['Remote', u.remote]]) {
+          if (!href) continue
           const line = document.createElement('div')
           line.textContent = `${label}: ${href}`
           shareUrls.appendChild(line)

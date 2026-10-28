@@ -223,3 +223,62 @@ describe('SlideEditor — background image', () => {
     expect(bg.mediaPath).toMatch(/^data:image\/svg\+xml/)
   })
 })
+
+describe('SlideEditor — undo / redo', () => {
+  const undoBtn = () => container.querySelector('#editor-undo-btn')
+  const redoBtn = () => container.querySelector('#editor-redo-btn')
+  const boxCount = () => container.querySelectorAll('.editor-textbox').length
+
+  it('starts with nothing to undo or redo', () => {
+    state.set('activeSlideIndex', 0)
+    expect(undoBtn().disabled).toBe(true)
+    expect(redoBtn().disabled).toBe(true)
+  })
+
+  it('undoes and redoes adding a text box', () => {
+    state.set('activeSlideIndex', 0)
+    const before = boxCount()
+    container.querySelector('#add-textbox-btn').click()
+    expect(boxCount()).toBe(before + 1)
+
+    undoBtn().click()
+    expect(boxCount()).toBe(before)
+    expect(redoBtn().disabled).toBe(false)
+
+    redoBtn().click()
+    expect(boxCount()).toBe(before + 1)
+  })
+
+  it('undoes a font change and a new edit clears the redo branch', async () => {
+    state.set('activeSlideIndex', 0)
+    fontInput().value = 'Georgia'
+    fontInput().dispatchEvent(new window.Event('input'))
+    undoBtn().click() // checkpoints the pending edit, then steps back
+    expect(fontInput().value).toBe('Inter')
+    expect(redoBtn().disabled).toBe(false)
+
+    container.querySelector('#add-textbox-btn').click()
+    expect(redoBtn().disabled).toBe(true)
+  })
+
+  it('Ctrl+Z / Ctrl+Shift+Z drive undo and redo from the keyboard', () => {
+    state.set('activeSlideIndex', 0)
+    state.set('isEditing', true)
+    const before = boxCount()
+    container.querySelector('#add-textbox-btn').click()
+    document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }))
+    expect(boxCount()).toBe(before)
+    document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'z', ctrlKey: true, shiftKey: true, bubbles: true }))
+    expect(boxCount()).toBe(before + 1)
+    state.set('isEditing', false)
+  })
+
+  it('loading another slide resets the history', () => {
+    state.set('activeSlideIndex', 0)
+    container.querySelector('#add-textbox-btn').click()
+    expect(undoBtn().disabled).toBe(false)
+    state.set('selectedPresentation', makePres({ slides: [{ id: 's1', text: 'Hello', type: 'worship' }, { id: 's2', text: 'B' }] }))
+    state.set('activeSlideIndex', 1)
+    expect(undoBtn().disabled).toBe(true)
+  })
+})

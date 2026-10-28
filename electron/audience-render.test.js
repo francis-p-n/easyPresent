@@ -127,3 +127,59 @@ describe('renderAudienceState — re-render clears previous frame', () => {
     expect(root.querySelector('#output-text').textContent).toBe('second')
   })
 })
+
+describe('renderAudienceState — hide-slide look', () => {
+  it('keeps slide text off the screen but still shows the message', () => {
+    const root = makeRoot()
+    renderAudienceState({ hideSlide: true, slide: { text: 'lyrics' }, message: 'Welcome' }, root, 1)
+    expect(root.textContent).not.toContain('lyrics')
+    expect(root.textContent).toContain('Welcome')
+    expect(root.querySelector('#output-logo')).toBeNull()
+  })
+})
+
+describe('transitionAudience', () => {
+  let transitionAudience
+  beforeAll(() => {
+    const src = fs.readFileSync(path.join(__dirname, '../public/output/audience-render.js'), 'utf8')
+    const sandbox = { document, module: { exports: {} }, console, setTimeout }
+    vm.createContext(sandbox)
+    vm.runInContext(src, sandbox)
+    transitionAudience = sandbox.transitionAudience
+  })
+
+  it('cuts straight to the new frame when the type is cut', () => {
+    const root = makeRoot()
+    transitionAudience({ slide: { text: 'A' } }, root, 1, { type: 'cut', ms: 400 })
+    transitionAudience({ slide: { text: 'B' } }, root, 1, { type: 'cut', ms: 400 })
+    expect(root.querySelector('.output-transition-old')).toBeNull()
+    expect(root.textContent).toBe('B')
+  })
+
+  it('does not transition from an empty screen', () => {
+    const root = makeRoot()
+    transitionAudience({ slide: { text: 'A' } }, root, 1, { type: 'dissolve', ms: 400 })
+    expect(root.querySelector('.output-transition-old')).toBeNull()
+  })
+
+  it('overlays the previous frame during a dissolve, then removes it', async () => {
+    const root = makeRoot()
+    transitionAudience({ slide: { text: 'A' } }, root, 1, { type: 'cut', ms: 0 })
+    transitionAudience({ slide: { text: 'B' } }, root, 1, { type: 'dissolve', ms: 20 })
+    const old = root.querySelector('.output-transition-old')
+    expect(old).not.toBeNull()
+    expect(old.textContent).toBe('A')
+    expect(root.querySelector('#output-text').textContent).toBe('B')
+    await new Promise((r) => setTimeout(r, 120))
+    expect(root.querySelector('.output-transition-old')).toBeNull()
+  })
+
+  it('a new frame mid-transition drops the stale overlay (no stacking)', () => {
+    const root = makeRoot()
+    transitionAudience({ slide: { text: 'A' } }, root, 1, { type: 'cut', ms: 0 })
+    transitionAudience({ slide: { text: 'B' } }, root, 1, { type: 'wipe', ms: 5000 })
+    transitionAudience({ slide: { text: 'C' } }, root, 1, { type: 'wipe', ms: 5000 })
+    expect(root.querySelectorAll('.output-transition-old')).toHaveLength(1)
+    expect(root.querySelector('.output-transition-old').textContent).toBe('B')
+  })
+})

@@ -141,3 +141,33 @@ describe('payloadSignature', () => {
     expect(sigA).not.toBe(sigB)
   })
 })
+
+describe('transition + audience look', () => {
+  const live = (extra = {}) => ({
+    slide: { active: true, content: { text: 'Hi', ...extra } },
+    message: { active: false, content: null }
+  })
+
+  it('uses the global transition when the slide has no override', () => {
+    const p = buildOutputPayload(live(), theme, false, '00:00', { transition: 'dissolve', transitionMs: 500 })
+    expect(p.transition).toEqual({ type: 'dissolve', ms: 500 })
+  })
+
+  it('lets a per-slide transition override the global one', () => {
+    const p = buildOutputPayload(live({ transition: 'wipe' }), theme, false, '00:00', { transition: 'cut', transitionMs: 300 })
+    expect(p.transition).toEqual({ type: 'wipe', ms: 300 })
+  })
+
+  it('degrades unknown or zero-length transitions to a cut', () => {
+    expect(buildOutputPayload(live(), theme, false, '', { transition: 'spin', transitionMs: 400 }).transition.type).toBe('cut')
+    expect(buildOutputPayload(live(), theme, false, '', { transition: 'dissolve', transitionMs: 0 }).transition.type).toBe('cut')
+    expect(buildOutputPayload(live(), theme, false, '00:00').transition.type).toBe('cut')
+  })
+
+  it('carries the hide-slide look and changes the signature when it flips', () => {
+    const a = buildOutputPayload(live(), theme, false, '00:00', { hideSlide: false })
+    const b = buildOutputPayload(live(), theme, false, '00:00', { hideSlide: true })
+    expect(b.hideSlide).toBe(true)
+    expect(payloadSignature(a)).not.toBe(payloadSignature(b))
+  })
+})

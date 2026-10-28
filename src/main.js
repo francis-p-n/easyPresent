@@ -157,7 +157,12 @@ class App {
         state.get('layers'),
         activeTheme,
         state.get('showLogo'),
-        state.get('timer_main')
+        state.get('timer_main'),
+        {
+          hideSlide: state.get('hideAudienceSlide'),
+          transition: state.get('outputTransition'),
+          transitionMs: state.get('outputTransitionMs')
+        }
       )
       const sig = payloadSignature(payload)
       if (sig === this._lastAudienceSig) return
@@ -166,8 +171,21 @@ class App {
     }
     state.on('layers', syncAudience)
     state.on('showLogo', syncAudience)
+    state.on('hideAudienceSlide', syncAudience)
+    state.on('outputTransition', syncAudience)
+    state.on('outputTransitionMs', syncAudience)
     state.on('activeThemeId', syncAudience)
     state.on('timer_main', syncAudience) // live {timer} token in messages
+
+    // Phone remote (web page served by the stage server): the same actions as the keyboard shortcuts
+    if (window.electronAPI && window.electronAPI.onRemoteCommand) {
+      window.electronAPI.onRemoteCommand((cmd) => {
+        if (cmd === 'next') goLiveNext()
+        else if (cmd === 'prev') goLivePrev()
+        else if (cmd === 'clear') document.getElementById('clear-btn-all')?.click()
+        else if (cmd === 'logo') document.getElementById('clear-btn-logo')?.click()
+      })
+    }
 
     // Feed the presenter / PA views (current + next slide, clock, message).
     // Text-only, so a cheap JSON signature is enough to dedupe.

@@ -34,7 +34,7 @@ describe('ArrangementEditor — opening', () => {
     const tabs = [...panel().querySelectorAll('#arr-tabs button')]
     // Master tab + the "new arrangement" (+) button
     expect(tabs.some((b) => b.textContent === 'Master')).toBe(true)
-    expect(panel().querySelector('#arr-sequence').textContent).toContain('Master reflects your slide order')
+    expect(panel().querySelector('#arr-sequence').textContent).toContain('Master is your stored slide order')
   })
 
   it('lists every master slide in Add Slide', () => {
@@ -112,10 +112,29 @@ describe('ArrangementEditor — building a custom arrangement', () => {
     expect(sequenceRows()[1].textContent).toContain('Chorus') // unchanged
   })
 
-  it('Master cannot be edited (no add/remove/reorder controls)', () => {
+  it('Master has no add/remove controls', () => {
     arrangementEditor.open('pres-1')
-    // Master tab is already active on open
     expect(panel().querySelectorAll('#arr-sequence [title="Remove"]')).toHaveLength(0)
+    availableButtons()[0].click()
+    expect(panel().querySelectorAll('#arr-sequence [draggable="true"]')).toHaveLength(4)
+  })
+
+  it('drag-and-drop moves a row to the dropped position', () => {
+    arrangementEditor.open('pres-1')
+    panel().querySelector('[title="New arrangement"]').click()
+    ;[0, 1, 2].forEach((i) => availableButtons()[i].click()) // V1, C, V2
+    const rows = () => [...panel().querySelectorAll('#arr-sequence [draggable="true"]')]
+    rows()[0].dispatchEvent(new window.Event('dragstart', { bubbles: true }))
+    rows()[2].dispatchEvent(new window.Event('drop', { bubbles: true, cancelable: true }))
+    expect(rows().map((r) => r.textContent.replace(/\s+/g, ' ').trim().replace(/^\d+ /, ''))).toEqual(['Chorus', 'Verse 2', 'Verse 1'])
+  })
+
+  it('reordering Master and saving rewrites the stored slide order', () => {
+    arrangementEditor.open('pres-1')
+    const rows = () => [...panel().querySelectorAll('#arr-sequence [draggable="true"]')]
+    rows()[3].querySelector('[title="Move up"]').click() // Bridge above Verse 2
+    panel().querySelector('#arr-save').click()
+    expect(state.get('presentations')[0].slides.map((s) => s.id)).toEqual(['s1', 's2', 's4', 's3'])
   })
 })
 
@@ -138,7 +157,7 @@ describe('ArrangementEditor — managing arrangements', () => {
     panel().querySelector('[title="New arrangement"]').click()
     panel().querySelector('[title="Delete arrangement"]').click()
 
-    expect(panel().querySelector('#arr-sequence').textContent).toContain('Master reflects your slide order')
+    expect(panel().querySelector('#arr-sequence').textContent).toContain('Master is your stored slide order')
   })
 
   it('Master has no rename/delete controls', () => {

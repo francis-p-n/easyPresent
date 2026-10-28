@@ -26,6 +26,7 @@ export class ArrangementEditor {
     this.pres = null
     this.workingArrangements = []
     this.workingActiveId = MASTER_ARRANGEMENT_ID
+    this.workingMasterOrder = []
   }
 
   open(presId) {
@@ -34,6 +35,7 @@ export class ArrangementEditor {
     this.pres = pres
     this.workingArrangements = getArrangements(pres).map((a) => ({ ...a, sequence: [...a.sequence] }))
     this.workingActiveId = getActiveArrangementId(pres)
+    this.workingMasterOrder = pres.slides.map((s) => s.id)
 
     if (this.overlay) this.close()
 
@@ -223,11 +225,11 @@ export class ArrangementEditor {
       const note = document.createElement('div')
       note.style.cssText = 'font-size:12px;color:var(--text-secondary);padding:8px;'
       note.textContent =
-        'Master reflects your slide order as stored. Create a new arrangement to build a custom sequence with repeats.'
+        'Master is your stored slide order: drag rows to reorder. Create a new arrangement to build a custom sequence with repeats.'
       container.appendChild(note)
     }
 
-    const sequence = isMaster ? this.pres.slides.map((s) => s.id) : arr.sequence
+    const sequence = isMaster ? this.workingMasterOrder : arr.sequence
     if (sequence.length === 0) {
       const empty = document.createElement('div')
       empty.style.cssText = 'font-size:12px;color:var(--text-secondary);padding:8px;text-align:center;'
@@ -244,14 +246,31 @@ export class ArrangementEditor {
         <span style="color:var(--text-secondary);min-width:18px;">${i + 1}</span>
         <span style="flex:1;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._esc(slide?.label || slide?.text?.split('\n')[0] || '(missing slide)')}</span>
       `
-      if (!isMaster) {
-        const up = this._iconBtn('chevronUp', 'Move up', () => this._move(i, -1))
-        const down = this._iconBtn('chevronDown', 'Move down', () => this._move(i, 1))
-        const remove = this._iconBtn('x', 'Remove', () => this._removeAt(i))
-        row.appendChild(up)
-        row.appendChild(down)
-        row.appendChild(remove)
-      }
+      row.draggable = true
+      row.dataset.index = String(i)
+      row.style.cursor = 'grab'
+      row.addEventListener('dragstart', (e) => {
+        this._dragIndex = i
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move'
+          e.dataTransfer.setData('text/plain', String(i))
+        }
+      })
+      row.addEventListener('dragover', (e) => {
+        e.preventDefault()
+        row.style.outline = '2px solid var(--primary-color)'
+      })
+      row.addEventListener('dragleave', () => (row.style.outline = ''))
+      row.addEventListener('drop', (e) => {
+        e.preventDefault()
+        row.style.outline = ''
+        const from = this._dragIndex
+        this._dragIndex = null
+        if (typeof from === 'number') this._reorder(from, i)
+      })
+      row.appendChild(this._iconBtn('chevronUp', 'Move up', () => this._move(i, -1)))
+      row.appendChild(this._iconBtn('chevronDown', 'Move down', () => this._move(i, 1)))
+      if (!isMaster) row.appendChild(this._iconBtn('x', 'Remove', () => this._removeAt(i)))
       container.appendChild(row)
     })
   }
@@ -297,13 +316,20 @@ export class ArrangementEditor {
   }
 
   _move(index, delta) {
+    this._reorder(index, index + delta)
+  }
+
+  /** Moves the entry at `from` to position `to` (Master reorders the stored slide order). */
+  _reorder(from, to) {
     const arr = this._activeArrangement()
-    if (!arr || arr.id === MASTER_ARRANGEMENT_ID) return
-    const target = index + delta
-    if (target < 0 || target >= arr.sequence.length) return
-    const next = [...arr.sequence]
-    ;[next[index], next[target]] = [next[target], next[index]]
-    this.workingArrangements = setArrangementSequence(this.workingArrangements, arr.id, next)
+    const isMaster = !arr || arr.id === MASTER_ARRANGEMENT_ID
+    const list = isMaster ? this.workingMasterOrder : arr.sequence
+    if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return
+    const next = [...list]
+    const [item] = next.splice(from, 1)
+    next.splice(to, 0, item)
+    if (isMaster) this.workingMasterOrder = next
+    else this.workingArrangements = setArrangementSequence(this.workingArrangements, arr.id, next)
     this._renderSequence()
   }
 
@@ -315,6 +341,9 @@ export class ArrangementEditor {
     state.updatePresentation(this.pres.id, (p) => {
       p.arrangements = toStore
       p.activeArrangementId = this.workingActiveId
+      const byId = new Map(p.slides.map((sl) => [sl.id, sl]))
+      const reordered = this.workingMasterOrder.map((id) => byId.get(id)).filter(Boolean)
+      if (reordered.length === p.slides.length) p.slides = reordered
     })
 
     const selected = state.get('selectedPresentation')

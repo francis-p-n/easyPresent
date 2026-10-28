@@ -1,7 +1,13 @@
 const { ipcMain } = require('electron')
 
 /** Wires the renderer's screen controls and live feeds to the display windows. */
-function registerDisplayIpc({ displays, stageHub }) {
+function registerDisplayIpc({ displays, stageHub, getMainWindow }) {
+  // Phone remote commands go to the operator window, which owns all live state
+  stageHub.setRemoteHandler?.((cmd) => {
+    const win = getMainWindow && getMainWindow()
+    if (win && !win.isDestroyed()) win.webContents.send('remote-command', cmd)
+  })
+
   ipcMain.handle('list-displays', () => displays.listDisplays())
   ipcMain.handle('open-displays', () => displays.openRoles())
   ipcMain.handle('toggle-display', (event, role, displayId) => displays.toggle(role, displayId))

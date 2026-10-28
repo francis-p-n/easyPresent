@@ -128,7 +128,7 @@ export function renderSlideLayout(container, { elements = [], images = [] } = {}
       `font-family:"${el.fontFamily || 'Inter'}", sans-serif;` +
       `font-size:${wpct(el.fontSize || 48)}cqw;` +
       `color:${el.color || '#ffffff'};` +
-      `font-weight:${el.bold ? 700 : 400};font-style:${el.italic ? 'italic' : 'normal'};` +
+      `font-weight:${el.bold ? 700 : 400};font-style:${el.italic ? 'italic' : 'normal'};text-decoration:${el.underline ? 'underline' : 'none'};` +
       `text-align:${['left', 'center', 'right'].includes(el.hAlign) ? el.hAlign : 'left'};` +
       `line-height:${el.lineSpacing || 1.2};` +
       `white-space:pre-wrap;word-break:break-word;`

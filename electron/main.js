@@ -20,7 +20,7 @@ app.whenReady().then(() => {
   registerPptxIpc({ getMainWindow })
   const songDb = registerSongsIpc({ userDataDir, getMainWindow })
   registerBibleIpc({ userDataDir, getMainWindow })
-  registerDisplayIpc({ displays, stageHub })
+  registerDisplayIpc({ displays, stageHub, getMainWindow })
 
   mainWindow = createMainWindow()
 

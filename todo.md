@@ -35,6 +35,8 @@
 
 - `[x]` Imported media is stored as binary files in userData/media (content-addressed); library.json and its backups stay small
 
+- `[x]` Customization (no presets): save any slide as your own template (Save in the editor, listed under "My templates"), any number of game teams with configurable points per tap and countdown shortcuts, per-slide auto-advance with presentation loop, and choose which Show Controls tabs appear (the ⋯ button)
+
 ## Active Development
 - `[ ]` Audience output has no video backgrounds (needs the C++ DirectX addon wired in; `native/src/video_decoder.cc:137` TODO)
 - `[ ]` Rasterize SVG-based PPTX slides (shape-heavy templates import text-only)
@@ -43,6 +45,7 @@
 - `[ ]` Not yet verified in the real Electron app: transitions, Looks, phone remote, editor undo/redo (unit/integration tests only)
 
 ## Future Ideas
+- `[ ]` More customization: user-defined keyboard shortcuts, saved workspace layouts, custom remote buttons, per-presentation default theme/transition
 - `[ ]` Multi-text-box rendering on the stage display (currently chart/text)
 - `[ ]` Per-output Looks beyond the audience slide toggle (message/props per output)
 - `[ ]` Remote: slide list / jump-to-slide

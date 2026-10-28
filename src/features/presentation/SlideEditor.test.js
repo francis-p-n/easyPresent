@@ -282,3 +282,116 @@ describe('SlideEditor — undo / redo', () => {
     expect(undoBtn().disabled).toBe(true)
   })
 })
+
+describe('SlideEditor — saved templates', () => {
+  const nameInput = () => container.querySelector('#prop-template-name')
+  const saveBtn = () => container.querySelector('#save-template-btn')
+  const deleteBtn = () => container.querySelector('#delete-template-btn')
+  const select = () => container.querySelector('#prop-template')
+
+  beforeEach(() => state.set('userTemplates', []))
+
+  it('refuses to save without a name', () => {
+    state.set('activeSlideIndex', 0)
+    saveBtn().click()
+    expect(state.get('userTemplates')).toHaveLength(0)
+  })
+
+  it('saves the slide as a template, lists it, and selects it', () => {
+    state.set('activeSlideIndex', 0)
+    fontInput().value = 'Georgia'
+    fontInput().dispatchEvent(new window.Event('input'))
+    nameInput().value = 'Georgia centre'
+    saveBtn().click()
+
+    const saved = state.get('userTemplates')
+    expect(saved).toHaveLength(1)
+    expect(saved[0].label).toBe('Georgia centre')
+    expect(saved[0].boxes[0].fontFamily).toBe('Georgia')
+    expect([...select().options].some((o) => o.textContent === 'Georgia centre')).toBe(true)
+    expect(select().value).toBe('user:' + saved[0].id)
+    expect(deleteBtn().disabled).toBe(false)
+  })
+
+  it('stamping a saved template onto another slide brings its boxes and keeps that slide’s text', () => {
+    state.set('activeSlideIndex', 0)
+    container.querySelector('#add-textbox-btn').click() // two boxes
+    nameInput().value = 'Two boxes'
+    saveBtn().click()
+
+    state.set('selectedPresentation', makePres({ slides: [{ id: 's9', text: 'Other words', type: 'worship' }] }))
+    state.set('activeSlideIndex', 0)
+    expect(container.querySelectorAll('.editor-textbox')).toHaveLength(1)
+    select().value = 'user:' + state.get('userTemplates')[0].id
+    select().dispatchEvent(new window.Event('change'))
+    expect(container.querySelectorAll('.editor-textbox')).toHaveLength(2)
+    expect(container.textContent).toContain('Other words')
+  })
+
+  it('deleting the selected template removes it and falls back to Freeform', () => {
+    state.set('activeSlideIndex', 0)
+    nameInput().value = 'Temp'
+    saveBtn().click()
+    deleteBtn().click()
+    expect(state.get('userTemplates')).toHaveLength(0)
+    expect(select().value).toBe('freeform')
+    expect(deleteBtn().disabled).toBe(true)
+  })
+
+  it('built-in templates cannot be deleted', () => {
+    state.set('activeSlideIndex', 0)
+    select().value = 'worship'
+    select().dispatchEvent(new window.Event('change'))
+    expect(deleteBtn().disabled).toBe(true)
+  })
+
+  it('a slide saved with a template reopens with it selected', () => {
+    state.set('activeSlideIndex', 0)
+    nameInput().value = 'Keep me'
+    saveBtn().click()
+    const id = 'user:' + state.get('userTemplates')[0].id
+    container.querySelector('#editor-save-btn').click()
+    state.set('activeSlideIndex', -1)
+    state.set('activeSlideIndex', 0)
+    expect(select().value).toBe(id)
+  })
+})
+
+describe('SlideEditor — auto-advance', () => {
+  const secs = () => container.querySelector('#prop-auto-advance')
+  const loop = () => container.querySelector('#prop-loop')
+  const save = () => container.querySelector('#editor-save-btn').click()
+
+  it('saves a per-slide time and the presentation loop flag', () => {
+    state.set('activeSlideIndex', 0)
+    secs().value = '12'
+    loop().checked = true
+    save()
+    const pres = state.get('selectedPresentation')
+    expect(pres.slides[0].autoAdvanceSec).toBe(12)
+    expect(pres.loop).toBe(true)
+  })
+
+  it('clears them again when set back to 0 / unchecked, and clamps nonsense', () => {
+    state.set('activeSlideIndex', 0)
+    secs().value = '999999'
+    save()
+    expect(state.get('selectedPresentation').slides[0].autoAdvanceSec).toBe(3600)
+    secs().value = '0'
+    loop().checked = false
+    save()
+    expect(state.get('selectedPresentation').slides[0].autoAdvanceSec).toBeUndefined()
+    expect(state.get('selectedPresentation').loop).toBeUndefined()
+  })
+
+  it('reopens showing what was saved', () => {
+    state.set('activeSlideIndex', 0)
+    secs().value = '7'
+    loop().checked = true
+    save()
+    state.set('activeSlideIndex', -1)
+    state.set('activeSlideIndex', 0)
+    expect(secs().value).toBe('7')
+    expect(loop().checked).toBe(true)
+  })
+})

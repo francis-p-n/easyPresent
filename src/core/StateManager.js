@@ -45,6 +45,8 @@ export class StateManager {
       isEditing: false,
       searchQuery: '',
       showLogo: false,
+      hiddenControlTabs: [], // Show Controls tabs this operator has switched off (kept per device)
+      userTemplates: [], // slide layouts the operator saved from the editor (see userTemplates.js)
       outputTransition: 'cut', // 'cut' | 'dissolve' | 'wipe' — audience screen, per-slide override wins
       outputTransitionMs: 400,
       hideAudienceSlide: false, // Look: keep slide text off the audience screen (stage/presenter unaffected)

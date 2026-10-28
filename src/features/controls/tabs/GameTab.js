@@ -1,29 +1,31 @@
 import { state } from '../../../core/StateManager.js'
+import {
+  normalizeGame,
+  parsePresets,
+  addTeam,
+  removeTeam,
+  bumpScore,
+  resetScores,
+  scoresText,
+  MAX_TEAMS
+} from './gameModel.js'
+
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /**
- * GameTab — Live camp game controls: team scores, trivia questions, countdown timer.
+ * GameTab — Live game controls: any number of teams with their own names and colours,
+ * a configurable points-per-tap, trivia questions, and a countdown with your own shortcuts.
  */
 export function renderGame(container) {
   const saved = (() => {
     try { return JSON.parse(localStorage.getItem('campGameState')) } catch { return null }
   })()
 
-  const gameState = saved || {
-    teamA: { name: 'Team A', score: 0, color: '#ef4444' },
-    teamB: { name: 'Team B', score: 0, color: '#3b82f6' },
-    teamC: { name: 'Team C', score: 0, color: '#22c55e' },
-    activeTeams: 2,
-    countdown: 30,
-    countdownRunning: false,
-    triviaQuestion: '',
-    triviaAnswer: '',
-    mode: 'scores',
-  }
-
+  let game = normalizeGame(saved)
   let countdownInterval = null
 
   function save() {
-    try { localStorage.setItem('campGameState', JSON.stringify(gameState)) } catch { /* quota */ }
+    try { localStorage.setItem('campGameState', JSON.stringify(game)) } catch { /* quota */ }
   }
 
   function broadcastText(text) {
@@ -32,48 +34,38 @@ export function renderGame(container) {
     state.set('layers', layers)
   }
 
-  function getTeams() {
-    return [gameState.teamA, gameState.teamB, gameState.teamC].slice(0, gameState.activeTeams)
-  }
-
-  function teamKey(i) { return ['teamA', 'teamB', 'teamC'][i] }
+  const set = (next) => { game = next; save(); render() }
 
   function render() {
-    const teams = getTeams()
-
-    const modeBar = ['scores', 'trivia', 'countdown'].map(m => {
-      const active = gameState.mode === m
+    const modeBar = ['scores', 'trivia', 'countdown'].map((m) => {
+      const active = game.mode === m
       return `<button data-mode="${m}" style="flex:1;padding:5px;border-radius:4px;border:none;cursor:pointer;background:${active ? 'var(--accent-blue)' : 'transparent'};color:${active ? 'white' : 'var(--text-secondary)'};font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">${m}</button>`
     }).join('')
 
     let modeContent = ''
 
-    if (gameState.mode === 'scores') {
-      const teamCountBtns = [2, 3].map(n => {
-        const active = gameState.activeTeams === n
-        return `<button data-teams="${n}" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border-color);cursor:pointer;background:${active ? 'var(--accent-blue)' : 'transparent'};color:${active ? 'white' : 'var(--text-secondary)'};font-size:11px;">${n}</button>`
-      }).join('')
-
-      const scoreCards = teams.map((team, i) => {
-        const key = teamKey(i)
-        return `
-          <div style="background:var(--bg-active);border-radius:8px;padding:10px;border-left:4px solid ${team.color};">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-              <input data-team-name="${key}" value="${team.name.replace(/"/g, '&quot;')}" style="background:transparent;border:none;color:var(--text-primary);font-weight:600;font-size:13px;width:120px;outline:none;border-bottom:1px solid var(--border-color);" />
-              <input type="color" data-team-color="${key}" value="${team.color}" style="width:28px;height:28px;border-radius:4px;border:none;cursor:pointer;" />
+    if (game.mode === 'scores') {
+      const scoreCards = game.teams.map((team) => `
+          <div data-team="${esc(team.id)}" style="background:var(--bg-active);border-radius:8px;padding:10px;border-left:4px solid ${team.color};">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px;">
+              <input data-team-name="${esc(team.id)}" value="${esc(team.name)}" maxlength="40" aria-label="Team name" style="background:transparent;border:none;color:var(--text-primary);font-weight:600;font-size:13px;flex:1;min-width:0;outline:none;border-bottom:1px solid var(--border-color);" />
+              <input type="color" data-team-color="${esc(team.id)}" value="${team.color}" aria-label="Team colour" style="width:28px;height:28px;border-radius:4px;border:none;cursor:pointer;" />
+              <button data-team-remove="${esc(team.id)}" aria-label="Remove team" title="Remove team" ${game.teams.length <= 1 ? 'disabled' : ''} style="width:28px;height:28px;border-radius:4px;border:1px solid var(--border-color);background:transparent;color:var(--text-secondary);cursor:pointer;">&#x2715;</button>
             </div>
             <div style="display:flex;align-items:center;gap:8px;justify-content:center;">
-              <button data-score-dec="${key}" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border-color);background:var(--bg-panel);cursor:pointer;font-size:20px;color:var(--text-primary);line-height:1;">&#x2212;</button>
+              <button data-score-dec="${esc(team.id)}" aria-label="Subtract points" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border-color);background:var(--bg-panel);cursor:pointer;font-size:20px;color:var(--text-primary);line-height:1;">&#x2212;</button>
               <span style="font-size:36px;font-weight:700;color:${team.color};min-width:60px;text-align:center;">${team.score}</span>
-              <button data-score-inc="${key}" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border-color);background:var(--bg-panel);cursor:pointer;font-size:20px;color:var(--text-primary);line-height:1;">&#x2B;</button>
+              <button data-score-inc="${esc(team.id)}" aria-label="Add points" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border-color);background:var(--bg-panel);cursor:pointer;font-size:20px;color:var(--text-primary);line-height:1;">&#x2B;</button>
             </div>
           </div>
-        `
-      }).join('')
+        `).join('')
 
       modeContent = `
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-secondary);">
-          Teams: ${teamCountBtns}
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-secondary);flex-wrap:wrap;">
+          <button id="game-add-team" class="btn" style="font-size:11px;" ${game.teams.length >= MAX_TEAMS ? 'disabled' : ''}>+ Team</button>
+          <label style="display:flex;align-items:center;gap:4px;">Points per tap
+            <input id="game-step" type="number" min="1" max="1000" value="${game.step}" class="input" style="width:64px;font-size:12px;" />
+          </label>
         </div>
         ${scoreCards}
         <div style="display:flex;gap:6px;">
@@ -83,16 +75,16 @@ export function renderGame(container) {
       `
     }
 
-    if (gameState.mode === 'trivia') {
+    if (game.mode === 'trivia') {
       modeContent = `
         <div style="display:flex;flex-direction:column;gap:8px;">
           <label style="font-size:11px;color:var(--text-secondary);">
             Question
-            <textarea id="trivia-question" class="input" rows="3" style="resize:vertical;margin-top:4px;font-size:13px;">${gameState.triviaQuestion.replace(/</g, '&lt;')}</textarea>
+            <textarea id="trivia-question" class="input" rows="3" style="resize:vertical;margin-top:4px;font-size:13px;">${esc(game.triviaQuestion)}</textarea>
           </label>
           <label style="font-size:11px;color:var(--text-secondary);">
             Answer
-            <textarea id="trivia-answer" class="input" rows="2" style="resize:vertical;margin-top:4px;font-size:13px;">${gameState.triviaAnswer.replace(/</g, '&lt;')}</textarea>
+            <textarea id="trivia-answer" class="input" rows="2" style="resize:vertical;margin-top:4px;font-size:13px;">${esc(game.triviaAnswer)}</textarea>
           </label>
           <div style="display:flex;gap:6px;">
             <button id="show-question" class="btn btn--primary" style="flex:1;font-size:11px;">Show Question</button>
@@ -102,24 +94,32 @@ export function renderGame(container) {
       `
     }
 
-    if (gameState.mode === 'countdown') {
-      const cdColor = gameState.countdown <= 5 ? '#ef4444' : 'var(--text-primary)'
-      const presetBtns = [10, 15, 30, 60].map(s => {
-        const active = gameState.countdown === s && !gameState.countdownRunning
+    if (game.mode === 'countdown') {
+      const cdColor = game.countdown <= 5 ? '#ef4444' : 'var(--text-primary)'
+      const presetBtns = game.presets.map((s) => {
+        const active = game.countdown === s && !game.countdownRunning
         return `<button data-cd-preset="${s}" style="padding:3px 7px;border-radius:4px;border:1px solid var(--border-color);cursor:pointer;font-size:11px;background:${active ? 'var(--accent-blue)' : 'transparent'};color:${active ? 'white' : 'var(--text-secondary)'};">${s}s</button>`
       }).join('')
 
       modeContent = `
         <div style="display:flex;flex-direction:column;gap:10px;align-items:center;">
           <div style="font-size:56px;font-weight:700;color:${cdColor};font-variant-numeric:tabular-nums;line-height:1;">
-            ${gameState.countdown}s
+            ${game.countdown}s
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;">
             ${presetBtns}
           </div>
           <div style="display:flex;gap:6px;width:100%;">
-            <button id="cd-start" class="btn btn--primary" style="flex:1;">${gameState.countdownRunning ? 'Pause' : 'Start'}</button>
-            <button id="cd-reset" class="btn" style="flex:1;">Reset</button>
+            <button id="cd-start" class="btn btn--primary" style="flex:1;">${game.countdownRunning ? 'Pause' : 'Start'}</button>
+            <button id="cd-reset" class="btn" style="flex:1;">Reset to ${game.countdownStart}s</button>
+          </div>
+          <div style="display:flex;gap:8px;width:100%;font-size:11px;color:var(--text-secondary);flex-wrap:wrap;">
+            <label style="flex:2;min-width:120px;">Shortcuts (seconds)
+              <input id="cd-presets" class="input" value="${esc(game.presets.join(', '))}" style="font-size:12px;width:100%;" />
+            </label>
+            <label style="flex:1;min-width:80px;">Reset value
+              <input id="cd-start-value" type="number" min="1" max="3600" class="input" value="${game.countdownStart}" style="font-size:12px;width:100%;" />
+            </label>
           </div>
         </div>
       `
@@ -135,110 +135,90 @@ export function renderGame(container) {
     `
 
     // Mode switching
-    container.querySelectorAll('[data-mode]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        gameState.mode = btn.dataset.mode
-        save()
-        render()
-      })
+    container.querySelectorAll('[data-mode]').forEach((btn) => {
+      btn.addEventListener('click', () => set({ ...game, mode: btn.dataset.mode }))
     })
 
-    // Team count
-    container.querySelectorAll('[data-teams]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        gameState.activeTeams = parseInt(btn.dataset.teams, 10)
-        save(); render()
-      })
+    // Teams
+    container.querySelector('#game-add-team')?.addEventListener('click', () => set(addTeam(game)))
+    container.querySelectorAll('[data-team-remove]').forEach((btn) => {
+      btn.addEventListener('click', () => set(removeTeam(game, btn.dataset.teamRemove)))
     })
+    const step = container.querySelector('#game-step')
+    if (step) {
+      step.addEventListener('change', () => {
+        const n = Math.round(Number(step.value))
+        set({ ...game, step: Number.isFinite(n) && n >= 1 ? Math.min(1000, n) : 1 })
+      })
+    }
 
     // Score +/-
-    container.querySelectorAll('[data-score-inc]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        gameState[btn.dataset.scoreInc].score++
-        save(); render()
-      })
+    container.querySelectorAll('[data-score-inc]').forEach((btn) => {
+      btn.addEventListener('click', () => set(bumpScore(game, btn.dataset.scoreInc, +1)))
     })
-    container.querySelectorAll('[data-score-dec]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        gameState[btn.dataset.scoreDec].score = Math.max(0, gameState[btn.dataset.scoreDec].score - 1)
-        save(); render()
-      })
+    container.querySelectorAll('[data-score-dec]').forEach((btn) => {
+      btn.addEventListener('click', () => set(bumpScore(game, btn.dataset.scoreDec, -1)))
     })
 
-    // Team name / color
-    container.querySelectorAll('[data-team-name]').forEach(input => {
+    // Team name / colour (a name edit must not rebuild the DOM under the cursor)
+    container.querySelectorAll('[data-team-name]').forEach((input) => {
       input.addEventListener('change', () => {
-        gameState[input.dataset.teamName].name = input.value
+        game = { ...game, teams: game.teams.map((t) => (t.id === input.dataset.teamName ? { ...t, name: input.value } : t)) }
         save()
       })
     })
-    container.querySelectorAll('[data-team-color]').forEach(input => {
+    container.querySelectorAll('[data-team-color]').forEach((input) => {
       input.addEventListener('input', () => {
-        gameState[input.dataset.teamColor].color = input.value
+        game = { ...game, teams: game.teams.map((t) => (t.id === input.dataset.teamColor ? { ...t, color: input.value } : t)) }
         save(); render()
       })
     })
 
-    // Show scores
-    const showScoresBtn = container.querySelector('#game-show-scores')
-    if (showScoresBtn) {
-      showScoresBtn.addEventListener('click', () => {
-        const text = getTeams().map(t => `${t.name}: ${t.score}`).join('\n')
-        broadcastText(text)
-      })
-    }
-
-    const resetBtn = container.querySelector('#game-reset-scores')
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        gameState.teamA.score = 0
-        gameState.teamB.score = 0
-        gameState.teamC.score = 0
-        save(); render()
-      })
-    }
+    container.querySelector('#game-show-scores')?.addEventListener('click', () => broadcastText(scoresText(game)))
+    container.querySelector('#game-reset-scores')?.addEventListener('click', () => set(resetScores(game)))
 
     // Trivia
     const triviaQ = container.querySelector('#trivia-question')
-    if (triviaQ) triviaQ.addEventListener('input', () => { gameState.triviaQuestion = triviaQ.value; save() })
+    if (triviaQ) triviaQ.addEventListener('input', () => { game = { ...game, triviaQuestion: triviaQ.value }; save() })
 
     const triviaA = container.querySelector('#trivia-answer')
-    if (triviaA) triviaA.addEventListener('input', () => { gameState.triviaAnswer = triviaA.value; save() })
+    if (triviaA) triviaA.addEventListener('input', () => { game = { ...game, triviaAnswer: triviaA.value }; save() })
 
-    const showQ = container.querySelector('#show-question')
-    if (showQ) showQ.addEventListener('click', () => broadcastText(gameState.triviaQuestion))
+    container.querySelector('#show-question')?.addEventListener('click', () => broadcastText(game.triviaQuestion))
+    container.querySelector('#show-answer')?.addEventListener('click', () => broadcastText(game.triviaAnswer))
 
-    const showAns = container.querySelector('#show-answer')
-    if (showAns) showAns.addEventListener('click', () => broadcastText(gameState.triviaAnswer))
-
-    // Countdown presets
-    container.querySelectorAll('[data-cd-preset]').forEach(btn => {
+    // Countdown
+    container.querySelectorAll('[data-cd-preset]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        if (!gameState.countdownRunning) {
-          gameState.countdown = parseInt(btn.dataset.cdPreset, 10)
-          save(); render()
-        }
+        if (!game.countdownRunning) set({ ...game, countdown: parseInt(btn.dataset.cdPreset, 10) })
       })
+    })
+
+    container.querySelector('#cd-presets')?.addEventListener('change', (e) => set({ ...game, presets: parsePresets(e.target.value) }))
+    container.querySelector('#cd-start-value')?.addEventListener('change', (e) => {
+      const n = Math.round(Number(e.target.value))
+      set({ ...game, countdownStart: Number.isFinite(n) && n > 0 ? Math.min(3600, n) : 30 })
     })
 
     const cdStart = container.querySelector('#cd-start')
     if (cdStart) {
       cdStart.addEventListener('click', () => {
-        if (gameState.countdownRunning) {
+        if (game.countdownRunning) {
           clearInterval(countdownInterval)
           countdownInterval = null
-          gameState.countdownRunning = false
-        } else if (gameState.countdown > 0) {
-          gameState.countdownRunning = true
+          game = { ...game, countdownRunning: false }
+        } else if (game.countdown > 0) {
+          game = { ...game, countdownRunning: true }
           countdownInterval = setInterval(() => {
-            gameState.countdown--
-            save()
-            if (gameState.countdown <= 0) {
+            const left = game.countdown - 1
+            if (left <= 0) {
               clearInterval(countdownInterval)
               countdownInterval = null
-              gameState.countdownRunning = false
-              gameState.countdown = 0
+              game = { ...game, countdown: 0, countdownRunning: false }
+            } else {
+              game = { ...game, countdown: left }
             }
+            save()
             render()
           }, 1000)
         }
@@ -246,16 +226,11 @@ export function renderGame(container) {
       })
     }
 
-    const cdReset = container.querySelector('#cd-reset')
-    if (cdReset) {
-      cdReset.addEventListener('click', () => {
-        clearInterval(countdownInterval)
-        countdownInterval = null
-        gameState.countdownRunning = false
-        gameState.countdown = 30
-        save(); render()
-      })
-    }
+    container.querySelector('#cd-reset')?.addEventListener('click', () => {
+      clearInterval(countdownInterval)
+      countdownInterval = null
+      set({ ...game, countdownRunning: false, countdown: game.countdownStart })
+    })
   }
 
   render()

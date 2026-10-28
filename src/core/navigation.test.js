@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { state } from './StateManager.js'
-import { goLive, goLiveNext, goLivePrev } from './navigation.js'
+import { goLive, goLiveNext, goLivePrev, clampAutoSeconds } from './navigation.js'
 
 const makePres = () => ({
   id: 'test-pres',
@@ -159,5 +159,98 @@ describe('StateManager.updatePresentation (copy-on-write)', () => {
 
   it('returns null for unknown ids', () => {
     expect(state.updatePresentation('nope', () => {})).toBeNull()
+  })
+})
+
+describe('auto-advance', () => {
+  const pres = (over = {}, slideOver = {}) => ({
+    id: 'auto',
+    name: 'Auto',
+    slides: [
+      { id: 'a', text: 'A', autoAdvanceSec: 5, ...slideOver },
+      { id: 'b', text: 'B', autoAdvanceSec: 5 },
+      { id: 'c', text: 'C' }
+    ],
+    ...over
+  })
+  const load = (p) => {
+    state.set('presentations', [p])
+    state.set('selectedPresentation', p)
+  }
+  const live = () => state.get('liveSlideIndex')
+
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => {
+    state.set('layers', { ...state.get('layers'), slide: { active: false, content: null } }) // cancels any timer
+    vi.useRealTimers()
+  })
+
+  it('moves on after the slide’s own number of seconds', () => {
+    load(pres())
+    goLive(0)
+    vi.advanceTimersByTime(4900)
+    expect(live()).toBe(0)
+    vi.advanceTimersByTime(200)
+    expect(live()).toBe(1)
+    vi.advanceTimersByTime(5000)
+    expect(live()).toBe(2)
+  })
+
+  it('stops at the last slide unless the presentation loops', () => {
+    load(pres())
+    goLive(2)
+    vi.advanceTimersByTime(60000)
+    expect(live()).toBe(2)
+
+    load(pres({ loop: true }, {}))
+    state.set('presentations', [{ ...pres({ loop: true }), slides: pres().slides.map((s) => ({ ...s, autoAdvanceSec: 2 })) }])
+    state.set('selectedPresentation', state.get('presentations')[0])
+    goLive(2)
+    vi.advanceTimersByTime(2100)
+    expect(live()).toBe(0)
+  })
+
+  it('does nothing for slides without a time', () => {
+    load(pres({}, { autoAdvanceSec: 0 }))
+    goLive(0)
+    vi.advanceTimersByTime(600000)
+    expect(live()).toBe(0)
+  })
+
+  it('manual navigation restarts the countdown', () => {
+    load(pres())
+    goLive(0)
+    vi.advanceTimersByTime(4000)
+    goLiveNext() // → slide 1, a fresh 5 s
+    vi.advanceTimersByTime(4000)
+    expect(live()).toBe(1)
+    vi.advanceTimersByTime(1500)
+    expect(live()).toBe(2)
+  })
+
+  it('clearing the slide cancels the pending advance', () => {
+    load(pres())
+    goLive(0)
+    state.set('layers', { ...state.get('layers'), slide: { active: false, content: null } })
+    vi.advanceTimersByTime(60000)
+    expect(live()).toBe(0)
+    expect(state.get('layers').slide.active).toBe(false)
+  })
+
+  it('keeps advancing the live song even if another song is selected meanwhile', () => {
+    load(pres())
+    goLive(0)
+    state.set('selectedPresentation', { id: 'other', name: 'Other', slides: [{ id: 'z', text: 'Z' }] })
+    vi.advanceTimersByTime(5100)
+    expect(state.get('livePresentationId')).toBe('auto')
+    expect(live()).toBe(1)
+    expect(state.get('selectedPresentation').id).toBe('other')
+  })
+
+  it('ignores nonsense times', () => {
+    expect(clampAutoSeconds('abc')).toBe(0)
+    expect(clampAutoSeconds(-4)).toBe(0)
+    expect(clampAutoSeconds(0.2)).toBe(1)
+    expect(clampAutoSeconds(99999)).toBe(3600)
   })
 })

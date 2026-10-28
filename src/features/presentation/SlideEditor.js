@@ -1,8 +1,19 @@
 import { state } from '../../core/StateManager.js'
 import { TextElement } from '../../models/TextElement.js'
 import { getActiveSequence } from '../../core/arrangement.js'
+import { clampAutoSeconds } from '../../core/navigation.js'
 import { imageFrameStyle, shapeTransform } from '../../core/slideLayout.js'
 import { BUILTIN_BACKGROUNDS } from '../../data/builtinBackgrounds.js'
+import {
+  captureTemplate,
+  stampTemplate,
+  addUserTemplate,
+  removeUserTemplate,
+  findUserTemplate,
+  isUserTemplateKey,
+  userTemplateKey,
+  userTemplateId
+} from '../../core/userTemplates.js'
 
 const CANVAS_W = 1920
 const CANVAS_H = 1080
@@ -77,6 +88,12 @@ export function createSlideEditor(container) {
           <select id="prop-template" class="input">${templateOptions}</select>
         </label>
 
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="text" id="prop-template-name" class="input" placeholder="Name this layout" maxlength="40" style="flex:1;min-width:0;" aria-label="Template name" />
+          <button class="btn" id="save-template-btn" style="font-size:11px;" title="Save this slide's boxes and background as a reusable template">Save</button>
+          <button class="btn" id="delete-template-btn" style="font-size:11px;" disabled title="Delete the selected saved template">Delete</button>
+        </div>
+
         <div style="display:flex;gap:8px;">
           <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);flex:1;">
             Background
@@ -97,6 +114,16 @@ export function createSlideEditor(container) {
               <option value="camp">Camp</option>
               <option value="blank">Blank</option>
             </select>
+          </label>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);flex:1;">
+            Auto-advance after (seconds, 0 = off)
+            <input type="number" id="prop-auto-advance" class="input" min="0" max="3600" value="0" />
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary);white-space:nowrap;padding-bottom:8px;" title="When the last slide's time is up, start again from the first slide">
+            <input type="checkbox" id="prop-loop" /> Loop
           </label>
         </div>
 
@@ -221,12 +248,17 @@ export function createSlideEditor(container) {
   const boldBtn = container.querySelector('#style-bold')
   const italicBtn = container.querySelector('#style-italic')
   const templateSelect = container.querySelector('#prop-template')
+  const templateNameInput = container.querySelector('#prop-template-name')
+  const saveTemplateBtn = container.querySelector('#save-template-btn')
+  const deleteTemplateBtn = container.querySelector('#delete-template-btn')
   const slideTypeSelect = container.querySelector('#prop-slide-type')
   const rehearsalAudioInput = container.querySelector('#prop-rehearsal-audio')
   const addBoxBtn = container.querySelector('#add-textbox-btn')
   const dupBoxBtn = container.querySelector('#dup-textbox-btn')
   const delBoxBtn = container.querySelector('#del-textbox-btn')
   const transitionSelect = container.querySelector('#prop-transition')
+  const autoAdvanceInput = container.querySelector('#prop-auto-advance')
+  const loopCheckbox = container.querySelector('#prop-loop')
   const undoBtn = container.querySelector('#editor-undo-btn')
   const redoBtn = container.querySelector('#editor-redo-btn')
   const boxProps = container.querySelector('#box-props')
@@ -851,6 +883,20 @@ export function createSlideEditor(container) {
   // Template: stamps the layout onto the slide, preserving existing text where possible
   templateSelect.addEventListener('change', () => {
     const key = templateSelect.value
+    updateDeleteTemplateBtn()
+    if (isUserTemplateKey(key)) {
+      const saved = findUserTemplate(state.get('userTemplates'), userTemplateId(key))
+      if (!saved) return
+      bgColorInput.value = saved.bg
+      canvas.style.background = saved.bg
+      bgImageDataUrl = null
+      bgImageClearBtn.style.display = 'none'
+      const oldTexts = elements.map((e) => e.text).filter((s) => s.trim())
+      elements = stampTemplate(saved, oldTexts).map((box) => new TextElement(box))
+      selectBox(elements[0]?.id || null)
+      checkpoint()
+      return
+    }
     const t = TEMPLATES[key]
     if (!t) return
     // Freeform is the "no-op" template — persist the choice via save() but
@@ -873,6 +919,56 @@ export function createSlideEditor(container) {
     checkpoint()
   })
 
+  // ── Saved (user) templates ─────────────────────────────────────────────────
+  function updateDeleteTemplateBtn() {
+    deleteTemplateBtn.disabled = !isUserTemplateKey(templateSelect.value)
+  }
+
+  // Rebuilds the dropdown: built-ins first, then the operator's own layouts
+  function renderTemplateOptions(keep = templateSelect.value) {
+    const saved = state.get('userTemplates') || []
+    templateSelect.innerHTML = templateOptions
+    if (saved.length) {
+      const group = document.createElement('optgroup')
+      group.label = 'My templates'
+      saved.forEach((t) => {
+        const o = document.createElement('option')
+        o.value = userTemplateKey(t.id)
+        o.textContent = t.label
+        group.appendChild(o)
+      })
+      templateSelect.appendChild(group)
+    }
+    // A selection that no longer exists (deleted template) falls back to Freeform
+    templateSelect.value = [...templateSelect.options].some((o) => o.value === keep) ? keep : 'freeform'
+    updateDeleteTemplateBtn()
+  }
+  renderTemplateOptions('freeform')
+  const offUserTemplates = state.on('userTemplates', () => renderTemplateOptions())
+
+  saveTemplateBtn.addEventListener('click', () => {
+    const name = templateNameInput.value.trim()
+    if (!name) {
+      templateNameInput.focus()
+      templateNameInput.placeholder = 'Type a name first'
+      return
+    }
+    stopInlineEdit()
+    const saved = captureTemplate(name, elements, bgColorInput.value)
+    state.set('userTemplates', addUserTemplate(state.get('userTemplates'), saved))
+    templateSelect.value = userTemplateKey(saved.id) // the slide now uses it
+    templateNameInput.value = ''
+    templateNameInput.placeholder = 'Name this layout'
+    updateDeleteTemplateBtn()
+    checkpoint()
+  })
+
+  deleteTemplateBtn.addEventListener('click', () => {
+    const key = templateSelect.value
+    if (!isUserTemplateKey(key)) return
+    state.set('userTemplates', removeUserTemplate(state.get('userTemplates'), userTemplateId(key)))
+  })
+
   // ── Load slide into editor ─────────────────────────────────────────────────
   // `sequenceIdx` is a position in the active ARRANGEMENT (see arrangement.js),
   // which can repeat a slide — resolve it back to the slide's real position in
@@ -887,6 +983,8 @@ export function createSlideEditor(container) {
     const slide = pres.slides[idx]
     rehearsalAudioInput.value = pres.linkedAudio || ''
     transitionSelect.value = slide.transition || ''
+    autoAdvanceInput.value = clampAutoSeconds(slide.autoAdvanceSec)
+    loopCheckbox.checked = !!pres.loop
     if (slide.type && [...slideTypeSelect.options].some((o) => o.value === slide.type)) {
       slideTypeSelect.value = slide.type
     }
@@ -894,13 +992,17 @@ export function createSlideEditor(container) {
     // Prefer explicit templateId, then a template matching the slide's type,
     // then Freeform (no overrides). Imported slides land here as 'imported' —
     // Freeform keeps their captured font/color/bg instead of resetting them.
+    const savedTemplate = isUserTemplateKey(slide.templateId)
+      ? findUserTemplate(state.get('userTemplates'), userTemplateId(slide.templateId))
+      : null
     const t =
-      TEMPLATES[slide.templateId] || TEMPLATES[slide.type] || TEMPLATES.freeform
-    templateSelect.value = TEMPLATES[slide.templateId]
+      TEMPLATES[slide.templateId] || (savedTemplate && { bg: savedTemplate.bg }) || TEMPLATES[slide.type] || TEMPLATES.freeform
+    templateSelect.value = TEMPLATES[slide.templateId] || savedTemplate
       ? slide.templateId
       : TEMPLATES[slide.type]
         ? slide.type
         : 'freeform'
+    updateDeleteTemplateBtn()
     const bg = (slide.background && slide.background.color) || t.bg || '#000000'
     bgColorInput.value = bg
     // Show the imported background media (usually a PPTX design image) in
@@ -974,6 +1076,11 @@ export function createSlideEditor(container) {
       slide.templateId = templateSelect.value
       if (transitionSelect.value) slide.transition = transitionSelect.value
       else delete slide.transition
+      const auto = clampAutoSeconds(autoAdvanceInput.value)
+      if (auto) slide.autoAdvanceSec = auto
+      else delete slide.autoAdvanceSec
+      if (loopCheckbox.checked) p.loop = true
+      else delete p.loop
       // Preserve the existing background type + mediaPath (e.g. an imported
       // PPTX background image). Previously this forced type: 'color', which
       // silently dropped the imported bg image the first time the operator
@@ -1017,6 +1124,7 @@ export function createSlideEditor(container) {
       document.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('resize', updateScale)
       clearTimeout(checkpointTimer)
+      offUserTemplates()
       measurer.remove()
     },
   }

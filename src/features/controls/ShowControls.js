@@ -9,12 +9,25 @@ import { renderStage } from './tabs/StageTab.js'
 import { renderGame } from './tabs/GameTab.js'
 import { renderScheduler } from './tabs/SchedulerTab.js'
 
+const HIDDEN_TABS_KEY = 'easyPresentHiddenTabs'
+
+/** Tabs to show: everything not switched off, but never none, and never the one you are on. */
+export function visibleTabDefs(defs, hidden, activeKey) {
+  const hide = new Set(hidden || [])
+  const shown = defs.filter((t) => !hide.has(t.key) || t.key === activeKey)
+  return shown.length ? shown : defs.slice(0, 1)
+}
+
 /**
  * ShowControls — Bottom-right panel with tabs for Timers, Messages, Props, Macros, Stage
  */
 export class ShowControls {
   constructor(container) {
     this.container = container
+    try {
+      const saved = JSON.parse(localStorage.getItem(HIDDEN_TABS_KEY))
+      if (Array.isArray(saved)) state.set('hiddenControlTabs', saved.filter((k) => typeof k === 'string'))
+    } catch { /* private window or damaged value: show everything */ }
     this.render()
     this._bindEvents()
   }
@@ -37,9 +50,10 @@ export class ShowControls {
       { key: 'scheduler', icon: 'calendarDays', label: 'Schedule' }
     ]
 
+    this.tabDefs = tabDefs
     const activeTab = state.get('activeControlTab')
 
-    tabDefs.forEach((t) => {
+    visibleTabDefs(tabDefs, state.get('hiddenControlTabs'), activeTab).forEach((t) => {
       const tab = document.createElement('button')
       tab.className = `tab ${activeTab === t.key ? 'active' : ''}`
       tab.dataset.tab = t.key
@@ -47,6 +61,15 @@ export class ShowControls {
       tab.innerHTML = `${icon(t.icon, 12).outerHTML}<span>${t.label}</span>`
       tabs.appendChild(tab)
     })
+
+    const customize = document.createElement('button')
+    customize.className = 'tab'
+    customize.id = 'control-tabs-customize'
+    customize.title = 'Choose which tabs to show'
+    customize.setAttribute('aria-label', 'Choose which tabs to show')
+    customize.setAttribute('aria-expanded', 'false')
+    customize.textContent = '⋯'
+    tabs.appendChild(customize)
 
     this.container.appendChild(tabs)
 
@@ -57,6 +80,58 @@ export class ShowControls {
     this.container.appendChild(content)
 
     this._renderTabContent(activeTab)
+  }
+
+  /** Switches a tab on or off. The tab you are on, and the last visible one, cannot be switched off. */
+  _setTabHidden(key, hidden) {
+    const current = new Set(state.get('hiddenControlTabs') || [])
+    if (hidden) {
+      const stillVisible = this.tabDefs.filter((t) => !current.has(t.key) && t.key !== key)
+      if (!stillVisible.length || key === state.get('activeControlTab')) return this._renderTabMenu()
+      current.add(key)
+    } else {
+      current.delete(key)
+    }
+    const next = [...current]
+    state.set('hiddenControlTabs', next)
+    try { localStorage.setItem(HIDDEN_TABS_KEY, JSON.stringify(next)) } catch { /* private window */ }
+    this.render()
+    this._renderTabMenu(true)
+  }
+
+  _toggleTabMenu() {
+    const open = !!this.container.querySelector('#control-tabs-menu')
+    if (open) {
+      this.container.querySelector('#control-tabs-menu').remove()
+      this.container.querySelector('#control-tabs-customize')?.setAttribute('aria-expanded', 'false')
+    } else {
+      this._renderTabMenu(true)
+    }
+  }
+
+  _renderTabMenu(open = false) {
+    const existing = this.container.querySelector('#control-tabs-menu')
+    if (!open && !existing) return
+    existing?.remove()
+    const hidden = new Set(state.get('hiddenControlTabs') || [])
+    const active = state.get('activeControlTab')
+    const menu = document.createElement('div')
+    menu.id = 'control-tabs-menu'
+    menu.style.cssText = 'padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px 14px;border-bottom:1px solid var(--border-color);font-size:12px;color:var(--text-secondary);'
+    this.tabDefs.forEach((t) => {
+      const label = document.createElement('label')
+      label.style.cssText = 'display:flex;align-items:center;gap:4px;cursor:pointer;'
+      const box = document.createElement('input')
+      box.type = 'checkbox'
+      box.dataset.tabToggle = t.key
+      box.checked = !hidden.has(t.key)
+      box.disabled = t.key === active // you are looking at it
+      label.append(box, document.createTextNode(t.label))
+      menu.appendChild(label)
+    })
+    const tabs = this.container.querySelector('#show-controls-tabs')
+    tabs.after(menu)
+    this.container.querySelector('#control-tabs-customize')?.setAttribute('aria-expanded', 'true')
   }
 
   _renderTabContent(tab) {
@@ -97,6 +172,15 @@ export class ShowControls {
   _bindEvents() {
     // Tab switching
     this.container.addEventListener('click', (e) => {
+      if (e.target.closest('#control-tabs-customize')) {
+        this._toggleTabMenu()
+        return
+      }
+      const tabToggle = e.target.closest('[data-tab-toggle]')
+      if (tabToggle) {
+        this._setTabHidden(tabToggle.dataset.tabToggle, !tabToggle.checked)
+        return
+      }
       const tab = e.target.closest('.tab')
       if (tab) {
         const key = tab.dataset.tab

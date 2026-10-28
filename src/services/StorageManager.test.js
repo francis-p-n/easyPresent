@@ -101,3 +101,23 @@ describe('StorageManager — debounced saves', () => {
     saveSpy.mockRestore()
   })
 })
+
+describe('StorageManager — saved slide templates', () => {
+  it('persists user templates and restores them on load', async () => {
+    const tpl = { id: 'ut-1', label: 'Mine', bg: '#101010', boxes: [{ x: 1, y: 2, width: 3, height: 4, text: 'T' }] }
+    state.set('userTemplates', [tpl])
+    storageManager.save()
+    expect(JSON.parse(localStorage.getItem(SAVE_KEY)).userTemplates).toEqual([tpl])
+
+    state.set('userTemplates', [])
+    await storageManager.load()
+    expect(state.get('userTemplates')).toEqual([tpl])
+  })
+
+  it('loads old libraries that have no templates key without touching the current list', async () => {
+    state.set('userTemplates', [])
+    localStorage.setItem(SAVE_KEY, JSON.stringify(samplePayload()))
+    await storageManager.load()
+    expect(state.get('userTemplates')).toEqual([])
+  })
+})

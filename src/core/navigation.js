@@ -14,19 +14,67 @@ import { getActiveSequence } from './arrangement.js'
  * repeat a slide, so the two only coincide for the default Master arrangement.
  */
 
-/** Make the slide at `index` (in the active arrangement) live and selected. */
-export function goLive(index) {
-  const pres = state.get('selectedPresentation')
+// ── Auto-advance ─────────────────────────────────────────────────────────────
+// A slide can carry `autoAdvanceSec`; once it has been live that long the show moves on by
+// itself. A presentation with `loop` goes back to its first slide at the end. Any way of
+// changing or clearing the live slide restarts or cancels the countdown.
+let autoTimer = null
+
+const findPresentation = (id) =>
+  (state.get('presentations') || []).find((p) => p.id === id) ||
+  (state.get('selectedPresentation')?.id === id ? state.get('selectedPresentation') : null)
+
+function cancelAutoAdvance() {
+  clearTimeout(autoTimer)
+  autoTimer = null
+}
+
+export const clampAutoSeconds = (n) => (Number.isFinite(Number(n)) && Number(n) > 0 ? Math.min(3600, Math.max(1, Math.round(Number(n)))) : 0)
+
+function scheduleAutoAdvance(presId, index) {
+  cancelAutoAdvance()
+  const pres = findPresentation(presId)
+  const slide = pres && getActiveSequence(pres)[index]
+  const seconds = clampAutoSeconds(slide && slide.autoAdvanceSec)
+  if (!seconds) return
+  autoTimer = setTimeout(() => {
+    autoTimer = null
+    // Only act if this slide is still the live one (the operator may have moved on or cleared it)
+    if (state.get('livePresentationId') !== presId || state.get('liveSlideIndex') !== index) return
+    if (!state.get('layers')?.slide?.active) return
+    const current = findPresentation(presId)
+    if (!current) return
+    const length = getActiveSequence(current).length
+    if (index + 1 < length) goLiveIn(current, index + 1)
+    else if (current.loop && length > 1) goLiveIn(current, 0)
+  }, seconds * 1000)
+}
+
+// Clearing the slide (or the whole screen) ends any pending advance
+state.on('layers', (layers) => {
+  if (!layers?.slide?.active) cancelAutoAdvance()
+})
+
+/** Make slide `index` of `pres` live, whether or not `pres` is the selected song. */
+function goLiveIn(pres, index) {
   const sequence = getActiveSequence(pres)
   if (!pres || !sequence[index]) return
 
-  state.set('activeSlideIndex', index)
+  if (state.get('selectedPresentation')?.id === pres.id) state.set('activeSlideIndex', index)
   state.set('livePresentationId', pres.id)
   state.set('liveSlideIndex', index)
 
   const layers = { ...state.get('layers') }
   layers.slide = { active: true, content: sequence[index] }
   state.set('layers', layers)
+  scheduleAutoAdvance(pres.id, index)
+}
+
+/** Make the slide at `index` (in the active arrangement) live and selected. */
+export function goLive(index) {
+  const pres = state.get('selectedPresentation')
+  if (!pres) return
+  goLiveIn(pres, index)
 }
 
 /**

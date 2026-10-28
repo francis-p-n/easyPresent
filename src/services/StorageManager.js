@@ -35,9 +35,10 @@ class StorageManager {
     const presentations = lift(state.get('presentations'))
     const playlists = lift(state.get('playlists'))
     const themes = lift(state.get('themes'))
+    const userTemplates = lift(state.get('userTemplates') || [])
 
     const activePlaylistId = state.get('activePlaylist')?.id || null // so a restart reopens the same setlist
-    return JSON.stringify({ version: SCHEMA_VERSION, presentations, playlists, themes, media, activePlaylistId })
+    return JSON.stringify({ version: SCHEMA_VERSION, presentations, playlists, themes, userTemplates, media, activePlaylistId })
   }
 
   _applyData(data) {
@@ -56,6 +57,7 @@ class StorageManager {
       state.set('activePlaylist', match)
     }
     if (data.themes) state.set('themes', drop(data.themes))
+    if (Array.isArray(data.userTemplates)) state.set('userTemplates', drop(data.userTemplates))
   }
 
   /** Immediate save (async when file-backed; sync fallback to localStorage) */
@@ -168,6 +170,7 @@ class StorageManager {
     state.on('presentations', () => this.scheduleSave())
     state.on('playlists', () => this.scheduleSave())
     state.on('themes', () => this.scheduleSave())
+    state.on('userTemplates', () => this.scheduleSave())
     state.on('activePlaylist', () => this.scheduleSave()) // switching setlists alone must survive a restart
 
     // Don't lose a pending debounced save when the window closes

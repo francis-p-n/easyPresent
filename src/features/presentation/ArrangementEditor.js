@@ -1,4 +1,5 @@
 import { state } from '../../core/StateManager.js'
+import { presentationTransition } from '../../core/presentationDefaults.js'
 import { icon } from '../../components/common/Icons.js'
 import {
   MASTER_ARRANGEMENT_ID,
@@ -36,6 +37,8 @@ export class ArrangementEditor {
     this.workingArrangements = getArrangements(pres).map((a) => ({ ...a, sequence: [...a.sequence] }))
     this.workingActiveId = getActiveArrangementId(pres)
     this.workingMasterOrder = pres.slides.map((s) => s.id)
+    this.workingThemeId = pres.themeId || ''
+    this.workingTransition = presentationTransition(pres) || ''
 
     if (this.overlay) this.close()
 
@@ -74,6 +77,20 @@ export class ArrangementEditor {
         <button id="arr-close" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:20px;line-height:1;padding:4px;">&#x2715;</button>
       </div>
 
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;color:var(--text-secondary);">
+        <label style="display:flex;align-items:center;gap:6px;">Theme
+          <select id="arr-theme" class="input" style="font-size:12px;"></select>
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;">Transition
+          <select id="arr-transition" class="input" style="font-size:12px;">
+            <option value="">Use the app setting</option>
+            <option value="cut">Cut</option>
+            <option value="dissolve">Dissolve</option>
+            <option value="wipe">Wipe</option>
+          </select>
+        </label>
+      </div>
+
       <div id="arr-tabs" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
 
       <div style="display:flex;gap:16px;min-height:0;flex:1;">
@@ -103,6 +120,20 @@ export class ArrangementEditor {
     this.overlay.addEventListener('click', (e) => {
       if (e.target === this.overlay) this.close()
     })
+
+    const themeSelect = panel.querySelector('#arr-theme')
+    themeSelect.innerHTML = '<option value="">Use the current theme</option>'
+    for (const t of state.get('themes') || []) {
+      const o = document.createElement('option')
+      o.value = t.id
+      o.textContent = t.name || t.id
+      themeSelect.appendChild(o)
+    }
+    themeSelect.value = [...themeSelect.options].some((o) => o.value === this.workingThemeId) ? this.workingThemeId : ''
+    themeSelect.addEventListener('change', () => (this.workingThemeId = themeSelect.value))
+    const transitionSelect = panel.querySelector('#arr-transition')
+    transitionSelect.value = this.workingTransition
+    transitionSelect.addEventListener('change', () => (this.workingTransition = transitionSelect.value))
 
     this._renderTabs()
     this._renderSequence()
@@ -341,6 +372,10 @@ export class ArrangementEditor {
     state.updatePresentation(this.pres.id, (p) => {
       p.arrangements = toStore
       p.activeArrangementId = this.workingActiveId
+      if (this.workingThemeId) p.themeId = this.workingThemeId
+      else delete p.themeId
+      if (this.workingTransition) p.transition = this.workingTransition
+      else delete p.transition
       const byId = new Map(p.slides.map((sl) => [sl.id, sl]))
       const reordered = this.workingMasterOrder.map((id) => byId.get(id)).filter(Boolean)
       if (reordered.length === p.slides.length) p.slides = reordered

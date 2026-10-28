@@ -1,3 +1,4 @@
+import { themeFor, livePresentation } from '../../core/presentationDefaults.js'
 import { state } from '../../core/StateManager.js'
 import NativeRender from '../../services/NativeRender.js'
 import { hasLayout, renderSlideLayout } from '../../core/slideLayout.js'
@@ -14,6 +15,8 @@ export class PreviewPanel {
     state.on('liveSlideIndex', () => this._updatePreview())
     state.on('activeThemeId', () => this._updatePreview())
     state.on('themes', () => this._updatePreview())
+    state.on('presentations', () => this._updatePreview()) // the live presentation may have just been given its own theme
+    state.on('livePresentationId', () => this._updatePreview())
     state.on('showLogo', () => this._updatePreview())
     // A message containing {timer} shows the running countdown, so the preview has
     // to tick with it (it used to freeze at 00:00 while the real screens counted down)
@@ -74,7 +77,8 @@ export class PreviewPanel {
 
     const activeThemeId = state.get('activeThemeId')
     const themes = state.get('themes') || []
-    const activeTheme = themes.find((t) => t.id === activeThemeId) || themes[0]
+    const livePres = livePresentation(state.get('presentations'), state.get('livePresentationId'), state.get('selectedPresentation'))
+    const activeTheme = themeFor(livePres, themes, activeThemeId)
 
     // Skip redundant repaints: navigation fires both 'liveSlideIndex' and
     // 'layers', and rasterizing slide text into a GPU texture isn't free.

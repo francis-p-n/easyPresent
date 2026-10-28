@@ -13,6 +13,10 @@ import { initSongLibrary } from './songs/songLibrary.js'
 import { installA11y } from './components/common/a11y.js'
 import { showShortcutHelp } from './features/controls/ShortcutHelp.js'
 import { buildLiveState } from './core/liveState.js'
+import { buildLookup, eventToSpec, loadOverrides } from './core/shortcuts.js'
+import { themeFor, livePresentation, presentationTransition } from './core/presentationDefaults.js'
+import { applyPanelWidths, loadPanelWidths, readPanelWidths, savePanelWidths } from './core/workspaces.js'
+import { syncRemoteButtons } from './features/controls/RemoteButtonsEditor.js'
 import { makeTransposer } from './songs/transpose.js'
 import { slideToChordProText } from './songs/chordpro.js'
 import { buildStageChart } from './songs/stageChart.js'
@@ -30,6 +34,7 @@ export const MODAL_SELECTOR = [
   '#playlist-prompt-overlay',
   '#announcement-editor-overlay',
   '#arrangement-editor-overlay',
+  '#shortcut-help-overlay', // it listens for the key to bind; the show shortcuts must not fire under it
   '#theme-editor-overlay'
 ].join(', ')
 
@@ -73,6 +78,34 @@ export function closeOpenMenus(doc = document) {
   return closed
 }
 
+/** What each bindable shortcut does. The clear actions press the toolbar buttons so they behave exactly as a click would. */
+const CLICK_ACTIONS = {
+  clearAll: 'clear-btn-all',
+  clearSlide: 'clear-btn-slide',
+  clearMedia: 'clear-btn-media',
+  clearProps: 'clear-btn-props',
+  clearAudio: 'clear-btn-audio',
+  logo: 'clear-btn-logo'
+}
+
+export function runShortcutAction(action) {
+  if (CLICK_ACTIONS[action]) return document.getElementById(CLICK_ACTIONS[action])?.click()
+  switch (action) {
+    case 'next':
+      return goLiveNext()
+    case 'prev':
+      return goLivePrev()
+    case 'nextSong':
+      return goLiveSong(1)
+    case 'prevSong':
+      return goLiveSong(-1)
+    case 'hideAudienceText':
+      return state.set('hideAudienceSlide', !state.get('hideAudienceSlide'))
+    case 'help':
+      return showShortcutHelp()
+  }
+}
+
 /** How long a typed slide number stays open for another digit ("1" then "2" = slide 12). */
 const SLIDE_NUMBER_WINDOW_MS = 700
 
@@ -87,6 +120,9 @@ class App {
   async init() {
     // Load persisted data before rendering (file-backed, so it's async)
     await storageManager.load()
+    state.set('shortcutOverrides', loadOverrides())
+    syncRemoteButtons()
+    applyPanelWidths(loadPanelWidths()) // panel sizes survive a restart
     storageManager.reportRecovery()
     if (await initSongLibrary()) storageManager.scheduleSave()
 
@@ -152,7 +188,8 @@ class App {
     const syncAudience = () => {
       if (!window.electronAPI || !window.electronAPI.updateAudienceOutput) return
       const themes = state.get('themes') || []
-      const activeTheme = themes.find((t) => t.id === state.get('activeThemeId')) || themes[0]
+      const livePres = livePresentation(state.get('presentations'), state.get('livePresentationId'), state.get('selectedPresentation'))
+      const activeTheme = themeFor(livePres, themes, state.get('activeThemeId'))
       const payload = buildOutputPayload(
         state.get('layers'),
         activeTheme,
@@ -161,6 +198,7 @@ class App {
         {
           hideSlide: state.get('hideAudienceSlide'),
           transition: state.get('outputTransition'),
+          presentationTransition: presentationTransition(livePres),
           transitionMs: state.get('outputTransitionMs')
         }
       )
@@ -175,16 +213,15 @@ class App {
     state.on('outputTransition', syncAudience)
     state.on('outputTransitionMs', syncAudience)
     state.on('activeThemeId', syncAudience)
+    state.on('themes', syncAudience)
+    state.on('presentations', syncAudience) // a presentation's own theme/transition can change while it is live
+    state.on('livePresentationId', syncAudience)
     state.on('timer_main', syncAudience) // live {timer} token in messages
 
     // Phone remote (web page served by the stage server): the same actions as the keyboard shortcuts
     if (window.electronAPI && window.electronAPI.onRemoteCommand) {
-      window.electronAPI.onRemoteCommand((cmd) => {
-        if (cmd === 'next') goLiveNext()
-        else if (cmd === 'prev') goLivePrev()
-        else if (cmd === 'clear') document.getElementById('clear-btn-all')?.click()
-        else if (cmd === 'logo') document.getElementById('clear-btn-logo')?.click()
-      })
+      // The remote's 'clear' is the show's "Clear everything"; every other command is an action id
+      window.electronAPI.onRemoteCommand((cmd) => runShortcutAction(cmd === 'clear' ? 'clearAll' : cmd))
     }
 
     // Feed the presenter / PA views (current + next slide, clock, message).
@@ -355,6 +392,7 @@ class App {
 
     const onMouseUp = () => {
       resizer.classList.remove('active')
+      savePanelWidths(readPanelWidths())
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
       document.body.style.cursor = ''
@@ -376,88 +414,16 @@ class App {
     document.addEventListener('keydown', (e) => {
       if (isShowShortcutBlocked(e, state.get('isEditing'))) return
 
-      switch (e.key) {
-        case 'F1':
-          e.preventDefault()
-          document.getElementById('clear-btn-all')?.click()
-          break
-        case 'F2':
-          e.preventDefault()
-          document.getElementById('clear-btn-slide')?.click()
-          break
-        case 'F3':
-          e.preventDefault()
-          document.getElementById('clear-btn-media')?.click()
-          break
-        case 'F4':
-          e.preventDefault()
-          document.getElementById('clear-btn-props')?.click()
-          break
-        case 'F5':
-          e.preventDefault()
-          document.getElementById('clear-btn-audio')?.click()
-          break
-        case 'F6':
-          e.preventDefault()
-          document.getElementById('clear-btn-logo')?.click()
-          break
+      // Escape always closes an open dropdown first; only a bare Escape blanks the output
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        if (closeOpenMenus()) return
+      }
 
-        case 'ArrowRight':
-        case 'ArrowDown':
-          e.preventDefault()
-          // Shift jumps a whole song; plain arrows step one slide
-          if (e.shiftKey) goLiveSong(1)
-          else goLiveNext()
-          break
-
-        case 'PageDown':
-        case ' ':
-          e.preventDefault()
-          goLiveNext()
-          break
-
-        case 'ArrowLeft':
-        case 'ArrowUp':
-          e.preventDefault()
-          if (e.shiftKey) goLiveSong(-1)
-          else goLivePrev()
-          break
-
-        case 'PageUp':
-          e.preventDefault()
-          goLivePrev()
-          break
-
-        case ']':
-          e.preventDefault()
-          goLiveSong(1)
-          break
-
-        case '?':
-          e.preventDefault()
-          showShortcutHelp()
-          break
-
-        case '[':
-          e.preventDefault()
-          goLiveSong(-1)
-          break
-
-        case 'b':
-        case 'B':
-        case '.':
-          // Standard clicker 'Black screen' toggle
-          if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-            e.preventDefault()
-            document.getElementById('clear-btn-all')?.click()
-          }
-          break
-
-        case 'Escape':
-          e.preventDefault()
-          // An open dropdown takes the Escape; only a bare Escape blanks the output
-          if (!closeOpenMenus()) document.getElementById('clear-btn-all')?.click()
-          break
+      const action = buildLookup(state.get('shortcutOverrides')).get(eventToSpec(e))
+      if (action) {
+        e.preventDefault()
+        runShortcutAction(action)
       }
 
       // Number keys jump to a slide; digits typed in quick succession form one

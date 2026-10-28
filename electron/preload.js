@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   toggleAudienceOutput: () => ipcRenderer.invoke('toggle-audience-output'),
   updateAudienceOutput: (payload) => ipcRenderer.send('update-audience-output', payload),
   // Used by the output window itself to receive state frames
+  setRemoteButtons: (buttons) => ipcRenderer.send('set-remote-buttons', buttons),
   // Phone remote: 'next' | 'prev' | 'clear' | 'logo'
   onRemoteCommand: (cb) => ipcRenderer.on('remote-command', (_evt, cmd) => cb(cmd)),
   onAudienceUpdate: (cb) => ipcRenderer.on('audience-update', (_evt, state) => cb(state))

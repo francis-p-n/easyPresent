@@ -10,6 +10,7 @@
 const os = require('os')
 const crypto = require('crypto')
 const { startServer } = require('../server/stageServer')
+const { sanitizeButtons, defaultButtons } = require('./remoteButtons')
 
 // EASYPRESENT_PORT lets a second instance (testing, or a second church PC) run alongside
 const PORT = Number(process.env.EASYPRESENT_PORT) || 8080
@@ -33,6 +34,7 @@ function createStageHub() {
   let pendingSlide = null
   let pendingLiveState = null
   let remoteHandler = null
+  let remoteButtons = defaultButtons()
   const newPin = () => String(crypto.randomInt(0, 10000)).padStart(4, '0')
   let pin = newPin() // gates the phone remote; changes every time sharing starts
 
@@ -45,6 +47,7 @@ function createStageHub() {
     if (!starting) {
       server = startServer(port, sharing ? EVERYONE : LOCAL_ONLY, {
         getPin: () => pin,
+        getButtons: () => remoteButtons,
         onCommand: (cmd) => remoteHandler && remoteHandler(cmd)
       })
       if (pendingSlide) server.broadcastSlide(pendingSlide)
@@ -79,6 +82,12 @@ function createStageHub() {
       if (sharing && server) return start()
       pin = newPin()
       return restart(true)
+    },
+    /** Which buttons the phone remote draws (cleaned here, so a bad list can never reach it). */
+    setRemoteButtons(buttons) {
+      remoteButtons = sanitizeButtons(buttons)
+      if (server) server.broadcastRemoteButtons(remoteButtons)
+      return remoteButtons
     },
     /** Where phone-remote commands (next/prev/clear/logo) are delivered. */
     setRemoteHandler(fn) {

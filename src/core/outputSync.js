@@ -11,10 +11,14 @@ export const TRANSITION_TYPES = ['cut', 'dissolve', 'wipe']
 
 /**
  * Resolves the transition into the slide now going live: a per-slide override
- * wins over the global default; unknown values degrade to a hard cut.
+ * wins, then the presentation's own, then the global default; unknown values degrade to a hard cut.
  */
-export function resolveTransition(slide, globalType, globalMs) {
-  const type = TRANSITION_TYPES.includes(slide?.transition) ? slide.transition : globalType
+export function resolveTransition(slide, globalType, globalMs, presentationType) {
+  const type = TRANSITION_TYPES.includes(slide?.transition)
+    ? slide.transition
+    : TRANSITION_TYPES.includes(presentationType)
+      ? presentationType
+      : globalType
   const ms = Number.isFinite(globalMs) ? Math.min(3000, Math.max(0, globalMs)) : 400
   return TRANSITION_TYPES.includes(type) && type !== 'cut' && ms > 0 ? { type, ms } : { type: 'cut', ms: 0 }
 }
@@ -53,7 +57,7 @@ export function buildOutputPayload(layers, activeTheme, showLogo, timerValue, op
     message,
     showLogo: !!showLogo,
     hideSlide: !!options.hideSlide,
-    transition: resolveTransition(content, options.transition, options.transitionMs),
+    transition: resolveTransition(content, options.transition, options.transitionMs, options.presentationTransition),
     themeStyles: activeTheme?.styles || null
   }
 }

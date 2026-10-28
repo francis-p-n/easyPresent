@@ -14,6 +14,7 @@ function registerDisplayIpc({ displays, stageHub, getMainWindow }) {
   // Legacy single-button entry point (kept for the existing Screens button)
   ipcMain.handle('toggle-audience-output', () => displays.toggle('audience'))
 
+  ipcMain.on('set-remote-buttons', (event, buttons) => stageHub.setRemoteButtons?.(buttons))
   ipcMain.on('update-audience-output', (event, payload) => displays.updateAudience(payload))
   ipcMain.on('create-stage-display', () => displays.openStageDisplay().catch((e) => console.error(e.message)))
 

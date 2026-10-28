@@ -1,3 +1,4 @@
+import { themeFor } from '../../core/presentationDefaults.js'
 import { state } from '../../core/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
 import NativeRender from '../../services/NativeRender.js'
@@ -254,7 +255,7 @@ export class SlideView {
 
       const activeThemeId = state.get('activeThemeId')
       const themes = state.get('themes') || []
-      const activeTheme = themes.find((t) => t.id === activeThemeId) || themes[0]
+      const activeTheme = themeFor(state.get('selectedPresentation'), themes, activeThemeId)
 
       const styleOpts = {
         fontSize: 48,

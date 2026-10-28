@@ -8,6 +8,7 @@ import { renderMacros } from './tabs/MacrosTab.js'
 import { renderStage } from './tabs/StageTab.js'
 import { renderGame } from './tabs/GameTab.js'
 import { renderScheduler } from './tabs/SchedulerTab.js'
+import { renderWorkspaceMenu } from './WorkspaceMenu.js'
 
 const HIDDEN_TABS_KEY = 'easyPresentHiddenTabs'
 
@@ -129,6 +130,18 @@ export class ShowControls {
       label.append(box, document.createTextNode(t.label))
       menu.appendChild(label)
     })
+    // Saved layouts live in the same menu
+    const layouts = document.createElement('div')
+    layouts.id = 'control-layouts'
+    layouts.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;margin-top:6px;padding-top:6px;border-top:1px solid var(--border-color);'
+    menu.appendChild(layouts)
+    renderWorkspaceMenu(layouts, {
+      onApplied: () => {
+        this.render() // tabs and their content follow the applied layout
+        this._renderTabMenu(true)
+      }
+    })
+
     const tabs = this.container.querySelector('#show-controls-tabs')
     tabs.after(menu)
     this.container.querySelector('#control-tabs-customize')?.setAttribute('aria-expanded', 'true')

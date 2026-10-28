@@ -82,3 +82,24 @@ describe('isShowShortcutBlocked', () => {
     expect(isShowShortcutBlocked(ev({ key: 'ArrowRight' }), false)).toBe(false)
   })
 })
+
+describe('runShortcutAction', () => {
+  it('toggles the audience-text look and presses the toolbar button for clears', async () => {
+    const { runShortcutAction } = await import('./main.js')
+    const { state } = await import('./core/StateManager.js')
+    state.set('hideAudienceSlide', false)
+    runShortcutAction('hideAudienceText')
+    expect(state.get('hideAudienceSlide')).toBe(true)
+    runShortcutAction('hideAudienceText')
+    expect(state.get('hideAudienceSlide')).toBe(false)
+
+    let clicked = 0
+    const btn = document.createElement('button')
+    btn.id = 'clear-btn-logo'
+    btn.addEventListener('click', () => clicked++)
+    document.body.appendChild(btn)
+    runShortcutAction('logo')
+    expect(clicked).toBe(1)
+    expect(() => runShortcutAction('no-such-action')).not.toThrow()
+  })
+})

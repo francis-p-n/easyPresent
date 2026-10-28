@@ -1,3 +1,5 @@
+import { mountRemoteButtonsEditor } from './RemoteButtonsEditor.js'
+import { WORKSPACE_APPLIED_EVENT } from './WorkspaceMenu.js'
 import { state } from '../../core/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
 import { storageManager } from '../../services/StorageManager.js'
@@ -122,6 +124,11 @@ export class Toolbar {
             </select>
           </div>
         </div>
+        <details style="padding:8px 6px 6px;border-top:1px solid var(--border-color);margin-top:4px;">
+          <summary style="font-size:12px;font-weight:600;cursor:pointer;">Remote buttons</summary>
+          <div style="font-size:11px;opacity:.65;margin:4px 0;">Pick, rename, enlarge and reorder what the phone remote shows.</div>
+          <div id="remote-buttons-editor"></div>
+        </details>
         <div style="padding:8px 6px 6px;border-top:1px solid var(--border-color);margin-top:4px;">
           <div style="font-size:12px;font-weight:600;">Phones &amp; tablets</div>
           <div id="screens-share-note" style="font-size:11px;opacity:.65;margin:2px 0 6px;">Let people on the same Wi-Fi open the Presenter and PA screens in a web browser. Presenter and PA are view-only, but anyone on that Wi-Fi can open them. The Remote page can advance slides and needs the PIN shown here. Off until you start it.</div>
@@ -250,6 +257,15 @@ export class Toolbar {
       transitionSel.value = state.get('outputTransition') || 'cut'
       transitionSel.addEventListener('change', () => state.set('outputTransition', transitionSel.value))
     }
+
+    const remoteEditorHost = this.container.querySelector('#remote-buttons-editor')
+    const remoteEditor = remoteEditorHost ? mountRemoteButtonsEditor(remoteEditorHost) : null
+    // A saved layout can change all of these at once: redraw them from the new state
+    window.addEventListener(WORKSPACE_APPLIED_EVENT, () => {
+      if (hideSlideBox) hideSlideBox.checked = !!state.get('hideAudienceSlide')
+      if (transitionSel) transitionSel.value = state.get('outputTransition') || 'cut'
+      remoteEditor?.refresh()
+    })
 
     // Library backup menu
     const libraryBtn = this.container.querySelector('#toolbar-library-btn')

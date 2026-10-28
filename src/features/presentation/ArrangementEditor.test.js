@@ -214,3 +214,57 @@ describe('ArrangementEditor — save/cancel', () => {
     expect(saved.arrangements).toBeUndefined()
   })
 })
+
+describe('ArrangementEditor — presentation defaults', () => {
+  beforeEach(() => {
+    state.set('themes', [
+      { id: 'default', name: 'Default', styles: {} },
+      { id: 'sermon', name: 'Sermon', styles: {} }
+    ])
+  })
+
+  it('offers the existing themes and starts on "use the current theme"', () => {
+    arrangementEditor.open('pres-1')
+    const opts = [...panel().querySelectorAll('#arr-theme option')].map((o) => o.textContent)
+    expect(opts).toEqual(['Use the current theme', 'Default', 'Sermon'])
+    expect(panel().querySelector('#arr-theme').value).toBe('')
+    expect(panel().querySelector('#arr-transition').value).toBe('')
+  })
+
+  it('saves a theme and transition for the presentation', () => {
+    arrangementEditor.open('pres-1')
+    const theme = panel().querySelector('#arr-theme')
+    theme.value = 'sermon'
+    theme.dispatchEvent(new window.Event('change'))
+    const tr = panel().querySelector('#arr-transition')
+    tr.value = 'dissolve'
+    tr.dispatchEvent(new window.Event('change'))
+    panel().querySelector('#arr-save').click()
+    const pres = state.get('presentations')[0]
+    expect(pres.themeId).toBe('sermon')
+    expect(pres.transition).toBe('dissolve')
+  })
+
+  it('clears them again when set back, and reopens showing what was saved', () => {
+    state.set('presentations', [{ ...makePres(), themeId: 'sermon', transition: 'wipe' }])
+    arrangementEditor.open('pres-1')
+    expect(panel().querySelector('#arr-theme').value).toBe('sermon')
+    expect(panel().querySelector('#arr-transition').value).toBe('wipe')
+    const theme = panel().querySelector('#arr-theme')
+    theme.value = ''
+    theme.dispatchEvent(new window.Event('change'))
+    const tr = panel().querySelector('#arr-transition')
+    tr.value = ''
+    tr.dispatchEvent(new window.Event('change'))
+    panel().querySelector('#arr-save').click()
+    const pres = state.get('presentations')[0]
+    expect(pres.themeId).toBeUndefined()
+    expect(pres.transition).toBeUndefined()
+  })
+
+  it('a deleted theme shows as "use the current theme" instead of a blank', () => {
+    state.set('presentations', [{ ...makePres(), themeId: 'gone' }])
+    arrangementEditor.open('pres-1')
+    expect(panel().querySelector('#arr-theme').value).toBe('')
+  })
+})

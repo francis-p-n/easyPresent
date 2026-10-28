@@ -5,8 +5,8 @@ const { Server } = require('socket.io');
 const crypto = require('crypto');
 const { staticDirs } = require('../paths');
 
-// What a phone remote may ask the operator window to do — nothing else is relayed
-const REMOTE_COMMANDS = ['next', 'prev', 'clear', 'logo'];
+// What a phone remote may ask the operator window to do (see remoteButtons.js) — nothing else is relayed
+const { COMMANDS: REMOTE_COMMANDS, defaultButtons } = require('../services/remoteButtons');
 const MAX_BAD_PINS = 5; // per connection, then it is dropped
 
 function pinMatches(expected, given) {
@@ -96,6 +96,9 @@ function startServer(port = 8080, host = 'localhost', remote = {}) {
       socket.emit('live-state', currentLiveState);
     }
 
+    // The remote draws whatever buttons the operator chose
+    socket.emit('remote-config', remote.getButtons ? remote.getButtons() : defaultButtons());
+
     // Phone remote: every command carries the PIN shown in the operator's Screens menu
     let badPins = 0;
     socket.on('remote-command', (msg, ack) => {
@@ -133,6 +136,9 @@ function startServer(port = 8080, host = 'localhost', remote = {}) {
       if (io) {
         io.emit('slide-update', slideData);
       }
+    },
+    broadcastRemoteButtons: (buttons) => {
+      if (io) io.emit('remote-config', buttons);
     },
     broadcastLiveState: (state) => {
       currentLiveState = state;

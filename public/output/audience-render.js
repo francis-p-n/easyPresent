@@ -3,7 +3,10 @@
 // via a VM sandbox. All font/offset values in the payload are authored in
 // the app's 1920px design space; `scale` maps them to the real screen.
 
-function renderAudienceState(state, root, scale) {
+// `viewport` ({ w, h } in px) is optional. Plain text scales with `scale` (the caller picks a
+// size that suits the screen's shape); positioned layouts are authored on a 16:9 page, so with a
+// viewport they are fitted and centred on it instead of being stretched to the width alone.
+function renderAudienceState(state, root, scale, viewport) {
   root.innerHTML = ''
   root.style.position = 'relative'
   root.style.width = '100%'
@@ -52,7 +55,23 @@ function renderAudienceState(state, root, scale) {
       (state.slide.elements && state.slide.elements.length) ||
       (state.slide.images && state.slide.images.length)
     if (hasLayout) {
-      renderSlideLayout(state.slide, root, scale)
+      if (viewport && viewport.w > 0 && viewport.h > 0) {
+        const fit = Math.min(viewport.w / 1920, viewport.h / 1080)
+        const page = document.createElement('div')
+        page.id = 'output-page'
+        Object.assign(page.style, {
+          position: 'absolute',
+          left: `${(viewport.w - 1920 * fit) / 2}px`,
+          top: `${(viewport.h - 1080 * fit) / 2}px`,
+          width: `${1920 * fit}px`,
+          height: `${1080 * fit}px`,
+          overflow: 'hidden'
+        })
+        root.appendChild(page)
+        renderSlideLayout(state.slide, page, fit)
+      } else {
+        renderSlideLayout(state.slide, root, scale)
+      }
     } else {
       renderSlideText(state.slide.text, style, root, scale)
     }
@@ -64,14 +83,14 @@ function renderAudienceState(state, root, scale) {
 // Paints a new frame, optionally easing out of the previous one. The old frame
 // is lifted into an overlay that fades (dissolve) or slides away (wipe) over
 // the freshly painted one, then removes itself. A cut just paints.
-function transitionAudience(state, root, scale, transition) {
+function transitionAudience(state, root, scale, transition, viewport) {
   const type = transition && transition.type
   const ms = (transition && transition.ms) || 0
   // A frame arriving mid-transition: drop the stale overlay instead of nesting it
   root.querySelectorAll('.output-transition-old').forEach((n) => n.remove())
   const hadFrame = root.children.length > 0
   if ((type !== 'dissolve' && type !== 'wipe') || !ms || !hadFrame) {
-    renderAudienceState(state, root, scale)
+    renderAudienceState(state, root, scale, viewport)
     return
   }
 
@@ -87,7 +106,7 @@ function transitionAudience(state, root, scale, transition) {
   })
   while (root.firstChild) old.appendChild(root.firstChild)
 
-  renderAudienceState(state, root, scale)
+  renderAudienceState(state, root, scale, viewport)
   root.appendChild(old)
 
   const done = () => old.parentNode && old.parentNode.removeChild(old)

@@ -1,10 +1,12 @@
 const { ipcMain, dialog } = require('electron')
 const fs = require('fs')
 const { createLibraryStore } = require('../services/libraryStore')
+const { createBibleStore } = require('../services/bibleStore')
 
 /** Library persistence plus export/import of the whole library as one .json file. */
 function registerLibraryIpc({ userDataDir, getMainWindow }) {
   const store = createLibraryStore(userDataDir)
+  const bibles = createBibleStore(userDataDir)
 
   ipcMain.handle('save-library', (event, json) => store.save(json))
   ipcMain.handle('load-library', () => store.load())
@@ -18,7 +20,20 @@ function registerLibraryIpc({ userDataDir, getMainWindow }) {
       filters: [{ name: 'EasyPresent Library', extensions: ['json'] }]
     })
     if (canceled || !filePath) return false
-    await fs.promises.writeFile(filePath, json, 'utf8')
+    // Bible translations live in their own store; carry them along so the export is the whole show
+    let out = json
+    try {
+      const data = JSON.parse(json)
+      const all = []
+      for (const t of await bibles.list()) {
+        const full = await bibles.load(t.id)
+        if (full) all.push(full)
+      }
+      if (all.length) out = JSON.stringify({ ...data, bibles: all })
+    } catch (err) {
+      console.error('Bible translations left out of the export:', err.message)
+    }
+    await fs.promises.writeFile(filePath, out, 'utf8')
     return true
   })
 
@@ -36,8 +51,14 @@ function registerLibraryIpc({ userDataDir, getMainWindow }) {
     if (!data || typeof data !== 'object' || !Array.isArray(data.presentations)) {
       throw new Error('Not an EasyPresent library file')
     }
-    await store.replace(json)
-    return json
+    // Restore any translations that travelled with the export, then keep the library file itself lean
+    const { bibles: embedded, ...library } = data
+    if (Array.isArray(embedded)) {
+      for (const t of embedded) await bibles.save(t).catch((err) => console.error(`Bible ${t && t.id} not restored:`, err.message))
+    }
+    const libraryJson = Array.isArray(embedded) ? JSON.stringify(library) : json
+    await store.replace(libraryJson)
+    return libraryJson
   })
 }
 

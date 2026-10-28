@@ -16,12 +16,13 @@ export const ToastManager = {
     document.body.appendChild(this.container)
   },
 
-  show(message, type = 'info') {
+  /** `action` ({ label, onClick }) adds a button, e.g. Undo; such a toast stays long enough to be used. */
+  show(message, type = 'info', action = null) {
     this.init()
 
     // The same message again just keeps the toast already on screen a little longer,
     // so five quick imports show one toast, not five stacked over the preview
-    const same = [...this.container.children].find((t) => t.textContent === message && t.className.includes(`toast--${type}`) && !t._leaving)
+    const same = action ? null : [...this.container.children].find((t) => t.textContent === message && t.className.includes(`toast--${type}`) && !t._leaving)
     if (same) {
       same._extend()
       return
@@ -33,6 +34,18 @@ export const ToastManager = {
     const toast = document.createElement('div')
     toast.className = `toast toast--${type}`
     toast.textContent = message
+    if (action) {
+      const btn = document.createElement('button')
+      btn.className = 'toast__action'
+      btn.textContent = action.label
+      btn.style.cssText = 'margin-left:12px;background:none;border:0;color:inherit;font-weight:700;text-decoration:underline;cursor:pointer;'
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        toast._dismiss()
+        action.onClick()
+      })
+      toast.appendChild(btn)
+    }
 
     this.container.appendChild(toast)
 
@@ -52,7 +65,7 @@ export const ToastManager = {
     }
     toast._extend = () => {
       clearTimeout(timer)
-      timer = setTimeout(toast._dismiss, toastMs(message))
+      timer = setTimeout(toast._dismiss, action ? 8000 : toastMs(message))
     }
 
     toast.addEventListener('click', toast._dismiss)
@@ -60,4 +73,4 @@ export const ToastManager = {
   }
 }
 
-export const showToast = (message, type) => ToastManager.show(message, type)
+export const showToast = (message, type, action) => ToastManager.show(message, type, action)

@@ -219,15 +219,20 @@ screens, 31 rapid LOGO toggles, keys typed into a dialog, double-click, console 
 | A long section repeated the same label ("Verse 1", "Verse 1") | Continuation slides read "Verse 1 (cont.)" on the slide grid, the chord view and the print; saved charts write one header per section |
 | Printed continuation pages began with a bare heading and no song title | Each song's title and key sit in a table header row, which printing repeats on every page the song runs onto (page count unchanged: 13 for the weekly setlist) |
 
+### Fixed after the regression run
+
+- Printed setlist now keeps headers and notes in order, prints songs that have no chords, and names anything it does not print (slides-only items, songs removed from the library).
+- Deleting a song removes it from every setlist at once, and the toast offers Undo (restores the song and its setlist places).
+- Backups are taken at most every 2 minutes (was 10), and a restore says which backup it used.
+- Audience: text size follows the screen area, and positioned layouts are fitted and centred on 4:3 / portrait screens.
+- Presenter: A- / A+ text size (remembered per device) and a "connected, waiting for the operator" cue.
+- Hari Ini Kurasa Bahagia has its key (G).
+- Library export now includes installed Bible translations; import restores them.
+- 10-11px labels raised to 12px.
+
 ### Still open (known, not fixed)
 
-- Printed setlist leaves out headers and notes, and silently skips songs with no chords.
-- No undo after deleting a library song; a deleted song still appears in an open setlist until restart.
-- Hari Ini Kurasa Bahagia has no key stored, so its printed sheet shows none.
-- Backups are limited to one per 10 minutes, so a restore can lose a few minutes of edits (the app says it restored, not what was lost).
-- 10–11px labels and 24px row buttons with a fine pointer; touch sizes apply only when Windows reports a coarse pointer.
-- Playlist titles truncate heavily at 854–1024px; Library filter chips clip at 854px.
-- Audience text size scales with width only (4:3 and portrait look sparse); faint specks in glyphs with stroke + shadow.
+- Row buttons are 24px with a fine pointer; touch sizes apply only when Windows reports a coarse pointer.
+- Playlist titles truncate heavily at 854-1024px; Library filter chips clip at 854px.
+- Faint specks in glyphs with stroke + shadow.
 - CLEAR ALL hides the message but leaves the countdown running (by design: it is a clock); nothing signals 00:00.
-- Presenter text is small in landscape on a phone; no text-size control; no "connected, waiting" idle cue.
-- Library export/import may not include the Bible store (unverified).

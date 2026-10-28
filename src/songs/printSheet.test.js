@@ -38,7 +38,9 @@ describe('print sheet', () => {
     const html = buildSetlistSheetHtml(pl, pres)
     expect(html.match(/<article>/g)).toHaveLength(2)
     expect(html.indexOf('Song C')).toBeLessThan(html.indexOf('Song &lt;A&gt;'))
-    expect(html).not.toContain('Welcome')
+    expect(html).not.toContain('Welcome</h2>') // no page for it...
+    expect(html).toContain('Welcome <small>(slides only, not printed)</small>') // ...but it is named, not silently dropped
+    expect(html).toContain('<h4 class="hdr">Worship</h4>')
     expect(html).toContain('Key of G')
     expect(html).toContain('<span class="chords">G</span>')
   })
@@ -150,5 +152,19 @@ describe('print layout for wide characters and long words', () => {
     const html = buildSetlistSheetHtml({ name: 'W', items: [] }, [])
     expect(html).toMatch(/overflow-wrap:\s*anywhere/)
     expect(html).toMatch(/white-space:\s*pre-wrap/)
+  })
+})
+
+describe('setlist sheet — nothing disappears silently', () => {
+  it('prints a song that has no chords, keeps notes in order, and flags removed songs', () => {
+    const pres = [{ id: 'a', name: 'Plain Song', category: 'Imported', slides: [{ label: 'Verse', text: 'Just words' }] }]
+    const html = buildSetlistSheetHtml(
+      { name: 'W', items: [{ type: 'note', text: 'Capo 2 all set' }, { type: 'presentation', id: 'a' }, { type: 'presentation', id: 'gone' }] },
+      pres
+    )
+    expect(html.match(/<article>/g)).toHaveLength(1)
+    expect(html).toContain('Just words')
+    expect(html).toContain('Capo 2 all set')
+    expect(html).toContain('song removed from the library')
   })
 })

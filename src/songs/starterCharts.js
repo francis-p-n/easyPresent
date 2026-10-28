@@ -11,6 +11,7 @@ export const STARTER_SONGS = [
   {
     id: 'starter-hari-ini-kurasa-bahagia',
     name: 'Hari Ini Kurasa Bahagia',
+    key: 'G', // the verse opens and resolves on G
     category: 'Worship',
     sheet: `[Verse]
 G  D        C        G

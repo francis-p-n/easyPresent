@@ -31,6 +31,8 @@
     .fit { overflow: hidden; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
     .sect { display: block; font-size: .6em; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8fb4ff; margin-bottom: .3em; }
     .empty { color: #a3acb8; font-style: italic; }
+    #size-ctl { position: fixed; bottom: .8vh; left: 1vw; display: flex; gap: .6vw; }
+    #size-ctl button { background: #222; color: #fff; border: 1px solid #444; border-radius: 1vh; font-size: 3vh; min-width: 7vh; min-height: 6vh; cursor: pointer; }
     #conn { position: fixed; bottom: .8vh; right: 1vw; font-size: 2.2vh; color: #a3acb8; }
   </style>
 </head>
@@ -46,6 +48,7 @@
     <section class="panel" id="current" aria-live="polite"><div class="tag" id="current-tag">Now</div><div class="fit"><div class="text empty" id="current-text">Nothing on screen</div></div></section>
     <section class="panel" id="next"><div class="tag">Next</div><div class="fit"><div class="text" id="next-text"></div></div></section>
   </main>
+  <div id="size-ctl"><button id="size-down" aria-label="Smaller text">A&minus;</button><button id="size-up" aria-label="Larger text">A+</button></div>
   <div id="conn">connecting…</div>
 
   <script src="socket.io.min.js"></script>
@@ -110,8 +113,8 @@
       }
     }
     function fitAll() {
-      fit(document.getElementById('current-text'), 7);
-      fit(document.getElementById('next-text'), 3.6);
+      fit(document.getElementById('current-text'), 7 * textScale);
+      fit(document.getElementById('next-text'), 3.6 * textScale);
     }
     window.addEventListener('resize', fitAll);
 
@@ -120,13 +123,27 @@
     }
     tick(); setInterval(tick, 1000);
 
+    let textScale = 1;
     const socket = io();
     const conn = document.getElementById('conn');
-    socket.on('connect', () => { conn.textContent = ''; document.body.classList.remove('stale'); });
+    let gotState = false;
+    // Connected but nothing received yet (the operator hasn't gone live): say so, not just a blank screen
+    socket.on('connect', () => { conn.textContent = gotState ? '' : 'connected — waiting for the operator'; document.body.classList.remove('stale'); });
     const lost = () => { conn.textContent = 'disconnected — retrying…'; document.body.classList.add('stale'); };
     socket.on('disconnect', lost);
     socket.on('connect_error', lost);
-    socket.on('live-state', render);
+    socket.on('live-state', (s) => { gotState = true; conn.textContent = ''; render(s); });
+
+    // Text size, kept on this device only (handy on a phone held sideways)
+    try { textScale = Number(localStorage.getItem('presenterTextScale')) || 1; } catch (e) { /* private window */ }
+    function applyScale(delta) {
+      textScale = Math.min(2, Math.max(0.6, Math.round((textScale + delta) * 10) / 10));
+      try { localStorage.setItem('presenterTextScale', String(textScale)); } catch (e) { /* private window */ }
+      fitAll();
+    }
+    document.getElementById('size-down').addEventListener('click', () => applyScale(-0.1));
+    document.getElementById('size-up').addEventListener('click', () => applyScale(0.1));
+    applyScale(0);
   </script>
 </body>
 </html>

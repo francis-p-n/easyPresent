@@ -67,3 +67,17 @@ describe('libraryStore media files', () => {
     expect(JSON.parse(await store.load()).media.m0).toBe(dataUrl)
   })
 })
+
+describe('libraryStore recovery message', () => {
+  it('says which backup it restored from', async () => {
+    await store.save(lib({}))
+    await store.save(lib({})) // rate-limited: only the first save snapshots
+    fs.writeFileSync(path.join(dir, 'library.json'), '{ torn')
+    const backups = fs.readdirSync(path.join(dir, 'backups'))
+    expect(backups.length).toBeGreaterThan(0)
+    await store.load()
+    const r = store.takeRecovery()
+    expect(r.kind).toBe('backup')
+    expect(r.backupAt).toBeGreaterThan(Date.now() - 60000)
+  })
+})

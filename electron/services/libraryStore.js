@@ -11,8 +11,8 @@ const crypto = require('crypto')
 const FILE_REF = 'ep-file:' // media entry stored as a file in media/: ep-file:<sha1>:<mime>
 const PRUNE_AFTER_MS = 30 * 24 * 60 * 60 * 1000 // backups may still reference a file, so only old orphans go
 
-const BACKUP_INTERVAL_MS = 10 * 60 * 1000 // snapshot at most every 10 min
-const BACKUP_KEEP = 10
+const BACKUP_INTERVAL_MS = 2 * 60 * 1000 // snapshot at most every 2 min, so a restore loses at most a couple of minutes
+const BACKUP_KEEP = 30 // 30 x 2 min would only reach back an hour, but the kept set also spans older, rarer snapshots
 
 function createLibraryStore(userDataDir) {
   const target = path.join(userDataDir, 'library.json')
@@ -157,7 +157,7 @@ function createLibraryStore(userDataDir) {
           try {
             const json = await inflateMedia(await fs.promises.readFile(backup, 'utf8'))
             console.error(`Recovered library from backup: ${path.basename(backup)}`)
-            recovery = { kind: 'backup', corruptCopy }
+            recovery = { kind: 'backup', corruptCopy, backupAt: parseInt(path.basename(backup).match(/library-(\d+)/)[1], 10) }
             return json
           } catch {
             /* try older backup */

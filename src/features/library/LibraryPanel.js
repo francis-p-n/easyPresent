@@ -397,12 +397,45 @@ export class LibraryPanel {
               state.set('activeSlideIndex', -1)
             }
 
+            // Take the song out of every setlist too (remembering where, for Undo)
+            const at = state.get('presentations').findIndex((p) => p.id === presId)
+            const removedFrom = []
+            const playlists = (state.get('playlists') || []).map((pl) => {
+              const items = []
+              ;(pl.items || []).forEach((it, i) => {
+                if (it.type === 'presentation' && it.id === presId) removedFrom.push({ plId: pl.id, index: i, item: it })
+                else items.push(it)
+              })
+              return items.length === (pl.items || []).length ? pl : { ...pl, items }
+            })
+            state.set('playlists', playlists)
+
             state.set('presentations', state.get('presentations').filter((p) => p.id !== presId))
             if (state.get('selectedPresentation')?.id === presId) {
               state.set('selectedPresentation', null)
             }
             this._renderList()
-            showToast(`Deleted "${pres.name}"`, 'success')
+            showToast(`Deleted "${pres.name}"`, 'success', {
+              label: 'Undo',
+              onClick: () => {
+                const current = state.get('presentations')
+                if (current.some((p) => p.id === presId)) return
+                const next = [...current]
+                next.splice(Math.min(Math.max(at, 0), next.length), 0, pres)
+                state.set('presentations', next)
+                // Put it back in each setlist at its old position, oldest position first so indices line up
+                const restored = (state.get('playlists') || []).map((pl) => {
+                  const mine = removedFrom.filter((r) => r.plId === pl.id).sort((a, b) => a.index - b.index)
+                  if (!mine.length) return pl
+                  const items = [...(pl.items || [])]
+                  for (const r of mine) items.splice(Math.min(r.index, items.length), 0, r.item)
+                  return { ...pl, items }
+                })
+                state.set('playlists', restored)
+                this._renderList()
+                showToast(`Restored "${pres.name}"`, 'success')
+              }
+            })
           })
           break
         }

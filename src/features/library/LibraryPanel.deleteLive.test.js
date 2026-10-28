@@ -80,3 +80,34 @@ describe('LibraryPanel — deleting the live presentation', () => {
     expect(state.get('liveSlideIndex')).toBe(1)
   })
 })
+
+describe('LibraryPanel — deleting a song that is in setlists', () => {
+  const items = () => state.get('playlists')[0].items
+  beforeEach(() => {
+    document.querySelectorAll('.toast').forEach((t) => t.remove()) // earlier tests' toasts carry their own Undo
+    state.set('playlists', [
+      {
+        id: 'pl1',
+        name: 'Sunday',
+        items: [
+          { type: 'header', text: 'Worship' },
+          { type: 'presentation', id: 'p-other' },
+          { type: 'presentation', id: 'p-live' },
+          { type: 'note', text: 'Capo 2' }
+        ]
+      }
+    ])
+  })
+
+  it('removes the song from every setlist, leaving headers and notes', () => {
+    deleteViaMenu('p-live')
+    expect(items().map((i) => i.id || i.text)).toEqual(['Worship', 'p-other', 'Capo 2'])
+  })
+
+  it('Undo brings the song back to the library and to its old place in the setlist', () => {
+    deleteViaMenu('p-live')
+    document.querySelector('.toast__action').click()
+    expect(state.get('presentations').map((p) => p.id)).toEqual(['p-live', 'p-other'])
+    expect(items().map((i) => i.id || i.text)).toEqual(['Worship', 'p-other', 'p-live', 'Capo 2'])
+  })
+})

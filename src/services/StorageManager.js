@@ -137,7 +137,9 @@ class StorageManager {
     const { showToast } = await import('../components/common/ToastManager.js')
     showToast(
       recovery.kind === 'backup'
-        ? 'Your library file was damaged and has been restored from the latest backup. A copy of the damaged file was kept.'
+        ? `Your library file was damaged and has been restored from the backup made at ${
+            recovery.backupAt ? new Date(recovery.backupAt).toLocaleString() : 'an earlier time'
+          }. Anything changed after that is not in it. A copy of the damaged file was kept.`
         : 'Your library file was damaged and no backup was available, so EasyPresent started with a fresh library. A copy of the damaged file was kept.',
       'error'
     )

@@ -183,3 +183,24 @@ describe('transitionAudience', () => {
     expect(root.querySelector('.output-transition-old').textContent).toBe('B')
   })
 })
+
+describe('renderAudienceState — screens that are not 16:9', () => {
+  const layoutState = { slide: { text: 'x', elements: [{ x: 0, y: 0, width: 960, height: 540, text: 'Box', fontSize: 40 }] } }
+
+  it('fits and centres a positioned layout on a 4:3 screen instead of stretching it', () => {
+    const root = makeRoot()
+    renderAudienceState(layoutState, root, 0.5, { w: 1024, h: 768 })
+    const page = root.querySelector('#output-page')
+    expect(page).not.toBeNull()
+    expect(page.style.width).toBe('1024px') // fit = 1024/1920 → page spans the full width
+    expect(page.style.height).toBe('576px')
+    expect(page.style.top).toBe('96px') // letterboxed: (768 - 576) / 2
+    expect(page.textContent).toBe('Box')
+  })
+
+  it('without a viewport it behaves as before (no page wrapper)', () => {
+    const root = makeRoot()
+    renderAudienceState(layoutState, root, 1)
+    expect(root.querySelector('#output-page')).toBeNull()
+  })
+})

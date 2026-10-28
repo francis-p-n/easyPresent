@@ -14,6 +14,9 @@ const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 
 const SONG_CATEGORIES = new Set(['hymns', 'worship', 'songs'])
+// Slides that are never read off a chord sheet. Anything else with words is treated as a song,
+// chords or not, so a chart that simply has no chords yet still reaches the band's page.
+const NON_SONG_CATEGORIES = new Set(['announcements', 'announcement', 'sermon', 'scripture', 'bible', 'game', 'media', 'camp'])
 
 /** Lines of one slide as { text, chords:[{pos,chord}] }, from linesData or inline [C] markup. */
 export function slideLines(slide) {
@@ -35,8 +38,11 @@ export function slideLines(slide) {
 }
 
 function isSong(pres) {
-  if (SONG_CATEGORIES.has(String(pres.category || '').toLowerCase())) return true
-  return (pres.slides || []).some((s) => (s.linesData || []).some((l) => l.chords && l.chords.length))
+  const category = String(pres.category || '').toLowerCase()
+  if (SONG_CATEGORIES.has(category)) return true
+  if ((pres.slides || []).some((s) => (s.linesData || []).some((l) => l.chords && l.chords.length) || /\[[^\]]+\]/.test(s.text || ''))) return true
+  if (NON_SONG_CATEGORIES.has(category)) return false
+  return (pres.slides || []).some((s) => String(s.text || '').trim())
 }
 
 /** "Key of A (written in G, +2)" — the key to play in, and where it came from. */
@@ -96,6 +102,10 @@ const CSS = `
   .chords { font: bold 10pt Helvetica, Arial, sans-serif; white-space: pre; padding-right: .5em; min-height: 1.1em; line-height: 1.1; }
   .t { white-space: pre-wrap; font-size: 11pt; line-height: 1.2; }
   .empty { color: #888; font-style: italic; }
+  .toc li.hdr, .toc li.nte, .toc li.skip { list-style: none; margin-left: -6mm; }
+  .toc li.skip { color: #777; }
+  h4.hdr { font: bold 12pt Helvetica, Arial, sans-serif; text-transform: uppercase; letter-spacing: .1em; margin: 6mm 0 2mm; break-after: avoid; }
+  p.note { margin: 0 0 3mm; font-style: italic; color: #333; font-size: 10pt; }
 `
 
 /**
@@ -106,17 +116,40 @@ const CSS = `
 export function buildSetlistSheetHtml(playlist, presentations, opts = {}) {
   const showChords = opts.chords !== false
   const byId = new Map((presentations || []).map((p) => [p.id, p]))
-  const songs = (playlist?.items || [])
-    .filter((it) => it.type === 'presentation')
-    .map((it) => byId.get(it.id))
-    .filter((p) => p && isSong(p))
+  const items = playlist?.items || []
 
-  const toc = songs.map((p) => `<li>${esc(p.name)}${keyLabel(p) ? ` <small>(${esc(p.transpose && p.key ? transposeKey(p.key, p.transpose) : p.key || describeShift(p.transpose))})</small>` : ''}</li>`).join('')
-  const body = songs.length ? songs.map((p, i) => songHtml(p, i + 1, showChords)).join('') : '<p class="empty">No songs in this setlist.</p>'
+  // Walk the setlist in order so headers and notes stay where the operator put them,
+  // and anything that is not printed is still named rather than silently dropped
+  let number = 0
+  const toc = []
+  const pages = []
+  for (const it of items) {
+    if (it.type === 'header') {
+      const text = esc(it.text)
+      toc.push(`<li class="hdr"><strong>${text}</strong></li>`)
+      pages.push(`<h4 class="hdr">${text}</h4>`)
+    } else if (it.type === 'note') {
+      toc.push(`<li class="nte"><em>${esc(it.text)}</em></li>`)
+      pages.push(`<p class="note">${esc(it.text)}</p>`)
+    } else if (it.type === 'presentation') {
+      const p = byId.get(it.id)
+      if (!p) {
+        toc.push('<li class="skip">(song removed from the library)</li>')
+      } else if (!isSong(p)) {
+        toc.push(`<li class="skip">${esc(p.name)} <small>(slides only, not printed)</small></li>`)
+      } else {
+        number += 1
+        const label = keyLabel(p) ? ` <small>(${esc(p.transpose && p.key ? transposeKey(p.key, p.transpose) : p.key || describeShift(p.transpose))})</small>` : ''
+        toc.push(`<li>${esc(p.name)}${label}</li>`)
+        pages.push(songHtml(p, number, showChords))
+      }
+    }
+  }
+  const body = number ? pages.join('') : '<p class="empty">No songs in this setlist.</p>'
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(playlist?.name || 'Setlist')}</title><style>${CSS}</style></head><body>
 <h1>${esc(playlist?.name || 'Setlist')}</h1><div class="sub">${esc(opts.date || '')}</div>
-<ol class="toc">${toc}</ol>${body}</body></html>`
+<ol class="toc">${toc.join('')}</ol>${body}</body></html>`
 }
 
 /** Render into a hidden iframe and open the print dialog. */

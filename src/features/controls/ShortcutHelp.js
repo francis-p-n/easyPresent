@@ -70,7 +70,18 @@ export function showShortcutHelp() {
       const keys = document.createElement('span')
       keys.className = 'shortcut-keys'
       keys.style.cssText = 'flex:1;font-weight:600;color:var(--text-primary);'
-      keys.textContent = bindings[action.id].length ? bindings[action.id].map(describeSpec).join('   ') : '(no key)'
+      keys.style.cssText += 'display:flex;flex-wrap:wrap;gap:4px;'
+      if (bindings[action.id].length) {
+        for (const spec of bindings[action.id]) {
+          const chip = document.createElement('kbd')
+          chip.textContent = describeSpec(spec)
+          chip.style.cssText = 'font-family:inherit;font-size:12px;padding:1px 6px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-active);'
+          keys.appendChild(chip)
+        }
+      } else {
+        keys.textContent = '(no key)'
+        keys.style.fontWeight = '400'
+      }
 
       const isListening = listening && listening.action === action.id
       const mk = (text, cls, onClick, title) => {
@@ -78,7 +89,7 @@ export function showShortcutHelp() {
         b.className = `btn ${cls}`
         b.textContent = text
         b.title = title
-        b.style.cssText = 'font-size:11px;padding:2px 8px;'
+        b.style.cssText = 'font-size:12px;padding:2px 10px;min-height:26px;'
         b.addEventListener('click', onClick)
         return b
       }

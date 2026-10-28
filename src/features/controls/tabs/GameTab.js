@@ -39,7 +39,7 @@ export function renderGame(container) {
   function render() {
     const modeBar = ['scores', 'trivia', 'countdown'].map((m) => {
       const active = game.mode === m
-      return `<button data-mode="${m}" style="flex:1;padding:5px;border-radius:4px;border:none;cursor:pointer;background:${active ? 'var(--accent-blue)' : 'transparent'};color:${active ? 'white' : 'var(--text-secondary)'};font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">${m}</button>`
+      return `<button data-mode="${m}" style="flex:1;padding:5px;border-radius:4px;border:none;cursor:pointer;min-height:26px;background:${active ? 'var(--accent-blue-strong)' : 'transparent'};color:${active ? 'white' : '#a8adb8'};font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">${m}</button>`
     }).join('')
 
     let modeContent = ''

@@ -266,7 +266,7 @@
 }
 
 .tab.active {
-  color: var(--accent-blue);
+  color: var(--accent-blue-text);
   border-bottom-color: var(--accent-blue);
 }
 
@@ -688,15 +688,17 @@
 }
 .slide-thumbnail__label--bridge {
   background: var(--group-bridge);
+  color: #1a1205; /* white on amber is 2.3:1; dark text is 9:1 */
 }
 .slide-thumbnail__label--intro {
   background: var(--group-intro);
 }
 .slide-thumbnail__label--pre-chorus {
-  background: #8b5cf6;
+  background: #7c4ddb;
 }
 .slide-thumbnail__label--tag {
-  background: #f59e0b;
+  background: var(--group-tag);
+  color: #1a1205;
 }
 .slide-thumbnail__label--outro {
   background: #64748b;

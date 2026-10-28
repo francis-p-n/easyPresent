@@ -382,7 +382,7 @@ export class LibraryPanel {
       switch (action) {
         case 'delete': {
           // Deleting is irreversible — confirm before removing
-          this._showConfirmDialog(`Delete "${pres.name}"?`, 'This cannot be undone.', () => {
+          this._showConfirmDialog(`Delete "${pres.name}"?`, 'It is also taken out of any setlist. You can undo this right after.', () => {
             // If this deck's slide is the one on the projector, take it down
             // with the deck. Otherwise the audience keeps staring at a slide
             // that no longer exists anywhere in the app — and since the deck is
@@ -408,7 +408,7 @@ export class LibraryPanel {
               })
               return items.length === (pl.items || []).length ? pl : { ...pl, items }
             })
-            state.set('playlists', playlists)
+            this._setPlaylists(playlists)
 
             state.set('presentations', state.get('presentations').filter((p) => p.id !== presId))
             if (state.get('selectedPresentation')?.id === presId) {
@@ -431,7 +431,7 @@ export class LibraryPanel {
                   for (const r of mine) items.splice(Math.min(r.index, items.length), 0, r.item)
                   return { ...pl, items }
                 })
-                state.set('playlists', restored)
+                this._setPlaylists(restored)
                 this._renderList()
                 showToast(`Restored "${pres.name}"`, 'success')
               }
@@ -498,6 +498,13 @@ export class LibraryPanel {
     }
     setTimeout(() => document.addEventListener('click', close), 0)
     document.addEventListener('keydown', onKey)
+  }
+
+  /** Replaces the setlists and keeps the open one (a separate object) pointing at its updated copy. */
+  _setPlaylists(playlists) {
+    const open = state.get('activePlaylist')
+    if (open) state.set('activePlaylist', playlists.find((p) => p.id === open.id) || open) // first: the 'playlists' listeners redraw from it
+    state.set('playlists', playlists)
   }
 
   _showConfirmDialog(title, message, onConfirm) {

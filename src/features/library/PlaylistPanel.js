@@ -24,6 +24,7 @@ export class PlaylistPanel {
     state.on('selectedPresentation', () => this._renderItems())
     state.on('presentations', () => this._renderItems()) // a deleted/restored song must not linger in the open setlist
     state.on('playlists', () => this._renderItems())
+    state.on('activePlaylist', () => this._renderItems())
     // Close any open dropdown when clicking elsewhere (one listener, not one per render)
     document.addEventListener('click', (e) => {
       this.container.querySelectorAll('.playlist-menu').forEach((menu) => {

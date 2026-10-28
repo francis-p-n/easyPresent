@@ -36,7 +36,7 @@ export function renderWorkspaceMenu(host, { onApplied } = {}) {
     const select = document.createElement('select')
     select.id = 'ws-select'
     select.className = 'input'
-    select.style.cssText = 'font-size:12px;min-width:140px;'
+    select.style.cssText = 'font-size:12px;min-width:140px;min-height:26px;'
     select.setAttribute('aria-label', 'Saved layouts')
     select.innerHTML = '<option value="">Choose a saved layout…</option>'
     for (const w of list) {
@@ -52,7 +52,7 @@ export function renderWorkspaceMenu(host, { onApplied } = {}) {
       b.className = 'btn'
       b.textContent = text
       b.title = title
-      b.style.cssText = 'font-size:11px;padding:2px 8px;'
+      b.style.cssText = 'font-size:12px;padding:2px 10px;min-height:26px;'
       b.addEventListener('click', onClick)
       return b
     }
@@ -86,7 +86,7 @@ export function renderWorkspaceMenu(host, { onApplied } = {}) {
     name.className = 'input'
     name.placeholder = 'Name this layout'
     name.maxLength = 40
-    name.style.cssText = 'font-size:12px;width:140px;'
+    name.style.cssText = 'font-size:12px;width:140px;min-height:26px;'
     name.setAttribute('aria-label', 'Layout name')
 
     const save = button('ws-save', 'Save current', () => {

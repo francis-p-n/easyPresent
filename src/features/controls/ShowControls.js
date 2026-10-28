@@ -31,6 +31,14 @@ export class ShowControls {
     } catch { /* private window or damaged value: show everything */ }
     this.render()
     this._bindEvents()
+    // A popover goes away when you click elsewhere
+    document.addEventListener('click', (e) => {
+      const menu = this.container.querySelector('#control-tabs-menu')
+      if (!menu || !this.container.isConnected) return
+      // A click that re-rendered the panel (ticking a tab, applying a layout) leaves a detached target: not an outside click
+      if (!e.target.isConnected || menu.contains(e.target) || e.target.closest('#control-tabs-customize')) return
+      this._toggleTabMenu()
+    })
   }
 
   render() {
@@ -118,10 +126,10 @@ export class ShowControls {
     const active = state.get('activeControlTab')
     const menu = document.createElement('div')
     menu.id = 'control-tabs-menu'
-    menu.style.cssText = 'padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px 14px;border-bottom:1px solid var(--border-color);font-size:12px;color:var(--text-secondary);'
+menu.style.cssText = 'padding:8px 12px;display:flex;flex-wrap:wrap;gap:2px 14px;border-bottom:1px solid var(--border-color);font-size:12px;color:var(--text-secondary);'
     this.tabDefs.forEach((t) => {
       const label = document.createElement('label')
-      label.style.cssText = 'display:flex;align-items:center;gap:4px;cursor:pointer;'
+      label.style.cssText = 'display:flex;align-items:center;gap:4px;cursor:pointer;min-height:24px;'
       const box = document.createElement('input')
       box.type = 'checkbox'
       box.dataset.tabToggle = t.key

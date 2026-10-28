@@ -274,6 +274,7 @@ export class ArrangementEditor {
       row.style.cssText =
         'display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg-hover);border-radius:6px;font-size:12px;'
       row.innerHTML = `
+        <span aria-hidden="true" title="Drag to reorder" style="color:var(--text-muted);cursor:grab;">&#x283F;</span>
         <span style="color:var(--text-secondary);min-width:18px;">${i + 1}</span>
         <span style="flex:1;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._esc(slide?.label || slide?.text?.split('\n')[0] || '(missing slide)')}</span>
       `

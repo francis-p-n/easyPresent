@@ -99,6 +99,14 @@ describe('LibraryPanel — deleting a song that is in setlists', () => {
     ])
   })
 
+  it('keeps the open setlist (activePlaylist) in step, so no ghost row is left', () => {
+    state.set('activePlaylist', state.get('playlists')[0])
+    deleteViaMenu('p-live')
+    expect(state.get('activePlaylist').items.map((i) => i.id || i.text)).toEqual(['Worship', 'p-other', 'Capo 2'])
+    document.querySelector('.toast__action').click()
+    expect(state.get('activePlaylist').items.map((i) => i.id || i.text)).toEqual(['Worship', 'p-other', 'p-live', 'Capo 2'])
+  })
+
   it('removes the song from every setlist, leaving headers and notes', () => {
     deleteViaMenu('p-live')
     expect(items().map((i) => i.id || i.text)).toEqual(['Worship', 'p-other', 'Capo 2'])

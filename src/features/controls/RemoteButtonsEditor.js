@@ -78,6 +78,11 @@ export function mountRemoteButtonsEditor(host, options = {}) {
 
   function render() {
     host.innerHTML = ''
+    const head = document.createElement('div')
+    head.style.cssText = 'display:flex;gap:4px;font-size:10.5px;opacity:.75;margin-bottom:2px;'
+    head.setAttribute('aria-hidden', 'true')
+    head.innerHTML = '<span style="width:16px;">On</span><span style="flex:1;">Label</span><span style="width:34px;">Large</span><span style="width:50px;">Order</span>'
+    host.appendChild(head)
     const rows = rowsFor()
     rows.forEach((row, i) => {
       const el = document.createElement('div')

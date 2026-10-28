@@ -454,7 +454,7 @@
 }
 
 .preview-status--live {
-  background: var(--accent-red);
+  background: var(--accent-red-strong);
   color: #fff;
   animation: pulse 2s ease-in-out infinite;
 }

@@ -231,6 +231,16 @@ screens, 31 rapid LOGO toggles, keys typed into a dialog, double-click, console 
 - 10-11px labels raised to 12px.
 - Playlist rows show their reorder/remove buttons only on hover, focus or selection (always on touch screens), so titles are no longer cut to 3 letters; Library category chips wrap instead of clipping. Checked in the browser at 900px.
 
+### Found and fixed in the visual pass (browser, 1280x800 and phone width)
+
+- Deleting a song left a "Song removed from the library" row in the open setlist, and Undo did not redraw it: the panel read a separate open-setlist object that was not updated. Both now redraw at once.
+- The delete dialog still said "This cannot be undone" next to an Undo button.
+- Screens menu was taller than the window with Remote buttons open, hiding "Phones & tablets"; it now scrolls.
+- The tabs menu (the ⋯ button) now closes on an outside click or Esc (Esc no longer clears the screen while it is open) instead of staying open and pushing the controls down.
+- Contrast: slide-label badges (Bridge white-on-amber 2.3:1), the LIVE badge (4.0:1), the active control tab (4.1:1) and the Game mode buttons now meet 4.5:1; an automated pass over every visible text element finds no failures.
+- Shortcut sheet keys were run together ("→ ↓ Page Down Space"); they are now separate key chips. Buttons in the new menus are at least 26px tall.
+- Arrangement rows show a drag handle; the remote-button editor has column headings.
+
 ### Still open (known, not fixed)
 
 - Row buttons are 24px with a fine pointer; touch sizes apply only when Windows reports a coarse pointer.

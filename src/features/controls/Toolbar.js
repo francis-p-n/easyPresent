@@ -105,7 +105,7 @@ export class Toolbar {
       <button class="btn tooltip" id="toolbar-screens-btn" data-tooltip="Screen Configuration" aria-label="Screens">
         ${icon('monitor', 16).outerHTML}<span class="toolbar-btn-label">Screens</span>
       </button>
-      <div id="toolbar-screens-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:200;background:var(--bg-toolbar);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-md);width:290px;padding:4px;">
+      <div id="toolbar-screens-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:200;background:var(--bg-toolbar);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-md);width:290px;padding:4px;max-height:calc(100vh - 72px);overflow-y:auto;">
         <div style="padding:6px;font-size:11px;opacity:.7;line-height:1.4;">Each screen goes to its own display. "Auto" picks a free one; with a single display they open as windows you can move.</div>
         ${roleRow('audience', 'Audience', 'Congregation screen / projector')}
         ${roleRow('presenter', 'Presenter', 'Pastor: current + next slide, clock')}

@@ -126,7 +126,7 @@ describe('ArrangementEditor — building a custom arrangement', () => {
     const rows = () => [...panel().querySelectorAll('#arr-sequence [draggable="true"]')]
     rows()[0].dispatchEvent(new window.Event('dragstart', { bubbles: true }))
     rows()[2].dispatchEvent(new window.Event('drop', { bubbles: true, cancelable: true }))
-    expect(rows().map((r) => r.textContent.replace(/\s+/g, ' ').trim().replace(/^\d+ /, ''))).toEqual(['Chorus', 'Verse 2', 'Verse 1'])
+    expect(rows().map((r) => r.textContent.replace(/\s+/g, ' ').trim().replace(/^\u283F?\s*\d+ /, ''))).toEqual(['Chorus', 'Verse 2', 'Verse 1'])
   })
 
   it('reordering Master and saving rewrites the stored slide order', () => {

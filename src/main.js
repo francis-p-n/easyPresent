@@ -69,6 +69,12 @@ const OPEN_MENU_SELECTOR = '#toolbar-screens-menu, #toolbar-library-menu, .playl
 /** Closes any open dropdown menu; returns true if there was one. */
 export function closeOpenMenus(doc = document) {
   let closed = false
+  const tabsMenu = doc.getElementById('control-tabs-menu')
+  if (tabsMenu) {
+    tabsMenu.remove() // Escape closes the control-tabs popover before it would clear the screen
+    doc.getElementById('control-tabs-customize')?.setAttribute('aria-expanded', 'false')
+    closed = true
+  }
   doc.querySelectorAll(OPEN_MENU_SELECTOR).forEach((menu) => {
     if (menu.style.display === 'block') {
       menu.style.display = 'none'

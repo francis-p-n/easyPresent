@@ -3,7 +3,7 @@ import { icon } from '../../components/common/Icons.js'
 import { printSetlist } from '../../songs/printSheet.js'
 import { showToast } from '../../components/common/ToastManager.js'
 import * as ops from '../../core/playlistOps.js'
-import { createTitlePresentation, isTitlePresentation } from '../../core/titleSlide.js'
+import { createTitlePresentation, titleKindOf } from '../../core/titleSlide.js'
 
 const MENU_STYLE =
   'display:none;position:absolute;right:0;top:100%;background:var(--bg-toolbar);border:1px solid var(--border-color);border-radius:4px;padding:4px 0;min-width:170px;z-index:10;'
@@ -66,6 +66,7 @@ export class PlaylistPanel {
           <div class="playlist-menu" id="playlist-add-dropdown" style="${MENU_STYLE}">
             <div class="dropdown-item" data-add="song" style="${MENU_ITEM_STYLE}">Add Song…</div>
             <div class="dropdown-item" data-add="title" style="${MENU_ITEM_STYLE}">Add Welcome slide</div>
+            <div class="dropdown-item" data-add="sermon" style="${MENU_ITEM_STYLE}">Add Sermon slide</div>
             <div class="dropdown-item" data-add="header" style="${MENU_ITEM_STYLE}">Add Header</div>
             <div class="dropdown-item" data-add="note" style="${MENU_ITEM_STYLE}">Add Note</div>
           </div>
@@ -146,17 +147,17 @@ export class PlaylistPanel {
     }
   }
 
-  /** Adds the service's welcome slide (speaker, date and type filled in from its details) at the top. */
-  _addWelcomeSlide() {
+  /** Adds the service's welcome (top of the list) or sermon (end) slide, filled in from its details. */
+  _addTitleSlide(kind) {
     const playlist = state.get('activePlaylist')
     if (!playlist) return
     const presentations = state.get('presentations') || []
-    const existing = playlist.items.some((i) => i.type === 'presentation' && isTitlePresentation(presentations.find((p) => p.id === i.id)))
-    if (existing) return showToast('This service already has a welcome slide', 'info')
-    const made = createTitlePresentation(playlist)
+    const existing = playlist.items.some((i) => i.type === 'presentation' && titleKindOf(presentations.find((p) => p.id === i.id)) === kind)
+    if (existing) return showToast(`This service already has a ${kind} slide`, 'info')
+    const made = createTitlePresentation(playlist, kind)
     state.set('presentations', [...presentations, made])
-    this._commit(ops.addItem(playlist, { type: 'presentation', id: made.id }, 0))
-    showToast('Added the welcome slide. It follows the service details.', 'success')
+    this._commit(ops.addItem(playlist, { type: 'presentation', id: made.id }, kind === 'welcome' ? 0 : playlist.items.length))
+    showToast(`Added the ${kind} slide. It follows the service details.`, 'success')
   }
 
   _switchTo(playlist) {
@@ -541,7 +542,8 @@ export class PlaylistPanel {
         this.container.querySelectorAll('.playlist-menu').forEach((m) => (m.style.display = 'none'))
         if (!state.get('activePlaylist')) return this._newPlaylist()
         if (add.dataset.add === 'song') this._showSongPicker()
-        else if (add.dataset.add === 'title') this._addWelcomeSlide()
+        else if (add.dataset.add === 'title') this._addTitleSlide('welcome')
+        else if (add.dataset.add === 'sermon') this._addTitleSlide('sermon')
         else if (add.dataset.add === 'header') {
           this._showTextPrompt('Add Header', 'Header text', (text) => this._addPlaylistItem({ type: 'header', text }))
         } else {

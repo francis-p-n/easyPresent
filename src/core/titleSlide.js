@@ -35,6 +35,21 @@ export function titleWords(meta) {
   }
 }
 
+/** The words on the sermon slide: the message title and passage instead of "Welcome to". */
+export function sermonWords(meta) {
+  const m = metaOf({ meta })
+  return {
+    label: "TODAY'S MESSAGE",
+    title: m.title.toUpperCase(),
+    scripture: m.scripture,
+    speaker: m.speaker.toUpperCase(),
+    date: titleDate(m.date)
+  }
+}
+
+export const TITLE_KINDS = ['welcome', 'sermon']
+export const wordsFor = (kind, meta) => (kind === 'sermon' ? sermonWords(meta) : titleWords(meta))
+
 const slideId = () => 'slide-' + Math.random().toString(36).slice(2, 11)
 const presentationId = () => 'title-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 
@@ -50,19 +65,38 @@ export function titleElements(words) {
   ]
 }
 
+/** The sermon slide's text boxes: a small label, the title big, the passage in script, speaker and date. */
+export function sermonElements(words) {
+  const base = { vAlign: 'center', lineSpacing: 1.1, color: '#ffffff' }
+  return [
+    { ...base, role: 'label', text: words.label, x: 0, y: 56, width: 1920, height: 70, fontSize: 34, fontFamily: TITLE_FONTS.small, bold: true, hAlign: 'center', letterSpacing: 0.16 },
+    { ...base, role: 'title', text: words.title, x: 120, y: 270, width: 1680, height: 420, fontSize: 150, fontFamily: TITLE_FONTS.display, bold: false, hAlign: 'center' },
+    { ...base, role: 'scripture', text: words.scripture, x: 160, y: 720, width: 1600, height: 170, fontSize: 90, fontFamily: TITLE_FONTS.script, bold: false, hAlign: 'center' },
+    { ...base, role: 'speaker', text: words.speaker, x: 90, y: 930, width: 900, height: 70, fontSize: 32, fontFamily: TITLE_FONTS.small, bold: true, hAlign: 'left', letterSpacing: 0.12 },
+    { ...base, role: 'date', text: words.date, x: 930, y: 930, width: 900, height: 70, fontSize: 32, fontFamily: TITLE_FONTS.small, bold: true, hAlign: 'right', letterSpacing: 0.12 }
+  ]
+}
+
 const joinText = (elements) => elements.map((e) => e.text).filter(Boolean).join('\n')
 
-/** A new library entry holding the welcome slide for `playlist`. */
-export function createTitlePresentation(playlist) {
-  const elements = titleElements(titleWords(playlist.meta))
+/** A new library entry holding the welcome (or sermon) slide for `playlist`. */
+export function createTitlePresentation(playlist, kind = 'welcome') {
+  const sermon = kind === 'sermon'
+  const words = wordsFor(kind, playlist.meta)
+  const elements = sermon ? sermonElements(words) : titleElements(words)
+  const label = sermon ? 'Sermon' : 'Welcome'
   return {
     id: presentationId(),
-    name: 'Welcome',
+    name: label,
     category: TITLE_CATEGORY,
     serviceId: playlist.id,
-    slides: [{ id: slideId(), group: 'intro', label: 'Welcome', text: joinText(elements), elements }]
+    titleKind: sermon ? 'sermon' : 'welcome',
+    slides: [{ id: slideId(), group: sermon ? 'verse' : 'intro', label, text: joinText(elements), elements }]
   }
 }
+
+/** Which generated slide this is: 'welcome' or 'sermon' (null for any other library entry). */
+export const titleKindOf = (p) => (isTitlePresentation(p) ? (p.titleKind === 'sermon' ? 'sermon' : 'welcome') : null)
 
 /** Is this library entry a generated welcome slide? */
 export const isTitlePresentation = (p) => !!p && typeof p.serviceId === 'string' && p.category === TITLE_CATEGORY
@@ -72,10 +106,10 @@ export const isTitlePresentation = (p) => !!p && typeof p.serviceId === 'string'
  * changed, so callers can skip a state update.
  */
 export function refreshTitleSlides(playlist, presentations) {
-  const words = titleWords(playlist.meta)
   let changed = false
   const next = (presentations || []).map((p) => {
     if (!isTitlePresentation(p) || p.serviceId !== playlist.id) return p
+    const words = wordsFor(titleKindOf(p), playlist.meta)
     const slides = p.slides.map((slide) => {
       let touched = false
       const elements = (slide.elements || []).map((el) => {

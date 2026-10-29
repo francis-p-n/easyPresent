@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { titleDate, titleWords, createTitlePresentation, refreshTitleSlides, cloneTitleSlides, isTitlePresentation } from './titleSlide.js'
+import { titleDate, titleWords, createTitlePresentation, refreshTitleSlides, cloneTitleSlides, isTitlePresentation, titleKindOf } from './titleSlide.js'
 import { renderSlideLayout, hasLayout } from './slideLayout.js'
 
 const service = (meta, extra = {}) => ({ id: 'svc1', name: 'Sunday', items: [], meta, ...extra })
@@ -92,5 +92,43 @@ describe('next week', () => {
     const out = cloneTitleSlides(copy, songs)
     expect(out.presentations).toBe(songs)
     expect(out.playlist.items).toEqual(copy.items)
+  })
+})
+
+describe('the sermon slide', () => {
+  const sermon = { ...meta, title: 'Faith under pressure', scripture: 'Hebrews 11:1-6' }
+
+  it('shows the message title and passage, speaker and date', () => {
+    const p = createTitlePresentation(service(sermon), 'sermon')
+    expect(titleKindOf(p)).toBe('sermon')
+    expect(p.slides[0].elements.map((e) => e.role)).toEqual(['label', 'title', 'scripture', 'speaker', 'date'])
+    const text = (role) => p.slides[0].elements.find((e) => e.role === role).text
+    expect(text('title')).toBe('FAITH UNDER PRESSURE')
+    expect(text('scripture')).toBe('Hebrews 11:1-6')
+    expect(text('speaker')).toBe('PASTOR CONNOR HAMILTON')
+  })
+
+  it('follows the details separately from the welcome slide', () => {
+    const svc = service(sermon)
+    const welcome = createTitlePresentation(svc)
+    const msg = createTitlePresentation(svc, 'sermon')
+    const next = refreshTitleSlides({ ...svc, meta: { ...sermon, title: 'Hope', scripture: 'Romans 8' } }, [welcome, msg])
+    const el = (p, role) => p.slides[0].elements.find((e) => e.role === role).text
+    expect(el(next[1], 'title')).toBe('HOPE')
+    expect(el(next[1], 'scripture')).toBe('Romans 8')
+    expect(el(next[0], 'title')).toBe('SUNDAY SERVICE') // the welcome slide's "title" is the service type
+    expect(titleKindOf(welcome)).toBe('welcome')
+    expect(titleKindOf({ id: 'song', slides: [] })).toBeNull()
+  })
+
+  it('next week clears the sermon but keeps the church and type', () => {
+    const svc = service(sermon)
+    const p = createTitlePresentation(svc, 'sermon')
+    const copy = { id: 'svc2', name: 'Next', items: [{ type: 'presentation', id: p.id }], meta: { ...sermon, date: '2026-09-06', title: '', scripture: '', speaker: '' } }
+    const out = cloneTitleSlides(copy, [p])
+    const made = out.presentations.find((x) => x.id === out.playlist.items[0].id)
+    expect(made.titleKind).toBe('sermon')
+    expect(made.slides[0].elements.find((e) => e.role === 'title').text).toBe('')
+    expect(p.slides[0].elements.find((e) => e.role === 'title').text).toBe('FAITH UNDER PRESSURE')
   })
 })

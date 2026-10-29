@@ -21,6 +21,16 @@ function registerDisplayIpc({ displays, stageHub, getMainWindow }) {
   // "Share to phones & tablets": start the web server on request and report the
   // addresses a phone on the same Wi-Fi can open
   ipcMain.handle('stage-share-status', () => stageHub.status())
+  // Outside control (Stream Deck, Companion, lighting): the address and key, starting the server if needed
+  ipcMain.handle('stage-api-info', async () => {
+    await stageHub.start()
+    return stageHub.status()
+  })
+  ipcMain.handle('stage-api-new-key', async () => {
+    stageHub.newApiKey()
+    await stageHub.start()
+    return stageHub.status()
+  })
   ipcMain.handle('stage-share-start', async () => {
     await stageHub.share()
     return stageHub.status()

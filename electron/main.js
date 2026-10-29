@@ -2,6 +2,7 @@ const { app, BrowserWindow } = require('electron')
 const { createMainWindow } = require('./windows/mainWindow')
 const { createDisplayManager } = require('./windows/displays')
 const { createStageHub } = require('./services/stageHub')
+const { createApiKeyStore } = require('./services/apiKey')
 const { registerLibraryIpc } = require('./ipc/library')
 const { registerPptxIpc } = require('./ipc/pptx')
 const { registerSongsIpc } = require('./ipc/songs')
@@ -13,7 +14,8 @@ const getMainWindow = () => mainWindow
 
 app.whenReady().then(() => {
   const userDataDir = app.getPath('userData')
-  const stageHub = createStageHub()
+  const apiKeys = createApiKeyStore(userDataDir)
+  const stageHub = createStageHub({ getApiKey: () => apiKeys.get(), regenerateApiKey: () => apiKeys.regenerate() })
   const displays = createDisplayManager({ stageHub, getMainWindow })
 
   registerLibraryIpc({ userDataDir, getMainWindow })

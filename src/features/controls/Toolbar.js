@@ -153,6 +153,12 @@ export class Toolbar {
           <button class="btn" id="screens-share-btn" style="width:100%;">Start sharing</button>
           <div id="screens-share-urls" style="font-size:12px;margin-top:6px;word-break:break-all;"></div>
         </div>
+        <details id="screens-control" style="padding:8px 6px 6px;border-top:1px solid var(--border-color);margin-top:4px;">
+          <summary style="font-size:12px;font-weight:600;cursor:pointer;">Outside control (Stream Deck, Companion, lighting)</summary>
+          <div style="font-size:12px;opacity:.65;margin:4px 0;">Other programs can press Next, Back, Clear and the rest by opening a web address that carries the key below. It works from this computer; start sharing to use it from another computer on the Wi-Fi.</div>
+          <div id="screens-control-info" style="font-size:12px;word-break:break-all;"></div>
+          <button class="btn" id="screens-control-newkey" style="width:100%;margin-top:6px;" hidden>New key (stops anything using the old one)</button>
+        </details>
       </div>`
     this.container.appendChild(screensWrap)
 
@@ -407,6 +413,42 @@ export class Toolbar {
         }
       }
     }
+    // Outside control: show the address and key, with a ready-to-paste link for each command
+    const controlBox = screensMenu.querySelector('#screens-control')
+    const controlInfo = screensMenu.querySelector('#screens-control-info')
+    const newKeyBtn = screensMenu.querySelector('#screens-control-newkey')
+    const renderControl = (status) => {
+      controlInfo.textContent = ''
+      if (!status?.api || !status.apiKey) {
+        controlInfo.textContent = 'The screen server could not start.'
+        return
+      }
+      newKeyBtn.hidden = false
+      const line = (label, value) => {
+        const row = document.createElement('div')
+        row.style.cssText = 'margin-bottom:4px;'
+        const b = document.createElement('strong')
+        b.textContent = `${label}: `
+        row.append(b, document.createTextNode(value))
+        controlInfo.appendChild(row)
+      }
+      line('Key', status.apiKey)
+      const bases = [status.api, ...((status.urls || []).map((u) => u.api).filter(Boolean))]
+      bases.forEach((base, i) => line(i === 0 ? 'This computer' : 'Other computers', base))
+      line('Try', `${status.api}/next?key=${status.apiKey}`)
+      line('Other commands', 'prev, clear, logo, nextSong, prevSong, clearSlide, hideAudienceText, status')
+    }
+    controlBox?.addEventListener('toggle', async () => {
+      if (!controlBox.open) return
+      try {
+        renderControl(await window.electronAPI.stageApiInfo?.())
+      } catch (err) {
+        controlInfo.textContent = `Couldn't start the screen server: ${err.message}`
+      }
+    })
+    newKeyBtn?.addEventListener('click', async () => {
+      renderControl(await window.electronAPI.stageApiNewKey?.())
+    })
     const fillDisplays = async () => {
       const displays = (await window.electronAPI.listDisplays?.()) || []
       screensMenu.querySelectorAll('.screens-display').forEach((sel) => {
@@ -442,6 +484,7 @@ export class Toolbar {
         shareBtn.disabled = true // the server restarts; don't let a second click race it
         try {
           renderShare(await (stopping ? window.electronAPI.stageShareStop() : window.electronAPI.stageShareStart()))
+          if (controlBox?.open) renderControl(await window.electronAPI.stageApiInfo?.())
         } catch (err) {
           showToast(`Couldn't ${stopping ? 'stop' : 'start'} sharing: ${err.message}`, 'error')
           window.electronAPI.stageShareStatus?.().then(renderShare)

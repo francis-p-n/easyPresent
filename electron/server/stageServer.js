@@ -16,6 +16,9 @@ function pinMatches(expected, given) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+const MAX_API_FAILS = 10; // wrong keys from one address before it is turned away for a while
+const API_LOCKOUT_MS = 60 * 1000;
+
 let io;
 let currentSlideData = null;
 let currentLiveState = null;
@@ -73,6 +76,34 @@ function startServer(port = 8080, host = 'localhost', remote = {}) {
   const server = http.createServer(app);
   io = new Server(server, {
     cors: { origin: '*' }
+  });
+
+  // Outside control: other programs (Stream Deck, Companion, a lighting desk) call
+  //   GET|POST /api/<command>?key=...   or send the key in an X-Api-Key header
+  //   GET /api/status                    what is live now
+  // Only the same commands a phone remote may use are accepted; everything needs the key.
+  const apiFails = new Map(); // address -> { count, until }
+  app.all('/api/:name', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ ok: false, error: 'method-not-allowed' });
+    const who = req.ip || 'unknown';
+    const fail = apiFails.get(who);
+    if (fail && fail.count >= MAX_API_FAILS && fail.until > Date.now()) return res.status(429).json({ ok: false, error: 'too-many-attempts' });
+    const expected = remote.getApiKey ? remote.getApiKey() : null;
+    const given = req.get('x-api-key') || (typeof req.query.key === 'string' ? req.query.key : '');
+    if (!pinMatches(expected, given)) {
+      const count = fail && fail.until > Date.now() ? fail.count + 1 : 1;
+      apiFails.set(who, { count, until: Date.now() + API_LOCKOUT_MS });
+      return res.status(401).json({ ok: false, error: 'bad-key' });
+    }
+    apiFails.delete(who);
+    const name = req.params.name;
+    if (name === 'status') return res.json({ ok: true, commands: REMOTE_COMMANDS, live: currentLiveState });
+    if (!REMOTE_COMMANDS.includes(name) || !remote.onCommand) {
+      return res.status(404).json({ ok: false, error: 'unknown-command', commands: REMOTE_COMMANDS });
+    }
+    remote.onCommand(name);
+    res.json({ ok: true, command: name });
   });
 
   // Serve static files for the stage display. public/stage is the source of

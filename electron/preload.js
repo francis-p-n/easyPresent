@@ -37,6 +37,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stageShareStart: () => ipcRenderer.invoke('stage-share-start'),
   stageShareStop: () => ipcRenderer.invoke('stage-share-stop'),
   openDisplays: () => ipcRenderer.invoke('open-displays'),
+  stageApiInfo: () => ipcRenderer.invoke('stage-api-info'),
+  stageApiNewKey: () => ipcRenderer.invoke('stage-api-new-key'),
   toggleDisplay: (role, displayId, options) => ipcRenderer.invoke('toggle-display', role, displayId, options),
 
   // Audience output (fullscreen projection window)

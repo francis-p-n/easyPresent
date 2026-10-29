@@ -26,7 +26,7 @@ function lanAddresses() {
     .map((i) => i.address)
 }
 
-function createStageHub() {
+function createStageHub({ getApiKey = () => null, regenerateApiKey = () => null } = {}) {
   let server = null
   let starting = null // Promise<port> while starting / once running
   let port = PORT
@@ -48,6 +48,7 @@ function createStageHub() {
       server = startServer(port, sharing ? EVERYONE : LOCAL_ONLY, {
         getPin: () => pin,
         getButtons: () => remoteButtons,
+        getApiKey,
         onCommand: (cmd) => remoteHandler && remoteHandler(cmd)
       })
       if (pendingSlide) server.broadcastSlide(pendingSlide)
@@ -89,6 +90,8 @@ function createStageHub() {
       if (server) server.broadcastRemoteButtons(remoteButtons)
       return remoteButtons
     },
+    /** A new key for outside control; whatever used the old one stops working. */
+    newApiKey: () => regenerateApiKey(),
     /** Where phone-remote commands (next/prev/clear/logo) are delivered. */
     setRemoteHandler(fn) {
       remoteHandler = fn
@@ -102,12 +105,15 @@ function createStageHub() {
         sharing: !!server && sharing,
         port,
         pin,
+        apiKey: getApiKey(),
+        api: server ? `http://localhost:${port}/api` : null,
         urls: sharing
           ? lanAddresses().map((ip) => ({
               presenter: `http://${ip}:${port}/presenter`,
               pa: `http://${ip}:${port}/pa`,
               remote: `http://${ip}:${port}/remote`,
-              stage: `http://${ip}:${port}/`
+              stage: `http://${ip}:${port}/`,
+              api: `http://${ip}:${port}/api`
             }))
           : []
       }

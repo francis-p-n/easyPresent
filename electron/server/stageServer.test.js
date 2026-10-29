@@ -119,3 +119,57 @@ describe('Phone remote', () => {
     await other.close();
   });
 });
+
+describe('Outside control (HTTP API)', () => {
+  const port = 8086;
+  const commands = [];
+  let server;
+
+  beforeAll(async () => {
+    server = startServer(port, 'localhost', { getApiKey: () => 'secretkey1', onCommand: (c) => commands.push(c) });
+    await server.ready;
+    server.broadcastLiveState({ title: 'Sunday', onAir: true });
+  });
+  afterAll(() => server.close());
+
+  const call = (p, init) => fetch(`http://localhost:${port}/api/${p}`, init);
+
+  it('runs a command with the right key, from a link or a header', async () => {
+    const a = await call('next?key=secretkey1');
+    expect(a.status).toBe(200);
+    expect(await a.json()).toEqual({ ok: true, command: 'next' });
+    const b = await call('clear', { method: 'POST', headers: { 'X-Api-Key': 'secretkey1' } });
+    expect(b.status).toBe(200);
+    expect(commands).toEqual(['next', 'clear']);
+  });
+
+  it('refuses a missing or wrong key and runs nothing', async () => {
+    const before = commands.length;
+    expect((await call('next')).status).toBe(401);
+    expect((await call('next?key=wrong')).status).toBe(401);
+    expect((await call('next?key=secretkey')).status).toBe(401);
+    expect(commands.length).toBe(before);
+  });
+
+  it('only knows the remote commands, and says which', async () => {
+    const res = await call('shutdown?key=secretkey1');
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe('unknown-command');
+    expect(body.commands).toContain('nextSong');
+  });
+
+  it('reports what is live', async () => {
+    const res = await call('status?key=secretkey1');
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.live.title).toBe('Sunday');
+  });
+
+  it('rejects other methods and turns away an address that keeps guessing', async () => {
+    expect((await call('next?key=secretkey1', { method: 'DELETE' })).status).toBe(405);
+    for (let i = 0; i < 12; i++) await call('next?key=nope');
+    const locked = await call('next?key=secretkey1');
+    expect(locked.status).toBe(429);
+  });
+});

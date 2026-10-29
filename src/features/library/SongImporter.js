@@ -1,7 +1,7 @@
 import { icon } from '../../components/common/Icons.js'
 import { state } from '../../core/StateManager.js'
 import { showToast } from '../../components/common/ToastManager.js'
-import { parseChordProSong } from '../../songs/chordpro.js'
+import { parseChordProSong, withoutChordOnlySlides } from '../../songs/chordpro.js'
 import { chordsOverLyricsToChordPro, looksLikeChordsOverLyrics } from '../../songs/chordSheetParse.js'
 
 export function createSongImporter(onImport) {
@@ -215,7 +215,10 @@ export function createSongImporter(onImport) {
     state.set('maxLinesPerSlide', maxLines)
 
     // A `Title:` / `{title: ...}` line in the text fills in what the fields leave empty
-    const { meta, slides } = parseChordProSong(rawText, maxLines)
+    const parsed = parseChordProSong(rawText, maxLines)
+    const meta = parsed.meta
+    // An intro, tag or instrumental has chords but no words: leave it out rather than add a blank slide
+    const { slides, leftOut } = withoutChordOnlySlides(parsed.slides)
     const name = titleInput.value.trim() || meta.title
     if (!name) {
       showToast('Please enter a title.', 'error')
@@ -228,10 +231,11 @@ export function createSongImporter(onImport) {
         key: meta.key || undefined,
         slides: slides
       })
-      if (converted) showToast('Chords above the lyrics were converted to inline chords.', 'info')
+      if (leftOut.length) showToast(`Left out the parts with no words (${leftOut.join(', ')}).`, 'info')
+      else if (converted) showToast('Chords above the lyrics were converted to inline chords.', 'info')
       overlay.remove()
     } else {
-      showToast('Could not parse any slides.', 'error')
+      showToast(leftOut.length ? 'That song has chords but no words. Paste the lyrics too.' : 'Could not parse any slides.', 'error')
     }
   })
 

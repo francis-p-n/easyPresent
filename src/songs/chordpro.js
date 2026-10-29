@@ -148,6 +148,22 @@ export function parseChordProSong(text, maxLines = 4) {
   return { meta, slides }
 }
 
+/**
+ * Takes out the slides that have chords but no words: an intro, a tag, an instrumental break. They would
+ * otherwise be a blank screen when the operator presses Next. Returns the remaining slides and the labels
+ * of the ones left out.
+ */
+export function withoutChordOnlySlides(slides) {
+  const kept = []
+  const left = []
+  for (const slide of slides || []) {
+    if (String(slide.text || '').trim() === '') left.push(slide.label || 'Instrumental')
+    else kept.push(slide)
+  }
+  markContinuations(kept) // a section split around a removed slide is no longer a continuation of it
+  return { slides: kept, leftOut: left }
+}
+
 /** Just the slides (see parseChordProSong for the song details too). */
 export function parseChordProToSlides(text, maxLines = 4) {
   return parseChordProSong(text, maxLines).slides

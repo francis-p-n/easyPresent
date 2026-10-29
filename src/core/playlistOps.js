@@ -8,10 +8,17 @@
  *   { type: 'presentation', id } | { type: 'header', text } | { type: 'note', text }
  */
 
-const newId = () => `pl-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+import { normalizeMeta, carryForwardMeta } from './services.js'
 
-export function createPlaylist(name) {
-  return { id: newId(), name: name.trim(), items: [] }
+const newId =() => `pl-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+
+export function createPlaylist(name, meta) {
+  return { id: newId(), name: name.trim(), items: [], ...(meta ? { meta: normalizeMeta(meta) } : {}) }
+}
+
+/** Replaces a service's details (date, speaker, host, …). */
+export function setMeta(playlist, meta) {
+  return { ...playlist, meta: normalizeMeta(meta) }
 }
 
 export function renamePlaylist(playlist, name) {
@@ -20,7 +27,12 @@ export function renamePlaylist(playlist, name) {
 
 /** A copy with a new id and a "(copy)" name — the starting point for next week's setlist. */
 export function duplicatePlaylist(playlist, name = `${playlist.name} (copy)`) {
-  return { id: newId(), name, items: playlist.items.map((item) => ({ ...item })) }
+  return { id: newId(), name, items: playlist.items.map((item) => ({ ...item })), ...(playlist.meta ? { meta: normalizeMeta(playlist.meta) } : {}) }
+}
+
+/** Next week's service: same songs, details carried forward by `days` with the weekly ones cleared. */
+export function carryForwardPlaylist(playlist, name, days = 7) {
+  return { ...duplicatePlaylist(playlist, name), meta: carryForwardMeta(playlist.meta, days) }
 }
 
 /** Removes a playlist; returns the remaining list and the playlist to show next (or null). */

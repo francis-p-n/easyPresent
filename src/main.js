@@ -1,6 +1,7 @@
 import { Toolbar } from './features/controls/Toolbar.js'
 import { LibraryPanel } from './features/library/LibraryPanel.js'
 import { PlaylistPanel } from './features/library/PlaylistPanel.js'
+import { ServicesHome } from './features/services/ServicesHome.js'
 import { SlideView } from './features/presentation/SlideView.js'
 import { PreviewPanel } from './features/stage/PreviewPanel.js'
 import { ShowControls } from './features/controls/ShowControls.js'
@@ -166,6 +167,14 @@ class App {
     this.slideView = new SlideView(document.getElementById('slide-view'))
     this.preview = new PreviewPanel(document.getElementById('preview-panel'))
     this.showControls = new ShowControls(document.getElementById('show-controls'))
+
+    // The home page: every service with its date, speaker and host. The app opens on it.
+    const servicesEl = document.getElementById('services-home')
+    if (servicesEl) {
+      this.services = new ServicesHome(servicesEl)
+      window.addEventListener('ep:toggle-services', () => this.services.toggle())
+      this.services.open()
+    }
 
     // Names for icon buttons, keyboard access to rows, and real dialog behaviour for every modal
     installA11y()

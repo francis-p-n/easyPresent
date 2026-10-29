@@ -29,6 +29,15 @@ export class Toolbar {
     `
     this.container.appendChild(logo)
 
+    // Services: the home page (all services by date)
+    const servicesBtn = document.createElement('button')
+    servicesBtn.className = 'btn'
+    servicesBtn.id = 'toolbar-services-btn'
+    servicesBtn.title = 'Services: all your set lists by date'
+    servicesBtn.innerHTML = `${icon('list', 16).outerHTML}<span class="toolbar-btn-label">Services</span>`
+    servicesBtn.addEventListener('click', () => window.dispatchEvent(new CustomEvent('ep:toggle-services')))
+    this.container.appendChild(servicesBtn)
+
     // Separator
     this.container.appendChild(this._sep())
 

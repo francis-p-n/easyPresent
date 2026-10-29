@@ -27,6 +27,8 @@ function renderAudienceState(state, root, scale, viewport) {
   if (state.showLogo) renderLogo(root, scale)
 
   const theme = state.themeStyles || {}
+  // The picture or video on the media layer replaces the slide's own background; the logo still covers it
+  const media = !state.showLogo && state.media && state.media.src ? state.media : null
 
   if (showSlide) {
     const style = Object.assign(
@@ -55,7 +57,8 @@ function renderAudienceState(state, root, scale, viewport) {
     } else if (theme.backgroundColor) {
       root.style.background = theme.backgroundColor
     }
-    placeAudienceDim(root, state.dim)
+    if (media) applyAudienceMedia(root, media, keptVideo)
+    else placeAudienceDim(root, state.dim)
 
     // Imported layout slides carry positioned text boxes + images — render
     // them faithfully instead of the flat single text block.
@@ -84,6 +87,8 @@ function renderAudienceState(state, root, scale, viewport) {
       renderSlideText(state.slide.text, style, root, scale)
     }
   }
+
+  if (!showSlide && media) applyAudienceMedia(root, media, keptVideo)
 
   renderMessage(state.message, root, scale)
 }
@@ -249,6 +254,16 @@ function renderSlideLayout(slide, root, scale) {
     box.appendChild(text)
     root.appendChild(box)
   })
+}
+
+// The media layer: a picture, or a looping muted video (its sound comes from the audio player).
+function applyAudienceMedia(root, media, kept) {
+  if (media.type === 'video') {
+    root.style.background = '#000'
+    placeAudienceVideo(root, { mediaPath: media.src }, kept)
+  } else {
+    root.style.background = '#000 url("' + String(media.src).replace(/["\\]/g, '') + '") center / cover no-repeat'
+  }
 }
 
 // Looping background video (a file on this computer), behind everything else.

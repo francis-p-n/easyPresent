@@ -89,7 +89,12 @@ export class PreviewPanel {
 
     // Skip redundant repaints: navigation fires both 'liveSlideIndex' and
     // 'layers', and rasterizing slide text into a GPU texture isn't free.
-    const bg = looked.background
+    // A picture or video on the media layer replaces the slide's own background
+    const mediaLayer = layers.media
+    const liveMedia = mediaLayer && mediaLayer.active && !logoOn && mediaLayer.content && mediaLayer.content.src ? mediaLayer.content : null
+    const bg = liveMedia
+      ? { type: liveMedia.type === 'video' ? 'video' : 'media', mediaPath: liveMedia.src }
+      : looked.background
     const bgMarker = bg?.type === 'video' ? `video:${bg.mediaPath}` : bg?.mediaPath ? `media:${bg.mediaPath.length}` : `color:${bg?.color || ''}`
     const layoutMarker = hasLayout(slideLayer.content)
       ? JSON.stringify([
@@ -103,7 +108,7 @@ export class PreviewPanel {
       slideLayer.content?.text || '',
       slideLayer.content?.style || null, // per-slide style (e.g. PPTX import) changes the render even when text doesn't
       bgMarker,
-      looked.dim,
+      liveMedia ? 0 : looked.dim,
       layoutMarker,
       layers.message?.active,
       layers.message?.content,
@@ -116,13 +121,14 @@ export class PreviewPanel {
 
     // Background is CSS-layered behind the transparent PIXI canvas so image
     // backgrounds (imported PPTX designs) work without a GPU texture pipeline
-    placeBackgroundVideo(screen, slideOn && isVideoBackground(bg) ? bg : null, 'preview-bg-video')
-    placeDim(screen, slideOn ? looked.dim : 0, 'preview-dim')
-    if (slideOn && isVideoBackground(bg)) {
+    const bgOn = slideOn || !!liveMedia
+    placeBackgroundVideo(screen, bgOn && isVideoBackground(bg) ? bg : null, 'preview-bg-video')
+    placeDim(screen, slideOn && !liveMedia ? looked.dim : 0, 'preview-dim')
+    if (bgOn && isVideoBackground(bg)) {
       screen.style.background = bg.color || '#000'
-    } else if (slideOn && bg?.mediaPath) {
+    } else if (bgOn && bg?.mediaPath) {
       screen.style.background = `#000 url(${bg.mediaPath}) center / cover no-repeat`
-    } else if (slideOn && bg?.color) {
+    } else if (bgOn && bg?.color) {
       screen.style.background = bg.color
     } else if (activeTheme && activeTheme.styles.backgroundColor) {
       screen.style.background = activeTheme.styles.backgroundColor

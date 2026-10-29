@@ -34,6 +34,7 @@ export function resolveTransition(slide, globalType, globalMs, presentationType)
 export function buildOutputPayload(layers, activeTheme, showLogo, timerValue, options = {}) {
   const slideLayer = layers?.slide || { active: false, content: null }
   const messageLayer = layers?.message || { active: false, content: null }
+  const mediaLayer = layers?.media || { active: false, content: null }
 
   let message = null
   if (messageLayer.active && messageLayer.content) {
@@ -63,6 +64,8 @@ export function buildOutputPayload(layers, activeTheme, showLogo, timerValue, op
     showLogo: !!showLogo,
     hideSlide: !!options.hideSlide,
     transition: resolveTransition(content, options.transition, options.transitionMs, options.presentationTransition),
+    // The picture or video the operator put on the media layer: it replaces the slide's own background
+    media: mediaLayer.active && mediaLayer.content && mediaLayer.content.src ? { type: mediaLayer.content.type === 'video' ? 'video' : 'image', src: mediaLayer.content.src } : null,
     themeStyles: looked.themeStyles,
     dim: content ? looked.dim : 0,
     // Only the added fonts this slide uses, so the audience screen can draw them
@@ -100,6 +103,7 @@ export function payloadSignature(payload) {
     payload.transition,
     payload.themeStyles,
     payload.dim,
+    payload.media ? `${payload.media.type}:${payload.media.src.length}:${payload.media.src.slice(-40)}` : null,
     payload.fonts ? payload.fonts.map((f) => `${f.family}:${f.dataUrl.length}`) : null
   ])
 }

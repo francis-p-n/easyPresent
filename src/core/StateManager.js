@@ -47,6 +47,9 @@ export class StateManager {
       showLogo: false,
       shortcutOverrides: {}, // the operator's own key bindings (see shortcuts.js)
       hiddenControlTabs: [], // Show Controls tabs this operator has switched off (kept per device)
+      audioPlayback: null, // what the audio player is doing (see AudioPlayer.js)
+      mediaLibrary: [], // pictures and videos the operator added (see mediaLibrary.js)
+      audioLibrary: [], // audio files the operator added
       userFonts: [], // font files the operator added (see fontStore.js)
       userTemplates: [], // slide layouts the operator saved from the editor (see userTemplates.js)
       outputTransition: 'cut', // 'cut' | 'dissolve' | 'wipe' — audience screen, per-slide override wins

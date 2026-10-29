@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { slideLines, buildSetlistSheetHtml } from './printSheet.js'
 import { starterRecords } from './starterSongs.js'
-import { STARTER_SETLIST } from './starterCharts.js'
 import { fromRecord } from './songSync.js'
 
 describe('print sheet', () => {
@@ -55,16 +54,25 @@ describe('print sheet', () => {
   })
 })
 
-describe('printing the real weekly setlist', () => {
-  const presentations = starterRecords().map((r) => fromRecord(r))
-  const playlist = {
-    name: STARTER_SETLIST.name,
-    items: STARTER_SETLIST.songIds.map((id) => ({ type: 'presentation', id }))
-  }
+describe('printing a weekly setlist from chord sheets', () => {
+  // Public-domain hymns written for this test: the app bundles no songs
+  const sheets = [
+    { id: 'a', name: 'Amazing Grace', category: 'Hymns', key: 'Em', sheet: `[Verse 1]
+Em        G
+Amazing grace how sweet the sound` },
+    { id: 'b', name: 'Joy to the World', category: 'Hymns', key: 'A', sheet: `[Verse 1]
+A       E7     A
+Joy to the world the Lord is come` },
+    { id: 'c', name: 'Holy Holy Holy', category: 'Hymns', key: 'D', sheet: `[Verse 1]
+D          G     D
+Holy holy holy Lord God Almighty` }
+  ]
+  const presentations = starterRecords(Date.now(), sheets).map((r) => fromRecord(r))
+  const playlist = { name: 'This Week', items: sheets.map((s) => ({ type: 'presentation', id: s.id })) }
   const html = buildSetlistSheetHtml(playlist, presentations)
 
-  it('gives every one of the eight songs its own page, in order', () => {
-    expect(html.match(/<article>/g)).toHaveLength(8)
+  it('gives every song its own page, in order', () => {
+    expect(html.match(/<article>/g)).toHaveLength(3)
     const at = presentations.map((p) => html.indexOf(p.name))
     expect(at.every((v, i) => v >= 0 && (i === 0 || v > at[i - 1]))).toBe(true)
   })

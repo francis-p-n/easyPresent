@@ -4,8 +4,8 @@ import { chordsOverLyricsToChordPro } from './chordSheetParse.js'
 const SEED_FLAG = 'starter_songs_v1'
 
 /** The bundled charts as database records (ChordPro). */
-export function starterRecords(now = Date.now()) {
-  return STARTER_SONGS.map((s) => ({
+export function starterRecords(now = Date.now(), songs = STARTER_SONGS) {
+  return songs.map((s) => ({
     id: s.id,
     title: s.name,
     category: s.category,
@@ -25,23 +25,23 @@ export async function markStarterSeeded(api) {
  * the database (not the library) records it, so a song the operator deletes
  * never comes back, and a database carried to a new machine isn't re-seeded.
  */
-export async function seedStarterSongs(api) {
+export async function seedStarterSongs(api, songs = STARTER_SONGS) {
   if (await api.songsMetaGet(SEED_FLAG)) return false
-  await api.songsUpsert(starterRecords())
+  await api.songsUpsert(starterRecords(Date.now(), songs))
   await api.songsMetaSet(SEED_FLAG, '1')
   return true
 }
 
 /** Adds the "This Week" setlist (once, by id) when its songs exist in the library. */
-export function ensureStarterSetlist(state) {
+export function ensureStarterSetlist(state, starter = STARTER_SETLIST) {
   const playlists = state.get('playlists') || []
-  if (playlists.some((p) => p.id === STARTER_SETLIST.id)) return false
+  if (playlists.some((p) => p.id === starter.id)) return false
   const have = new Set((state.get('presentations') || []).map((p) => p.id))
-  const ids = STARTER_SETLIST.songIds.filter((id) => have.has(id))
+  const ids = starter.songIds.filter((id) => have.has(id))
   if (!ids.length) return false
   const setlist = {
-    id: STARTER_SETLIST.id,
-    name: STARTER_SETLIST.name,
+    id: starter.id,
+    name: starter.name,
     items: [{ type: 'header', text: 'Worship' }, ...ids.map((id) => ({ type: 'presentation', id }))]
   }
   state.set('playlists', [...playlists, setlist])

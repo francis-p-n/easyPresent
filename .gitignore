@@ -55,3 +55,6 @@ release/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Songs for local testing only; never committed
+local-songs/

@@ -13,7 +13,7 @@ export const STATUS_LABELS = { draft: 'Draft', ready: 'Ready', done: 'Done' }
 export const SERVICE_TYPES = ['Sunday service', 'Youth night', 'Midweek', 'Camp', 'Special event']
 
 /** Text fields a service carries. Order is the order the editor shows them. */
-export const META_TEXT_FIELDS = ['type', 'title', 'speaker', 'host', 'scripture', 'team', 'notes']
+export const META_TEXT_FIELDS = ['church', 'type', 'title', 'speaker', 'host', 'scripture', 'team', 'notes']
 
 const MAX_TEXT = { notes: 2000 }
 const DEFAULT_MAX = 120

@@ -17,6 +17,7 @@ import {
 } from '../../core/services.js'
 import { showToast } from '../../components/common/ToastManager.js'
 import { normalizeLook, MAX_DIM } from '../../core/serviceLook.js'
+import { refreshTitleSlides, cloneTitleSlides } from '../../core/titleSlide.js'
 import { isVideoFileName, fileUrlFromPath, videoLabel } from '../../core/videoBackground.js'
 import { rasterizeIfSvg } from '../../services/svgRaster.js'
 
@@ -223,7 +224,11 @@ export class ServicesHome {
   planNextWeek(playlist) {
     const m = metaOf(playlist)
     const date = m.date ? addDays(m.date, 7) : nextSunday()
-    const copy = ops.carryForwardPlaylist({ ...playlist, meta: { ...m, date: m.date || addDays(date, -7) } }, [m.type || 'Service', shortDate(date)].filter(Boolean).join(' · '))
+    let copy = ops.carryForwardPlaylist({ ...playlist, meta: { ...m, date: m.date || addDays(date, -7) } }, [m.type || 'Service', shortDate(date)].filter(Boolean).join(' · '))
+    // Next week gets its own welcome slide, so changing its speaker leaves last week's untouched
+    const cloned = cloneTitleSlides(copy, state.get('presentations'))
+    if (cloned.presentations !== state.get('presentations')) state.set('presentations', cloned.presentations)
+    copy = cloned.playlist
     state.set('playlists', [...(state.get('playlists') || []), copy])
     showToast(`Planned ${formatDate(copy.meta.date)} from "${playlist.name}"`, 'success')
     this._editDialog(copy)
@@ -234,6 +239,9 @@ export class ServicesHome {
     const finalName = name.trim() || [meta.type, formatDate(meta.date)].filter((s) => s && s !== 'No date').join(' ') || 'New service'
     if (existing) {
       const updated = { ...ops.setMeta(existing, meta), name: finalName }
+      // The welcome slide shows the speaker, date and type, so it follows the details
+      const refreshed = refreshTitleSlides(updated, state.get('presentations'))
+      if (refreshed !== state.get('presentations')) state.set('presentations', refreshed)
       state.set('playlists', ops.replacePlaylist(playlists, updated))
       if (state.get('activePlaylist')?.id === existing.id) state.set('activePlaylist', updated)
       return
@@ -451,6 +459,9 @@ export class ServicesHome {
     field('name', 'Name', 'text', { wide: true, value: playlist ? playlist.name : '', placeholder: 'Leave blank to name it from the date' })
     field('date', 'Date', 'date', { value: m.date })
     field('time', 'Time', 'time', { value: m.time })
+    // A new service starts with the church name of the latest one, so it is typed once
+    const lastChurch = (state.get('playlists') || []).map((p) => metaOf(p).church).filter(Boolean).pop() || ''
+    field('church', 'Church or group', 'text', { value: m.church || (isNew ? lastChurch : ''), placeholder: 'Shown on the welcome slide' })
     field('type', 'Service type', 'text', { value: m.type, list: 'service-types', placeholder: 'Sunday service' })
     const typeList = el('datalist')
     typeList.id = 'service-types'

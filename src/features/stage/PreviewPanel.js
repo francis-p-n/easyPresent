@@ -93,7 +93,7 @@ export class PreviewPanel {
     const bgMarker = bg?.type === 'video' ? `video:${bg.mediaPath}` : bg?.mediaPath ? `media:${bg.mediaPath.length}` : `color:${bg?.color || ''}`
     const layoutMarker = hasLayout(slideLayer.content)
       ? JSON.stringify([
-          (slideLayer.content.elements || []).map((e) => [e.x, e.y, e.width, e.height, e.fontSize, e.text, e.runs || null]),
+          (slideLayer.content.elements || []).map((e) => [e.x, e.y, e.width, e.height, e.fontSize, e.fontFamily || '', e.color || '', e.letterSpacing || '', e.text, e.runs || null]),
           (slideLayer.content.images || []).map((i) => [i.x, i.y, i.width, i.height, i.mediaPath ? i.mediaPath.length : 0])
         ])
       : ''

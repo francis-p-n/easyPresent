@@ -82,7 +82,7 @@ export function payloadSignature(payload) {
   // represented by length only (they can be multi-MB base64).
   const els = payload.slide?.elements
   const elMarker = els
-    ? els.map((e) => `${e.x},${e.y},${e.width},${e.height},${e.fontSize},${e.text},${e.runs ? JSON.stringify(e.runs) : ''}`).join('|')
+    ? els.map((e) => `${e.x},${e.y},${e.width},${e.height},${e.fontSize},${e.fontFamily || ''},${e.color || ''},${e.letterSpacing || ''},${e.text},${e.runs ? JSON.stringify(e.runs) : ''}`).join('|')
     : ''
   const imgs = payload.slide?.images
   const imgMarker = imgs

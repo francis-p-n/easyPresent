@@ -240,6 +240,7 @@ function renderSlideLayout(slide, root, scale) {
       textDecoration: el.underline ? 'underline' : 'none',
       textAlign: ['left', 'center', 'right'].includes(el.hAlign) ? el.hAlign : 'left',
       lineHeight: String(el.lineSpacing || 1.2),
+      letterSpacing: el.letterSpacing ? `${Number(el.letterSpacing) || 0}em` : '',
       whiteSpace: 'pre-wrap',
       overflowWrap: 'anywhere',
       wordBreak: 'break-word'

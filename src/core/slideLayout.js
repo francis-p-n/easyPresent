@@ -161,6 +161,7 @@ export function renderSlideLayout(container, { elements = [], images = [] } = {}
       `font-weight:${el.bold ? 700 : 400};font-style:${el.italic ? 'italic' : 'normal'};text-decoration:${el.underline ? 'underline' : 'none'};` +
       `text-align:${['left', 'center', 'right'].includes(el.hAlign) ? el.hAlign : 'left'};` +
       `line-height:${el.lineSpacing || 1.2};` +
+      (el.letterSpacing ? `letter-spacing:${Number(el.letterSpacing) || 0}em;` : '') +
       `white-space:pre-wrap;word-break:break-word;`
     fillRuns(text, el.text || '', el.runs, (px) => `${wpct(px)}cqw`)
     box.appendChild(text)

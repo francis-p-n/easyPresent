@@ -16,6 +16,9 @@ import {
   addDays
 } from '../../core/services.js'
 import { showToast } from '../../components/common/ToastManager.js'
+import { normalizeLook, MAX_DIM } from '../../core/serviceLook.js'
+import { isVideoFileName, fileUrlFromPath, videoLabel } from '../../core/videoBackground.js'
+import { rasterizeIfSvg } from '../../services/svgRaster.js'
 
 const PAST_SHOWN = 8
 
@@ -246,6 +249,163 @@ export class ServicesHome {
     if (state.get('activePlaylist')?.id === playlist.id) state.set('activePlaylist', next)
   }
 
+  // ---- look (background and text style for the whole service) ----------
+
+  /** Adds the "Look" section to a dialog box; returns a function that reads the chosen look. */
+  _lookSection(box, initial) {
+    const look = normalizeLook(initial)
+    const section = el('fieldset', 'service-look')
+    section.appendChild(el('legend', 'service-look__legend', 'Look for the whole service'))
+    section.appendChild(
+      el('div', 'service-look__hint', 'Every song in this service uses this background and text style. A slide with its own background keeps it.')
+    )
+
+    const preview = el('div', 'service-look__preview')
+    const sample = el('div', 'service-look__sample', 'Amazing grace, how sweet the sound')
+
+    const row = el('div', 'service-look__row')
+    const mkBtn = (label, id) => {
+      const b = el('button', 'btn', label)
+      b.type = 'button'
+      b.id = id
+      return b
+    }
+    const pictureBtn = mkBtn('Picture', 'look-picture')
+    const videoBtn = mkBtn('Video', 'look-video')
+    const clearBtn = mkBtn('Clear', 'look-clear')
+    const colorInput = el('input', 'service-look__color')
+    colorInput.type = 'color'
+    colorInput.id = 'look-color'
+    colorInput.setAttribute('aria-label', 'Background colour')
+    colorInput.value = look.background?.color || '#000000'
+    const pictureFile = el('input')
+    pictureFile.type = 'file'
+    pictureFile.accept = 'image/*'
+    pictureFile.hidden = true
+    pictureFile.id = 'look-picture-file'
+    const videoFile = el('input')
+    videoFile.type = 'file'
+    videoFile.accept = 'video/*'
+    videoFile.hidden = true
+    videoFile.id = 'look-video-file'
+    const note = el('span', 'service-look__note')
+    row.append(pictureBtn, videoBtn, colorInput, clearBtn, pictureFile, videoFile, note)
+
+    const dimWrap = el('label', 'service-look__dim')
+    dimWrap.appendChild(el('span', 'service-field__label', 'Darken background'))
+    const dim = el('input')
+    dim.type = 'range'
+    dim.min = '0'
+    dim.max = String(MAX_DIM)
+    dim.id = 'look-dim'
+    dim.value = String(look.dim)
+    const dimValue = el('span', 'service-look__dimvalue')
+    dimWrap.append(dim, dimValue)
+
+    const textRow = el('div', 'service-look__row')
+    const textColor = el('input', 'service-look__color')
+    textColor.type = 'color'
+    textColor.id = 'look-text-color'
+    textColor.setAttribute('aria-label', 'Text colour')
+    textColor.value = look.textColor || '#ffffff'
+    const textColorOn = el('input')
+    textColorOn.type = 'checkbox'
+    textColorOn.id = 'look-text-color-on'
+    textColorOn.checked = !!look.textColor
+    const colorLabel = el('label', 'service-look__check')
+    colorLabel.append(textColorOn, document.createTextNode(' Text colour'), textColor)
+    const font = el('input', 'input service-look__font')
+    font.id = 'look-font'
+    font.placeholder = 'Font (theme default)'
+    font.setAttribute('aria-label', 'Font')
+    font.setAttribute('list', 'look-fonts')
+    font.value = look.fontFamily
+    const fontList = el('datalist')
+    fontList.id = 'look-fonts'
+    const families = ['Inter', 'Montserrat', 'Open Sans', ...(state.get('userFonts') || []).map((f) => f.family)]
+    for (const f of families) fontList.appendChild(Object.assign(document.createElement('option'), { value: f }))
+    const size = el('input', 'input service-look__size')
+    size.type = 'number'
+    size.id = 'look-size'
+    size.min = '12'
+    size.max = '300'
+    size.placeholder = 'Size'
+    size.setAttribute('aria-label', 'Text size')
+    size.value = look.fontSize || ''
+    textRow.append(colorLabel, font, fontList, size)
+
+    section.append(preview, row, dimWrap, textRow)
+    box.appendChild(section)
+
+    const paint = () => {
+      const bg = look.background
+      preview.style.background = bg?.type === 'media' ? `#000 url(${bg.mediaPath}) center / cover no-repeat` : bg?.color || '#222'
+      if (bg?.type === 'video') note.textContent = `Video: ${videoLabel(bg.mediaPath)}`
+      else note.textContent = bg?.type === 'media' ? 'Picture set' : ''
+      preview.textContent = ''
+      const veil = el('div', 'service-look__veil')
+      veil.style.background = `rgba(0,0,0,${look.dim / 100})`
+      preview.append(veil, sample)
+      sample.style.color = textColorOn.checked ? textColor.value : '#ffffff'
+      sample.style.fontFamily = font.value ? `"${font.value.replace(/"/g, '')}", sans-serif` : ''
+      sample.style.fontSize = `${Math.min(28, Math.max(10, (Number(size.value) || 48) / 3))}px`
+      dimValue.textContent = `${look.dim}%`
+      clearBtn.disabled = !bg
+    }
+
+    pictureBtn.addEventListener('click', () => pictureFile.click())
+    pictureFile.addEventListener('change', () => {
+      const file = pictureFile.files[0]
+      pictureFile.value = ''
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = async () => {
+        look.background = { type: 'media', mediaPath: await rasterizeIfSvg(reader.result) }
+        paint()
+      }
+      reader.readAsDataURL(file)
+    })
+    videoBtn.addEventListener('click', () => videoFile.click())
+    videoFile.addEventListener('change', () => {
+      const file = videoFile.files[0]
+      videoFile.value = ''
+      if (!file) return
+      if (!isVideoFileName(file.name)) {
+        note.textContent = 'Choose an .mp4, .webm or .mov video.'
+        return
+      }
+      const location = window.electronAPI?.getPathForFile?.(file) || file.path
+      if (!location) {
+        note.textContent = 'Video backgrounds need the desktop app.'
+        return
+      }
+      look.background = { type: 'video', mediaPath: fileUrlFromPath(location), color: colorInput.value }
+      paint()
+    })
+    colorInput.addEventListener('input', () => {
+      look.background = { type: 'color', color: colorInput.value }
+      paint()
+    })
+    clearBtn.addEventListener('click', () => {
+      look.background = null
+      paint()
+    })
+    dim.addEventListener('input', () => {
+      look.dim = Number(dim.value)
+      paint()
+    })
+    for (const control of [textColor, textColorOn, font, size]) control.addEventListener('input', paint)
+    paint()
+
+    return () => ({
+      background: look.background,
+      dim: look.dim,
+      textColor: textColorOn.checked ? textColor.value : '',
+      fontFamily: font.value,
+      fontSize: Number(size.value) || 0
+    })
+  }
+
   // ---- details dialog --------------------------------------------------
 
   _editDialog(playlist) {
@@ -310,6 +470,7 @@ export class ServicesHome {
     field('team', 'Band / tech team', 'text', { value: m.team })
     field('notes', 'Notes', 'textarea', { value: m.notes, wide: true })
     box.appendChild(grid)
+    const getLook = this._lookSection(box, m.look)
 
     const row = el('div', 'service-dialog__actions')
     if (!isNew) {
@@ -339,6 +500,7 @@ export class ServicesHome {
       e.preventDefault()
       const meta = {}
       for (const key of Object.keys(fields)) if (key !== 'name') meta[key] = fields[key].value
+      meta.look = getLook()
       this._save(isNew ? null : playlist, fields.name.value, meta)
       close()
       if (isNew) this.close() // a service just made is made to be worked on

@@ -1,4 +1,5 @@
 import { themeFor } from '../../core/presentationDefaults.js'
+import { applyLook, currentLook } from '../../core/serviceLook.js'
 import { state } from '../../core/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
 import NativeRender from '../../services/NativeRender.js'
@@ -32,6 +33,7 @@ export class SlideView {
     // rendered image — without this, changing a theme (e.g. its font) only
     // ever showed up once something else happened to trigger a re-render
     state.on('activeThemeId', () => this._renderSlides())
+    state.on('activePlaylist', () => this._renderSlides()) // the open service's background and text style
     state.on('themes', () => this._renderSlides())
   }
 
@@ -256,6 +258,10 @@ export class SlideView {
       const activeThemeId = state.get('activeThemeId')
       const themes = state.get('themes') || []
       const activeTheme = themeFor(state.get('selectedPresentation'), themes, activeThemeId)
+      // The open service's own background and text style (a slide's own background wins)
+      const looked = applyLook(currentLook(state), activeTheme?.styles, slide.background)
+      const slideBg = looked.background
+      const dimLayer = looked.dim > 0 ? `linear-gradient(rgba(0,0,0,${looked.dim / 100}),rgba(0,0,0,${looked.dim / 100}))` : null
 
       const styleOpts = {
         fontSize: 48,
@@ -268,10 +274,10 @@ export class SlideView {
         color: '#FFFFFF'
       }
 
-      if (activeTheme && activeTheme.styles) {
-        Object.assign(styleOpts, activeTheme.styles)
-        if (activeTheme.styles.textAlign) {
-          styleOpts.hAlign = activeTheme.styles.textAlign
+      if (looked.themeStyles) {
+        Object.assign(styleOpts, looked.themeStyles)
+        if (looked.themeStyles.textAlign) {
+          styleOpts.hAlign = looked.themeStyles.textAlign
         }
       }
 
@@ -282,13 +288,13 @@ export class SlideView {
       // Slides with an image background (e.g. imported PPTX designs) get a
       // transparent text layer composited over the image via layered CSS
       const bgMedia =
-        slide.background && slide.background.type === 'media' && slide.background.mediaPath
+        slideBg && slideBg.type === 'media' && slideBg.mediaPath
 
       // Prefer the slide's own background color (e.g. from a PPTX import) so
       // solid-color slides don't all fall back to black
       const slideBgColor =
-        slide.background && slide.background.type === 'color' && slide.background.color
-          ? slide.background.color
+        slideBg && slideBg.type === 'color' && slideBg.color
+          ? slideBg.color
           : null
 
       if (hasLayout(slide)) {
@@ -296,7 +302,7 @@ export class SlideView {
         // to the original, instead of collapsing everything into one text block.
         content.style.backgroundColor = slideBgColor || '#000000'
         if (bgMedia) {
-          content.style.backgroundImage = `url(${slide.background.mediaPath})`
+          content.style.backgroundImage = `${dimLayer ? dimLayer + ', ' : ''}url(${slideBg.mediaPath})`
           content.style.backgroundSize = 'cover'
           content.style.backgroundPosition = 'center'
           content.style.backgroundRepeat = 'no-repeat'
@@ -309,8 +315,8 @@ export class SlideView {
         const imgUrl = NativeRender.generateThumbnailDataUrl(slide.text || '', styleOpts)
 
         if (bgMedia) {
-          content.style.backgroundImage = `url(${imgUrl}), url(${slide.background.mediaPath})`
-          content.style.backgroundSize = 'contain, cover'
+          content.style.backgroundImage = `url(${imgUrl}), ${dimLayer ? dimLayer + ', ' : ''}url(${slideBg.mediaPath})`
+          content.style.backgroundSize = `contain, ${dimLayer ? 'cover, ' : ''}cover`
         } else {
           content.style.backgroundImage = `url(${imgUrl})`
           content.style.backgroundSize = 'contain'

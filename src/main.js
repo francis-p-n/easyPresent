@@ -246,7 +246,8 @@ class App {
           transition: state.get('outputTransition'),
           presentationTransition: presentationTransition(livePres),
           transitionMs: state.get('outputTransitionMs'),
-          userFonts: state.get('userFonts')
+          userFonts: state.get('userFonts'),
+          look: state.get('activePlaylist')?.meta?.look
         }
       )
       const sig = payloadSignature(payload)
@@ -263,6 +264,8 @@ class App {
     state.on('themes', syncAudience)
     state.on('presentations', syncAudience) // a presentation's own theme/transition can change while it is live
     state.on('livePresentationId', syncAudience)
+    state.on('activePlaylist', syncAudience) // a service's own background and text style
+    state.on('playlists', syncAudience)
     state.on('timer_main', syncAudience) // live {timer} token in messages
 
     // Phone remote (web page served by the stage server): the same actions as the keyboard shortcuts

@@ -55,6 +55,7 @@ function renderAudienceState(state, root, scale, viewport) {
     } else if (theme.backgroundColor) {
       root.style.background = theme.backgroundColor
     }
+    placeAudienceDim(root, state.dim)
 
     // Imported layout slides carry positioned text boxes + images — render
     // them faithfully instead of the flat single text block.
@@ -85,6 +86,19 @@ function renderAudienceState(state, root, scale, viewport) {
   }
 
   renderMessage(state.message, root, scale)
+}
+
+// A black layer between the background (picture or video) and the text, so light backgrounds stay readable.
+function placeAudienceDim(root, percent) {
+  if (!(percent > 0)) return
+  var layer = document.createElement('div')
+  layer.id = 'output-dim'
+  layer.style.cssText = 'position:absolute;inset:0;z-index:-1;pointer-events:none;background:rgba(0,0,0,' + percent / 100 + ');'
+  root.style.isolation = 'isolate'
+  var video = root.querySelector('video')
+  if (video && video.nextSibling) root.insertBefore(layer, video.nextSibling)
+  else if (video) root.appendChild(layer)
+  else root.insertBefore(layer, root.firstChild)
 }
 
 // Paints a new frame, optionally easing out of the previous one. The old frame

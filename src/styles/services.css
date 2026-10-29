@@ -132,6 +132,23 @@
 .service-dialog__actions { display: flex; align-items: center; gap: 8px; }
 .service-dialog__spacer { flex: 1; }
 
+/* Look section of the details dialog */
+.service-look { border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.service-look__legend { padding: 0 6px; font-size: 12px; color: var(--text-muted); }
+.service-look__hint { font-size: 12px; color: var(--text-muted); }
+.service-look__preview { position: relative; aspect-ratio: 16 / 9; max-height: 160px; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; isolation: isolate; border: 1px solid var(--border-color); }
+.service-look__veil { position: absolute; inset: 0; }
+.service-look__sample { position: relative; padding: 0 12px; text-align: center; font-weight: 700; text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.75); }
+.service-look__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.service-look__color { width: 40px; height: 32px; padding: 0; border: 1px solid var(--border-color); border-radius: 6px; background: none; flex: 0 0 40px; }
+.service-look__note { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+.service-look__dim { display: flex; align-items: center; gap: 10px; }
+.service-look__dim input { flex: 1; }
+.service-look__dimvalue { width: 40px; text-align: right; font-size: 12px; color: var(--text-muted); }
+.service-look__check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.service-look__font { flex: 1; min-width: 120px; }
+.service-look__size { width: 72px; }
+
 @media (max-width: 640px) {
   .service-card { flex-wrap: wrap; }
   .service-card__side { align-items: flex-start; }

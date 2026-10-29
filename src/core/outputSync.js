@@ -8,6 +8,7 @@
  */
 
 import { fontsForPayload } from '../services/fontStore.js'
+import { applyLook } from './serviceLook.js'
 
 export const TRANSITION_TYPES = ['cut', 'dissolve', 'wipe']
 
@@ -43,13 +44,15 @@ export function buildOutputPayload(layers, activeTheme, showLogo, timerValue, op
   }
 
   const content = slideLayer.active ? slideLayer.content : null
+  // The open service's own background and text style, under anything the slide sets itself
+  const looked = applyLook(options.look, activeTheme?.styles, content?.background)
 
   return {
     slide: content
       ? {
           text: content.text || '',
           style: content.style || null,
-          background: content.background || null,
+          background: looked.background,
           // Positioned layout (imported PPTX). When present, the output window
           // renders these faithfully instead of the flat single text block.
           elements: content.elements && content.elements.length ? content.elements : null,
@@ -60,7 +63,8 @@ export function buildOutputPayload(layers, activeTheme, showLogo, timerValue, op
     showLogo: !!showLogo,
     hideSlide: !!options.hideSlide,
     transition: resolveTransition(content, options.transition, options.transitionMs, options.presentationTransition),
-    themeStyles: activeTheme?.styles || null,
+    themeStyles: looked.themeStyles,
+    dim: content ? looked.dim : 0,
     // Only the added fonts this slide uses, so the audience screen can draw them
     fonts: content ? fontsForPayload(options.userFonts, content, activeTheme?.styles) : null
   }
@@ -95,6 +99,7 @@ export function payloadSignature(payload) {
     payload.hideSlide,
     payload.transition,
     payload.themeStyles,
+    payload.dim,
     payload.fonts ? payload.fonts.map((f) => `${f.family}:${f.dataUrl.length}`) : null
   ])
 }

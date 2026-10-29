@@ -1,4 +1,5 @@
 import { themeFor, livePresentation } from '../../core/presentationDefaults.js'
+import { applyLook, placeDim, currentLook } from '../../core/serviceLook.js'
 import { state } from '../../core/StateManager.js'
 import NativeRender from '../../services/NativeRender.js'
 import { hasLayout, renderSlideLayout } from '../../core/slideLayout.js'
@@ -19,6 +20,8 @@ export class PreviewPanel {
     state.on('presentations', () => this._updatePreview()) // the live presentation may have just been given its own theme
     state.on('livePresentationId', () => this._updatePreview())
     state.on('showLogo', () => this._updatePreview())
+    state.on('activePlaylist', () => this._updatePreview()) // the open service's background and text style
+    state.on('playlists', () => this._updatePreview())
     // A message containing {timer} shows the running countdown, so the preview has
     // to tick with it (it used to freeze at 00:00 while the real screens counted down)
     state.on('timer_main', () => {
@@ -79,11 +82,14 @@ export class PreviewPanel {
     const activeThemeId = state.get('activeThemeId')
     const themes = state.get('themes') || []
     const livePres = livePresentation(state.get('presentations'), state.get('livePresentationId'), state.get('selectedPresentation'))
-    const activeTheme = themeFor(livePres, themes, activeThemeId)
+    const themeBase = themeFor(livePres, themes, activeThemeId)
+    // The open service's own background and text style sit under whatever the slide sets itself
+    const looked = applyLook(currentLook(state), themeBase?.styles, slideLayer.content?.background)
+    const activeTheme = themeBase ? { ...themeBase, styles: looked.themeStyles || themeBase.styles } : null
 
     // Skip redundant repaints: navigation fires both 'liveSlideIndex' and
     // 'layers', and rasterizing slide text into a GPU texture isn't free.
-    const bg = slideLayer.content?.background
+    const bg = looked.background
     const bgMarker = bg?.type === 'video' ? `video:${bg.mediaPath}` : bg?.mediaPath ? `media:${bg.mediaPath.length}` : `color:${bg?.color || ''}`
     const layoutMarker = hasLayout(slideLayer.content)
       ? JSON.stringify([
@@ -97,6 +103,7 @@ export class PreviewPanel {
       slideLayer.content?.text || '',
       slideLayer.content?.style || null, // per-slide style (e.g. PPTX import) changes the render even when text doesn't
       bgMarker,
+      looked.dim,
       layoutMarker,
       layers.message?.active,
       layers.message?.content,
@@ -110,6 +117,7 @@ export class PreviewPanel {
     // Background is CSS-layered behind the transparent PIXI canvas so image
     // backgrounds (imported PPTX designs) work without a GPU texture pipeline
     placeBackgroundVideo(screen, slideOn && isVideoBackground(bg) ? bg : null, 'preview-bg-video')
+    placeDim(screen, slideOn ? looked.dim : 0, 'preview-dim')
     if (slideOn && isVideoBackground(bg)) {
       screen.style.background = bg.color || '#000'
     } else if (slideOn && bg?.mediaPath) {

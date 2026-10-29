@@ -1,3 +1,5 @@
+import { normalizeLook, isEmptyLook } from './serviceLook.js'
+
 /**
  * services — the details of a service (a setlist) and the logic behind the Services home page.
  *
@@ -37,6 +39,7 @@ export function normalizeMeta(raw) {
     const limit = MAX_TEXT[key] || DEFAULT_MAX
     out[key] = typeof m[key] === 'string' ? m[key].trim().slice(0, limit) : ''
   }
+  if (!isEmptyLook(m.look)) out.look = normalizeLook(m.look)
   return out
 }
 

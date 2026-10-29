@@ -75,6 +75,13 @@ export function formatDate(dateStr, locale) {
   })
 }
 
+/** "Sun, Nov 8" for a service name; blank when the date is not valid. */
+export function shortDate(dateStr, locale) {
+  if (!isValidDate(dateStr)) return ''
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+}
+
 /** Whole days from `today` to the date (0 today, 1 tomorrow, -1 yesterday); null with no date. */
 export function daysFrom(dateStr, today) {
   if (!isValidDate(dateStr) || !isValidDate(today)) return null

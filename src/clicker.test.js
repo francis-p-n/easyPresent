@@ -147,3 +147,32 @@ describe('clicker: safety', () => {
     expect(index()).toBe(1)
   })
 })
+
+describe('clicker: while the Services page covers the slides', () => {
+  const openServices = () => {
+    const page = document.createElement('div')
+    page.id = 'services-home'
+    document.body.appendChild(page)
+    return page
+  }
+
+  it('slide buttons do nothing, but clearing the screen still works', () => {
+    openServices()
+    const btn = document.createElement('button')
+    btn.id = 'clear-btn-all'
+    let clicks = 0
+    btn.addEventListener('click', () => clicks++)
+    document.body.appendChild(btn)
+    expect(press('PageDown').handled).toBe(false)
+    expect(press(' ').handled).toBe(false)
+    expect(index()).toBe(0)
+    press('.')
+    expect(clicks).toBe(1)
+  })
+
+  it('a hidden Services page does not block the show', () => {
+    openServices().hidden = true
+    press('PageDown')
+    expect(index()).toBe(1)
+  })
+})

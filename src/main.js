@@ -128,6 +128,10 @@ export function handleShowKey(e, isEditing) {
   }
 
   const action = buildLookup(state.get('shortcutOverrides')).get(eventToSpec(e))
+  // The Services page covers the slides: a clicker press there must not advance a show nobody can see.
+  // Clearing the screen stays available.
+  const servicesOpen = document.getElementById('services-home')?.hidden === false
+  if (action && servicesOpen && !String(action).startsWith('clear')) return false
   if (action) {
     e.preventDefault()
     // A clicker button held down (or stuck) must not race through the slides or flicker the logo

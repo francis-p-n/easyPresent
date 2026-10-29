@@ -9,6 +9,7 @@ import {
   filterServices,
   songCount,
   formatDate,
+  shortDate,
   relativeLabel,
   toDateString,
   nextSunday,
@@ -219,7 +220,7 @@ export class ServicesHome {
   planNextWeek(playlist) {
     const m = metaOf(playlist)
     const date = m.date ? addDays(m.date, 7) : nextSunday()
-    const copy = ops.carryForwardPlaylist({ ...playlist, meta: { ...m, date: m.date || addDays(date, -7) } }, `Service ${formatDate(date)}`)
+    const copy = ops.carryForwardPlaylist({ ...playlist, meta: { ...m, date: m.date || addDays(date, -7) } }, [m.type || 'Service', shortDate(date)].filter(Boolean).join(' · '))
     state.set('playlists', [...(state.get('playlists') || []), copy])
     showToast(`Planned ${formatDate(copy.meta.date)} from "${playlist.name}"`, 'success')
     this._editDialog(copy)

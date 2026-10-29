@@ -10,6 +10,8 @@ import { goLive } from '../../core/navigation.js'
 import { getActiveSequence } from '../../core/arrangement.js'
 import { sectionLabel, markContinuations } from '../../songs/chordLayout.js'
 import { hasLayout, renderSlideLayout } from '../../core/slideLayout.js'
+import { canRemoveSlide, removeSlide, indexAfterRemoval } from '../../core/slideOps.js'
+import { showToast } from '../../components/common/ToastManager.js'
 
 /**
  * SlideView — Center panel showing slide thumbnails in a grid
@@ -163,6 +165,42 @@ export class SlideView {
     }
 
     this._renderSlides()
+  }
+
+  /**
+   * Deletes the slide at `index` of the sequence being shown, with an Undo. The slide goes from the whole
+   * song (and every arrangement); a slide that is on the screen right now stays there until it is cleared.
+   */
+  _deleteSlide(index) {
+    const pres = state.get('selectedPresentation')
+    if (!pres) return
+    const slide = getActiveSequence(pres)[index]
+    if (!slide) return
+    if (!canRemoveSlide(pres)) {
+      showToast('A song needs at least one slide.', 'error')
+      return
+    }
+    const name = slide.label ? sectionLabel(slide) : `slide ${index + 1}`
+    const updated = removeSlide(pres, slide.id)
+    const replace = (item) => (state.get('presentations') || []).map((p) => (p.id === item.id ? item : p))
+
+    const liveHere = state.get('livePresentationId') === pres.id
+    const previousLive = state.get('liveSlideIndex')
+    state.set('presentations', replace(updated))
+    state.set('selectedPresentation', updated)
+    if (liveHere) state.set('liveSlideIndex', indexAfterRemoval(previousLive, index))
+    const length = getActiveSequence(updated).length
+    state.set('activeSlideIndex', Math.min(index, length - 1))
+
+    showToast(`Deleted ${name}.`, 'info', {
+      label: 'Undo',
+      onClick: () => {
+        state.set('presentations', replace(pres))
+        if (state.get('selectedPresentation')?.id === pres.id) state.set('selectedPresentation', pres)
+        if (liveHere && state.get('livePresentationId') === pres.id) state.set('liveSlideIndex', previousLive)
+        state.set('activeSlideIndex', index)
+      }
+    })
   }
 
   /**
@@ -335,6 +373,15 @@ export class SlideView {
       num.textContent = index + 1
       thumb.appendChild(num)
 
+      // Delete this slide (shown on hover or focus; always shown on touch screens)
+      const del = document.createElement('button')
+      del.type = 'button'
+      del.className = 'slide-thumbnail__delete'
+      del.textContent = '✕'
+      del.title = 'Delete this slide'
+      del.setAttribute('aria-label', `Delete slide ${index + 1}${slide.label ? `, ${sectionLabel(slide)}` : ''}`)
+      thumb.appendChild(del)
+
       // Quick-edit badge for announcement slides
       if (slide.type === 'announcement') {
         const editBadge = document.createElement('div')
@@ -374,12 +421,32 @@ export class SlideView {
   }
 
   _bindEvents() {
-    // Single click: go live
+    // Single click: go live (the small ✕ on a slide deletes it instead)
     this.container.addEventListener('click', (e) => {
       const thumb = e.target.closest('.slide-thumbnail')
       if (!thumb) return
       const index = parseInt(thumb.dataset.index, 10)
-      if (!isNaN(index)) goLive(index)
+      if (isNaN(index)) return
+      if (e.target.closest('.slide-thumbnail__delete')) {
+        e.stopPropagation()
+        this._deleteSlide(index)
+        return
+      }
+      goLive(index)
+    })
+
+    // Delete key removes the selected slide (not while typing, editing or in a dialog)
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Delete' || e.ctrlKey || e.metaKey || e.altKey) return
+      const t = e.target
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
+      if (state.get('isEditing') || document.querySelector('.modal-overlay, [role="dialog"]')) return
+      if (document.getElementById('services-home')?.hidden === false) return
+      if (!this.container.offsetParent) return // the slide grid is not on screen
+      const index = state.get('activeSlideIndex')
+      if (!Number.isInteger(index) || index < 0) return
+      e.preventDefault()
+      this._deleteSlide(index)
     })
 
     // Double-click: open announcement quick-editor for announcement slides

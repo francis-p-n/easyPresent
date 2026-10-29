@@ -1,4 +1,5 @@
 const { app, BrowserWindow } = require('electron')
+const path = require('path')
 const { createMainWindow } = require('./windows/mainWindow')
 const { createDisplayManager } = require('./windows/displays')
 const { createStageHub } = require('./services/stageHub')
@@ -8,6 +9,13 @@ const { registerPptxIpc } = require('./ipc/pptx')
 const { registerSongsIpc } = require('./ipc/songs')
 const { registerBibleIpc } = require('./ipc/bible')
 const { registerDisplayIpc } = require('./ipc/displays')
+
+// An installed app keeps its library in its own "EasyPresent" folder. Running from the source folder
+// (development) keeps the folder named after the package, so an install never shares data with it.
+// An explicit --user-data-dir (tests, a second instance) is respected.
+if (app.isPackaged && !app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', path.join(app.getPath('appData'), 'EasyPresent'))
+}
 
 let mainWindow = null
 const getMainWindow = () => mainWindow

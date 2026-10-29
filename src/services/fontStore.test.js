@@ -30,6 +30,8 @@ describe('file names', () => {
     expect(familyFromFileName('Playfair-Display_Bold.ttf')).toBe('Playfair Display')
     expect(familyFromFileName('OpenSans-Regular.otf')).toBe('Open Sans')
     expect(familyFromFileName('Lobster.woff2')).toBe('Lobster')
+    expect(familyFromFileName('impact.ttf')).toBe('Impact')
+    expect(familyFromFileName('comic-sans.ttf')).toBe('Comic Sans')
     expect(familyFromFileName('.ttf')).toBe('Custom font')
   })
 })

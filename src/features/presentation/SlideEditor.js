@@ -100,10 +100,10 @@ export function createSlideEditor(container) {
           <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);flex:1;">
             Background
             <div style="display:flex;gap:4px;align-items:center;">
-              <input type="color" id="prop-bg-color" class="input" value="#000000" style="height:32px;flex:1;" />
-              <button class="btn btn--icon" id="prop-bg-image-btn" title="Set background image" style="height:32px;padding:0 8px;flex-shrink:0;">&#128247;</button>
-              <button class="btn btn--icon" id="prop-bg-video-btn" title="Set a looping video background" aria-label="Set a looping video background" style="height:32px;padding:0 8px;flex-shrink:0;">&#127902;</button>
-              <button class="btn btn--icon" id="prop-bg-image-clear" title="Clear background image or video" aria-label="Clear background image or video" style="height:32px;padding:0 6px;flex-shrink:0;display:none;">&#x2715;</button>
+              <input type="color" id="prop-bg-color" class="input" value="#000000" aria-label="Background colour" style="height:32px;flex:1 0 56px;min-width:56px;" />
+              <button class="btn" id="prop-bg-image-btn" title="Set a background picture" style="height:32px;padding:0 10px;flex-shrink:0;font-size:12px;">Picture</button>
+              <button class="btn" id="prop-bg-video-btn" title="Set a looping video background" style="height:32px;padding:0 10px;flex-shrink:0;font-size:12px;">Video</button>
+              <button class="btn" id="prop-bg-image-clear" title="Clear background picture or video" aria-label="Clear background picture or video" style="height:32px;padding:0 10px;flex-shrink:0;display:none;font-size:12px;">Clear</button>
             </div>
             <input type="file" id="prop-bg-image-file" accept="image/*" style="display:none;" />
             <input type="file" id="prop-bg-video-file" accept="video/mp4,video/webm,video/quicktime,video/ogg,.mp4,.m4v,.webm,.mov,.ogv" style="display:none;" />

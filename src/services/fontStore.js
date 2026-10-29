@@ -26,7 +26,9 @@ export function familyFromFileName(name) {
     .replace(/\s+(regular|bold|italic|oblique|light|medium|semibold|black|thin|book)(\s+(italic|oblique))?$/i, '')
     .replace(/\s+/g, ' ')
     .trim()
-  return words.slice(0, 60) || 'Custom font'
+  // A file named in all lower case (impact.ttf, comic-sans.ttf) reads better as words with capitals
+  const named = words === words.toLowerCase() ? words.replace(/(^|\s)(\p{L})/gu, (m, sp, ch) => sp + ch.toUpperCase()) : words
+  return named.slice(0, 60) || 'Custom font'
 }
 
 /** Keeps only well-formed entries: { id, family, dataUrl }. */

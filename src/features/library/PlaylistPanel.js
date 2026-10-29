@@ -426,7 +426,7 @@ export class PlaylistPanel {
     if (item.type === 'header') {
       el.className = 'playlist-header-item'
       const text = document.createElement('span')
-      text.style.cssText = 'font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;'
+      text.style.cssText = 'font-weight:600;color:var(--text-muted);font-size:12px;text-transform:uppercase;'
       text.textContent = item.text
       el.style.cssText = 'padding:4px 12px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;'
       el.append(text, this._controls(index, count))

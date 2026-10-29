@@ -94,8 +94,8 @@
 }
 
 .clear-btn__shortcut {
-  font-size: 8px;
-  opacity: 0.6;
+  font-size: 11px;
+  opacity: 0.8;
 }
 
 /* ===== RESPONSIVE TOOLBAR ===== */
@@ -207,10 +207,10 @@
 
   /* .panel-right in the selector: the base #show-controls-tabs .tab rule comes later in the file */
   .panel-right #show-controls-tabs .tab {
-    flex: 1 1 33%; /* three per row: every label gets room */
+    flex: 1 1 auto; /* as wide as the label; rows wrap */
     font-size: 12px;
     letter-spacing: 0;
-    padding: 8px 2px;
+    padding: 8px 6px;
   }
 }
 
@@ -488,17 +488,12 @@
   overflow: visible;
 }
 
-/* 4 on the first row, the remaining tabs stretch to fill the second */
+/* Each tab is as wide as its label (never clipped); rows fill up and the rest wrap */
 #show-controls-tabs .tab {
-  flex: 1 1 25%;
-}
-
-#show-controls-tabs .tab {
+  flex: 1 1 auto;
   justify-content: center;
-  padding: 8px 4px;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 8px 8px;
+  min-width: max-content;
   white-space: nowrap;
 }
 

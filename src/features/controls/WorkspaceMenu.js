@@ -29,7 +29,7 @@ export function renderWorkspaceMenu(host, { onApplied } = {}) {
   function render() {
     host.innerHTML = ''
     const title = document.createElement('div')
-    title.style.cssText = 'font-size:11px;letter-spacing:.08em;text-transform:uppercase;width:100%;'
+    title.style.cssText = 'font-size:12px;letter-spacing:.08em;text-transform:uppercase;width:100%;'
     title.textContent = 'Saved layouts'
     host.appendChild(title)
 
@@ -108,7 +108,7 @@ export function renderWorkspaceMenu(host, { onApplied } = {}) {
     const status = document.createElement('div')
     status.id = 'ws-note'
     status.setAttribute('role', 'status')
-    status.style.cssText = 'font-size:11px;width:100%;min-height:1.3em;'
+    status.style.cssText = 'font-size:12px;width:100%;min-height:1.3em;'
     status.textContent = note
 
     host.append(select, apply, del, name, save, status)

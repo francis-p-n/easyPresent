@@ -45,18 +45,18 @@ export function renderScheduler(container) {
       return `
         <div class="sched-task" data-idx="${i}" style="background:var(--bg-active);border-radius:6px;padding:8px;border-left:3px solid ${borderColor(task.status)};">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
-            <input data-time="${i}" value="${esc(task.time)}" type="time" style="background:transparent;border:none;color:var(--text-secondary);font-size:11px;width:70px;outline:none;" />
-            <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${statusColor(task.status)}33;color:${statusColor(task.status)};font-weight:600;">${task.status}</span>
+            <input data-time="${i}" value="${esc(task.time)}" type="time" style="background:transparent;border:none;color:var(--text-secondary);font-size:12px;width:70px;outline:none;" />
+            <span style="font-size:12px;padding:2px 6px;border-radius:10px;background:${statusColor(task.status)}33;color:${statusColor(task.status)};font-weight:600;">${task.status}</span>
             <button data-delete="${i}" style="margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;" title="Remove task">&#x2715;</button>
           </div>
           <input data-task="${i}" value="${esc(task.task)}" class="input" style="font-size:12px;font-weight:600;margin-bottom:5px;" placeholder="Task description" />
           <div style="display:flex;gap:4px;align-items:center;">
-            <input data-person="${i}" value="${esc(task.person)}" class="input" style="font-size:11px;flex:1;" placeholder="Assigned to" />
-            <select data-status="${i}" style="font-size:11px;background:var(--bg-panel);border:1px solid var(--border-color);border-radius:4px;color:var(--text-primary);padding:3px;cursor:pointer;">
+            <input data-person="${i}" value="${esc(task.person)}" class="input" style="font-size:12px;flex:1;" placeholder="Assigned to" />
+            <select data-status="${i}" style="font-size:12px;background:var(--bg-panel);border:1px solid var(--border-color);border-radius:4px;color:var(--text-primary);padding:3px;cursor:pointer;">
               ${statusOpts}
             </select>
           </div>
-          <input data-notes="${i}" value="${esc(task.notes)}" class="input" style="font-size:11px;margin-top:5px;" placeholder="Notes (optional)" />
+          <input data-notes="${i}" value="${esc(task.notes)}" class="input" style="font-size:12px;margin-top:5px;" placeholder="Notes (optional)" />
         </div>
       `
     }).join('')
@@ -66,18 +66,18 @@ export function renderScheduler(container) {
 
         <div style="display:flex;gap:6px;align-items:center;">
           <input id="sched-session" value="${esc(schedule.sessionName)}" class="input" style="flex:1;font-size:12px;font-weight:600;" placeholder="Session name" />
-          <input id="sched-date" type="date" value="${esc(schedule.date)}" class="input" style="font-size:11px;width:110px;" />
+          <input id="sched-date" type="date" value="${esc(schedule.date)}" class="input" style="font-size:12px;width:110px;" />
         </div>
 
         <div id="task-list" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;">
           ${taskRows || '<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:20px;">No tasks yet</div>'}
         </div>
 
-        <button id="add-task" class="btn" style="font-size:11px;width:100%;">+ Add Task</button>
+        <button id="add-task" class="btn" style="font-size:12px;width:100%;">+ Add Task</button>
 
         <div style="display:flex;gap:6px;">
-          <button id="sched-reset-all" class="btn" style="flex:1;font-size:11px;">Reset Status</button>
-          <button id="sched-export" class="btn btn--primary" style="flex:1;font-size:11px;">Copy Schedule</button>
+          <button id="sched-reset-all" class="btn" style="flex:1;font-size:12px;">Reset Status</button>
+          <button id="sched-export" class="btn btn--primary" style="flex:1;font-size:12px;">Copy Schedule</button>
         </div>
       </div>
     `

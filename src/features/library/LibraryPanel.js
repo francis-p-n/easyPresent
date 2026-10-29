@@ -301,8 +301,8 @@ export class LibraryPanel {
       (set) => `
         <button class="template-card" data-template="${set.id}" style="background:var(--bg-active);border:1px solid var(--border-color);border-radius:10px;padding:16px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px;transition:border-color 0.15s;">
           <span style="font-size:14px;font-weight:700;color:var(--text-primary);">${set.name}</span>
-          <span style="font-size:11px;color:var(--text-secondary);line-height:1.4;">${set.description}</span>
-          <span style="font-size:10px;color:var(--text-muted);margin-top:auto;">${set.slides.length} slides</span>
+          <span style="font-size:12px;color:var(--text-secondary);line-height:1.4;">${set.description}</span>
+          <span style="font-size:12px;color:var(--text-muted);margin-top:auto;">${set.slides.length} slides</span>
         </button>`
     ).join('')
 

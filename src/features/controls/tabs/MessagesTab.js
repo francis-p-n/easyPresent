@@ -11,7 +11,7 @@ export function renderMessages(content) {
         <button class="btn btn--primary" id="message-show">Show</button>
         <button class="btn" id="message-hide">Hide</button>
       </div>
-      <div class="message-hint" style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-secondary);line-height:1.4;">
+      <div class="message-hint" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);line-height:1.4;">
         <button class="btn" id="message-insert-timer" title="Add the running countdown to this message" style="height:24px;padding:0 8px;flex-shrink:0;">+ Timer</button>
         <span>Use <code>{timer}</code> to show the countdown from the Timers tab, e.g. "Starting in {timer}". Start the countdown first.</span>
       </div>

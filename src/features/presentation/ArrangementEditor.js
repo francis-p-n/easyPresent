@@ -95,11 +95,11 @@ export class ArrangementEditor {
 
       <div style="display:flex;gap:16px;min-height:0;flex:1;">
         <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-width:0;">
-          <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Sequence</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Sequence</div>
           <div id="arr-sequence" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;border:1px solid var(--border-color);border-radius:8px;padding:8px;min-height:200px;"></div>
         </div>
         <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-width:0;">
-          <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Add Slide</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Add Slide</div>
           <div id="arr-available" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;border:1px solid var(--border-color);border-radius:8px;padding:8px;min-height:200px;"></div>
         </div>
       </div>

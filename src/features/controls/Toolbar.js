@@ -96,7 +96,7 @@ export class Toolbar {
     const roleRow = (role, title, hint) => `
       <div class="screens-row" data-role="${role}" style="padding:6px;display:flex;flex-direction:column;gap:4px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-          <div><strong>${title}</strong><div style="font-size:11px;opacity:.65;">${hint}</div></div>
+          <div><strong>${title}</strong><div style="font-size:12px;opacity:.65;">${hint}</div></div>
           <button class="btn screens-toggle" data-role="${role}">Open</button>
         </div>
         <select class="input screens-display" data-role="${role}" style="width:100%;"></select>
@@ -106,7 +106,7 @@ export class Toolbar {
         ${icon('monitor', 16).outerHTML}<span class="toolbar-btn-label">Screens</span>
       </button>
       <div id="toolbar-screens-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:200;background:var(--bg-toolbar);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-md);width:290px;padding:4px;max-height:calc(100vh - 72px);overflow-y:auto;">
-        <div style="padding:6px;font-size:11px;opacity:.7;line-height:1.4;">Each screen goes to its own display. "Auto" picks a free one; with a single display they open as windows you can move.</div>
+        <div style="padding:6px;font-size:12px;opacity:.7;line-height:1.4;">Each screen goes to its own display. "Auto" picks a free one; with a single display they open as windows you can move.</div>
         ${roleRow('audience', 'Audience', 'Congregation screen / projector')}
         ${roleRow('presenter', 'Presenter', 'Pastor: current + next slide, clock')}
         ${roleRow('pa', 'PA Team', 'Sound desk: output check, cues, timers')}
@@ -126,14 +126,14 @@ export class Toolbar {
         </div>
         <details style="padding:8px 6px 6px;border-top:1px solid var(--border-color);margin-top:4px;">
           <summary style="font-size:12px;font-weight:600;cursor:pointer;">Remote buttons</summary>
-          <div style="font-size:11px;opacity:.65;margin:4px 0;">Pick, rename, enlarge and reorder what the phone remote shows.</div>
+          <div style="font-size:12px;opacity:.65;margin:4px 0;">Pick, rename, enlarge and reorder what the phone remote shows.</div>
           <div id="remote-buttons-editor"></div>
         </details>
         <div style="padding:8px 6px 6px;border-top:1px solid var(--border-color);margin-top:4px;">
           <div style="font-size:12px;font-weight:600;">Phones &amp; tablets</div>
-          <div id="screens-share-note" style="font-size:11px;opacity:.65;margin:2px 0 6px;">Let people on the same Wi-Fi open the Presenter and PA screens in a web browser. Presenter and PA are view-only, but anyone on that Wi-Fi can open them. The Remote page can advance slides and needs the PIN shown here. Off until you start it.</div>
+          <div id="screens-share-note" style="font-size:12px;opacity:.65;margin:2px 0 6px;">Let people on the same Wi-Fi open the Presenter and PA screens in a web browser. Presenter and PA are view-only, but anyone on that Wi-Fi can open them. The Remote page can advance slides and needs the PIN shown here. Off until you start it.</div>
           <button class="btn" id="screens-share-btn" style="width:100%;">Start sharing</button>
-          <div id="screens-share-urls" style="font-size:11px;margin-top:6px;word-break:break-all;"></div>
+          <div id="screens-share-urls" style="font-size:12px;margin-top:6px;word-break:break-all;"></div>
         </div>
       </div>`
     this.container.appendChild(screensWrap)

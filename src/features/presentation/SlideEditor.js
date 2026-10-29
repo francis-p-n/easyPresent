@@ -90,8 +90,8 @@ export function createSlideEditor(container) {
 
         <div style="display:flex;gap:6px;align-items:center;">
           <input type="text" id="prop-template-name" class="input" placeholder="Name this layout" maxlength="40" style="flex:1;min-width:0;" aria-label="Template name" />
-          <button class="btn" id="save-template-btn" style="font-size:11px;" title="Save this slide's boxes and background as a reusable template">Save</button>
-          <button class="btn" id="delete-template-btn" style="font-size:11px;" disabled title="Delete the selected saved template">Delete</button>
+          <button class="btn" id="save-template-btn" style="font-size:12px;" title="Save this slide's boxes and background as a reusable template">Save</button>
+          <button class="btn" id="delete-template-btn" style="font-size:12px;" disabled title="Delete the selected saved template">Delete</button>
         </div>
 
         <div style="display:flex;gap:8px;">
@@ -122,7 +122,7 @@ export function createSlideEditor(container) {
             Auto-advance after (seconds, 0 = off)
             <input type="number" id="prop-auto-advance" class="input" min="0" max="3600" value="0" />
           </label>
-          <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary);white-space:nowrap;padding-bottom:8px;" title="When the last slide's time is up, start again from the first slide">
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);white-space:nowrap;padding-bottom:8px;" title="When the last slide's time is up, start again from the first slide">
             <input type="checkbox" id="prop-loop" /> Loop
           </label>
         </div>
@@ -148,14 +148,14 @@ export function createSlideEditor(container) {
         </label>
 
         <div style="display:flex;gap:6px;">
-          <button class="btn" id="add-textbox-btn" style="flex:1;font-size:11px;">+ Text Box</button>
-          <button class="btn" id="dup-textbox-btn" style="flex:1;font-size:11px;" disabled>Duplicate</button>
-          <button class="btn" id="del-textbox-btn" style="font-size:11px;" disabled title="Delete box">&#x1F5D1;</button>
+          <button class="btn" id="add-textbox-btn" style="flex:1;font-size:12px;">+ Text Box</button>
+          <button class="btn" id="dup-textbox-btn" style="flex:1;font-size:12px;" disabled>Duplicate</button>
+          <button class="btn" id="del-textbox-btn" style="font-size:12px;" disabled title="Delete box">&#x1F5D1;</button>
         </div>
 
         <hr style="border:0;border-top:1px solid var(--border-color);margin:0;">
 
-        <h3 style="margin:0;font-size:14px;color:var(--text-primary);">Text Box <span id="selected-box-label" style="font-weight:400;color:var(--text-muted);font-size:11px;"></span></h3>
+        <h3 style="margin:0;font-size:14px;color:var(--text-primary);">Text Box <span id="selected-box-label" style="font-weight:400;color:var(--text-muted);font-size:12px;"></span></h3>
 
         <div id="box-props" style="display:flex;flex-direction:column;gap:12px;opacity:0.4;pointer-events:none;">
           <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);">
@@ -176,7 +176,7 @@ export function createSlideEditor(container) {
             Font Size
             <div style="display:flex;align-items:center;gap:8px;">
               <input type="number" id="prop-font-size" class="input" value="80" style="flex:1;" min="12" max="300" />
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;cursor:pointer;">
+              <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;cursor:pointer;">
                 <input type="checkbox" id="prop-autosize" /> Auto
               </label>
             </div>
@@ -216,8 +216,8 @@ export function createSlideEditor(container) {
         </label>
 
         <div style="display:flex;gap:6px;">
-          <button class="btn" id="editor-undo-btn" title="Undo (Ctrl+Z)" style="flex:1;font-size:11px;" disabled>&#8630; Undo</button>
-          <button class="btn" id="editor-redo-btn" title="Redo (Ctrl+Shift+Z)" style="flex:1;font-size:11px;" disabled>Redo &#8631;</button>
+          <button class="btn" id="editor-undo-btn" title="Undo (Ctrl+Z)" style="flex:1;font-size:12px;" disabled>&#8630; Undo</button>
+          <button class="btn" id="editor-redo-btn" title="Redo (Ctrl+Shift+Z)" style="flex:1;font-size:12px;" disabled>Redo &#8631;</button>
         </div>
 
         <div style="margin-top:auto;display:flex;gap:10px;">

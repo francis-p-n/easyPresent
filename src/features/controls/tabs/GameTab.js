@@ -39,7 +39,7 @@ export function renderGame(container) {
   function render() {
     const modeBar = ['scores', 'trivia', 'countdown'].map((m) => {
       const active = game.mode === m
-      return `<button data-mode="${m}" style="flex:1;padding:5px;border-radius:4px;border:none;cursor:pointer;min-height:26px;background:${active ? 'var(--accent-blue-strong)' : 'transparent'};color:${active ? 'white' : '#a8adb8'};font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">${m}</button>`
+      return `<button data-mode="${m}" style="flex:1;padding:5px;border-radius:4px;border:none;cursor:pointer;min-height:26px;background:${active ? 'var(--accent-blue-strong)' : 'transparent'};color:${active ? 'white' : '#a8adb8'};font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">${m}</button>`
     }).join('')
 
     let modeContent = ''
@@ -61,16 +61,16 @@ export function renderGame(container) {
         `).join('')
 
       modeContent = `
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-secondary);flex-wrap:wrap;">
-          <button id="game-add-team" class="btn" style="font-size:11px;" ${game.teams.length >= MAX_TEAMS ? 'disabled' : ''}>+ Team</button>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);flex-wrap:wrap;">
+          <button id="game-add-team" class="btn" style="font-size:12px;" ${game.teams.length >= MAX_TEAMS ? 'disabled' : ''}>+ Team</button>
           <label style="display:flex;align-items:center;gap:4px;">Points per tap
             <input id="game-step" type="number" min="1" max="1000" value="${game.step}" class="input" style="width:64px;font-size:12px;" />
           </label>
         </div>
         ${scoreCards}
         <div style="display:flex;gap:6px;">
-          <button id="game-show-scores" class="btn btn--primary" style="flex:1;font-size:11px;">Show Scores</button>
-          <button id="game-reset-scores" class="btn" style="flex:1;font-size:11px;">Reset All</button>
+          <button id="game-show-scores" class="btn btn--primary" style="flex:1;font-size:12px;">Show Scores</button>
+          <button id="game-reset-scores" class="btn" style="flex:1;font-size:12px;">Reset All</button>
         </div>
       `
     }
@@ -78,17 +78,17 @@ export function renderGame(container) {
     if (game.mode === 'trivia') {
       modeContent = `
         <div style="display:flex;flex-direction:column;gap:8px;">
-          <label style="font-size:11px;color:var(--text-secondary);">
+          <label style="font-size:12px;color:var(--text-secondary);">
             Question
             <textarea id="trivia-question" class="input" rows="3" style="resize:vertical;margin-top:4px;font-size:13px;">${esc(game.triviaQuestion)}</textarea>
           </label>
-          <label style="font-size:11px;color:var(--text-secondary);">
+          <label style="font-size:12px;color:var(--text-secondary);">
             Answer
             <textarea id="trivia-answer" class="input" rows="2" style="resize:vertical;margin-top:4px;font-size:13px;">${esc(game.triviaAnswer)}</textarea>
           </label>
           <div style="display:flex;gap:6px;">
-            <button id="show-question" class="btn btn--primary" style="flex:1;font-size:11px;">Show Question</button>
-            <button id="show-answer" class="btn" style="flex:1;font-size:11px;">Reveal Answer</button>
+            <button id="show-question" class="btn btn--primary" style="flex:1;font-size:12px;">Show Question</button>
+            <button id="show-answer" class="btn" style="flex:1;font-size:12px;">Reveal Answer</button>
           </div>
         </div>
       `
@@ -98,7 +98,7 @@ export function renderGame(container) {
       const cdColor = game.countdown <= 5 ? '#ef4444' : 'var(--text-primary)'
       const presetBtns = game.presets.map((s) => {
         const active = game.countdown === s && !game.countdownRunning
-        return `<button data-cd-preset="${s}" style="padding:3px 7px;border-radius:4px;border:1px solid var(--border-color);cursor:pointer;font-size:11px;background:${active ? 'var(--accent-blue)' : 'transparent'};color:${active ? 'white' : 'var(--text-secondary)'};">${s}s</button>`
+        return `<button data-cd-preset="${s}" style="padding:3px 7px;border-radius:4px;border:1px solid var(--border-color);cursor:pointer;font-size:12px;background:${active ? 'var(--accent-blue)' : 'transparent'};color:${active ? 'white' : 'var(--text-secondary)'};">${s}s</button>`
       }).join('')
 
       modeContent = `
@@ -113,7 +113,7 @@ export function renderGame(container) {
             <button id="cd-start" class="btn btn--primary" style="flex:1;">${game.countdownRunning ? 'Pause' : 'Start'}</button>
             <button id="cd-reset" class="btn" style="flex:1;">Reset to ${game.countdownStart}s</button>
           </div>
-          <div style="display:flex;gap:8px;width:100%;font-size:11px;color:var(--text-secondary);flex-wrap:wrap;">
+          <div style="display:flex;gap:8px;width:100%;font-size:12px;color:var(--text-secondary);flex-wrap:wrap;">
             <label style="flex:2;min-width:120px;">Shortcuts (seconds)
               <input id="cd-presets" class="input" value="${esc(game.presets.join(', '))}" style="font-size:12px;width:100%;" />
             </label>

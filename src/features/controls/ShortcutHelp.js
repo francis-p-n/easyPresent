@@ -112,7 +112,7 @@ export function showShortcutHelp() {
     }
 
     const fixedHead = document.createElement('div')
-    fixedHead.style.cssText = 'font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-secondary);margin-top:6px;'
+    fixedHead.style.cssText = 'font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-secondary);margin-top:6px;'
     fixedHead.textContent = 'Always on'
     box.append(fixedHead)
     for (const [keys, what] of FIXED_ROWS) {

@@ -332,7 +332,7 @@ export class SlideView {
       // Quick-edit badge for announcement slides
       if (slide.type === 'announcement') {
         const editBadge = document.createElement('div')
-        editBadge.style.cssText = 'position:absolute;top:4px;right:4px;background:rgba(59,130,246,0.85);color:white;font-size:9px;padding:2px 5px;border-radius:3px;pointer-events:none;font-weight:600;letter-spacing:0.3px;'
+        editBadge.style.cssText = 'position:absolute;top:4px;right:4px;background:rgba(59,130,246,0.85);color:white;font-size:12px;padding:2px 5px;border-radius:3px;pointer-events:none;font-weight:600;letter-spacing:0.3px;'
         editBadge.textContent = 'DBL-EDIT'
         thumb.appendChild(editBadge)
       }

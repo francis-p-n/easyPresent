@@ -77,7 +77,7 @@ export function createBiblePanel(container) {
   ])
   const hint = el('div', {
     id: 'bible-hint',
-    style: 'padding:6px 15px;font-size:11px;color:var(--text-secondary);border-bottom:1px solid var(--border-color);',
+    style: 'padding:6px 15px;font-size:12px;color:var(--text-secondary);border-bottom:1px solid var(--border-color);',
     text: 'Type a reference to look it up. Press Enter to put it on the screen, then use the arrow keys to move between verses.'
   })
   container.append(header, hint, results)
@@ -168,7 +168,7 @@ export function createBiblePanel(container) {
       el('div', { style: 'font-size:12px;color:var(--text-secondary);', text: `${filename}: ${parsed.verseCount.toLocaleString()} verses in ${parsed.bookCount} books.` }),
       abbreviation,
       fullName,
-      el('div', { style: 'font-size:11px;color:var(--text-secondary);', text: 'Adding a translation with an abbreviation you already have replaces it.' }),
+      el('div', { style: 'font-size:12px;color:var(--text-secondary);', text: 'Adding a translation with an abbreviation you already have replaces it.' }),
       el('div', { style: 'display:flex;gap:8px;justify-content:flex-end;' }, [
         el('button', { className: 'btn', text: 'Cancel', onclick: close }),
         el('button', { className: 'btn btn--primary', text: 'Add', onclick: save })

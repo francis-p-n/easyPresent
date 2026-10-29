@@ -1,8 +1,10 @@
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer, webUtils } = require('electron')
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
+  // The location of a file the operator chose (a File object no longer carries its own path)
+  getPathForFile: (file) => (webUtils && webUtils.getPathForFile ? webUtils.getPathForFile(file) : ''),
   createStageDisplay: () => ipcRenderer.send('create-stage-display'),
   importPptx: () => ipcRenderer.invoke('import-pptx'),
   broadcastSlide: (slideData) => ipcRenderer.send('broadcast-slide', slideData),

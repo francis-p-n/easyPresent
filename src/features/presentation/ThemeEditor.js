@@ -1,5 +1,6 @@
 import { state } from '../../core/StateManager.js'
 import { icon } from '../../components/common/Icons.js'
+import { addUserFont, removeUserFont, readFontFile, registerUserFonts } from '../../services/fontStore.js'
 
 export function createThemeEditor() {
   const overlay = document.createElement('div')
@@ -105,15 +106,86 @@ export function createThemeEditor() {
   const fontSelect = document.createElement('select')
   fontSelect.className = 'input'
   fontSelect.id = 'theme-editor-font-select'
-  const fonts = ['Inter', 'Open Sans', 'Montserrat', 'Arial', 'Georgia']
-  fonts.forEach((f) => {
-    const opt = document.createElement('option')
-    opt.value = f
-    opt.textContent = f
-    if (f === currentTheme.styles.fontFamily) opt.selected = true
-    fontSelect.appendChild(opt)
-  })
+  const BUILT_IN_FONTS = ['Inter', 'Open Sans', 'Montserrat', 'Arial', 'Georgia']
+  const fillFontOptions = () => {
+    const wanted = fontSelect.value || currentTheme.styles.fontFamily
+    fontSelect.innerHTML = ''
+    const names = [...BUILT_IN_FONTS, ...(state.get('userFonts') || []).map((f) => f.family)]
+    names.forEach((f) => {
+      const opt = document.createElement('option')
+      opt.value = f
+      opt.textContent = f
+      if (f === wanted) opt.selected = true
+      fontSelect.appendChild(opt)
+    })
+  }
+  fillFontOptions()
   fontGroup.appendChild(fontSelect)
+
+  // Fonts from a file: kept in the library and sent to the audience screen when a slide uses them
+  const fontFileRow = document.createElement('div')
+  fontFileRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;'
+  const addFontBtn = document.createElement('button')
+  addFontBtn.className = 'btn'
+  addFontBtn.id = 'theme-editor-add-font'
+  addFontBtn.style.cssText = 'font-size:12px;min-height:26px;'
+  addFontBtn.textContent = 'Add font file…'
+  const fontFile = document.createElement('input')
+  fontFile.type = 'file'
+  fontFile.id = 'theme-editor-font-file'
+  fontFile.accept = '.ttf,.otf,.woff,.woff2'
+  fontFile.style.display = 'none'
+  const fontNote = document.createElement('div')
+  fontNote.id = 'theme-editor-font-note'
+  fontNote.setAttribute('role', 'status')
+  fontNote.style.cssText = 'font-size:12px;color:var(--text-secondary);width:100%;'
+  const fontList = document.createElement('div')
+  fontList.id = 'theme-editor-font-list'
+  fontList.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;width:100%;'
+
+  const drawFontList = () => {
+    fontList.innerHTML = ''
+    for (const f of state.get('userFonts') || []) {
+      const chip = document.createElement('span')
+      chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:1px 4px 1px 8px;border:1px solid var(--border-color);border-radius:4px;'
+      chip.textContent = f.family
+      const x = document.createElement('button')
+      x.className = 'btn font-remove'
+      x.style.cssText = 'font-size:12px;padding:0 6px;min-height:22px;'
+      x.textContent = '✕'
+      x.setAttribute('aria-label', `Remove font ${f.family}`)
+      x.title = `Remove ${f.family}`
+      x.addEventListener('click', () => {
+        state.set('userFonts', removeUserFont(state.get('userFonts'), f.id))
+        fontNote.textContent = `Removed ${f.family}. Slides that use it fall back to another font.`
+        fillFontOptions()
+        drawFontList()
+      })
+      chip.appendChild(x)
+      fontList.appendChild(chip)
+    }
+  }
+  addFontBtn.addEventListener('click', () => fontFile.click())
+  fontFile.addEventListener('change', async () => {
+    const file = fontFile.files[0]
+    fontFile.value = ''
+    if (!file) return
+    try {
+      const { family, dataUrl } = await readFontFile(file)
+      state.set('userFonts', addUserFont(state.get('userFonts'), { family, dataUrl }))
+      registerUserFonts(state.get('userFonts'))
+      fontNote.textContent = `Added ${family}.`
+      fontSelect.value = family
+      fillFontOptions()
+      fontSelect.value = family
+      drawFontList()
+    } catch (err) {
+      fontNote.textContent = err.message
+    }
+  })
+  fontFileRow.append(addFontBtn, fontFile, fontNote, fontList)
+  fontGroup.appendChild(fontFileRow)
+  drawFontList()
 
   body.appendChild(selectGroup)
   body.appendChild(bgColorGroup)

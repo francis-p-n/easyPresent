@@ -714,3 +714,76 @@ describe('parsePptx — gradient background + underline', () => {
     expect(slides[0].elements[1].underline).toBe(false)
   })
 })
+
+// "Praise the Lord" – one bold word and one red word in a regular line, and a second paragraph.
+const SLIDE_MIXED = sld(`<p:sp><p:txBody>
+  <a:bodyPr/>
+  <a:p>
+    <a:r><a:rPr sz="4000"/><a:t>Praise </a:t></a:r>
+    <a:r><a:rPr sz="4000" b="1"/><a:t>the</a:t></a:r>
+    <a:r><a:rPr sz="4000"/><a:t> Lord </a:t></a:r>
+    <a:r><a:rPr sz="4000"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:rPr><a:t>always</a:t></a:r>
+  </a:p>
+  <a:p><a:r><a:rPr sz="6000" i="1"/><a:t>Big</a:t></a:r></a:p>
+</p:txBody></p:sp>`)
+
+describe('parsePptx — per-run styling', () => {
+  it('keeps the character ranges whose formatting differs from the box', async () => {
+    const file = buildPptx(path.join(tmpDir, 'mixed.pptx'), { slides: { 'slide1.xml': SLIDE_MIXED } })
+    const { slides } = await parsePptx(file)
+    const el = slides[0].elements[0]
+    expect(el.text).toBe('Praise the Lord always\nBig')
+    const word = (r) => el.text.slice(r.start, r.end)
+    const named = Object.fromEntries(el.runs.map((r) => [word(r), r]))
+    expect(named.the.bold).toBe(true)
+    expect(named.always.color).toBe('#FF0000')
+    expect(named.Big.fontSize).toBeGreaterThan(el.fontSize)
+    expect(named.Big.italic).toBe(true)
+  })
+
+  it('adds no runs to a uniformly formatted box', async () => {
+    const file = buildPptx(path.join(tmpDir, 'uniform.pptx'), { slides: { 'slide1.xml': SLIDE_RUNS } })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].elements[0].runs).toBeUndefined()
+  })
+})
+
+describe('parsePptx — SVG pictures', () => {
+  it('keeps a vector picture instead of dropping it', async () => {
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>')
+    const rel = IMAGE_REL.replace(/image1\.png/g, 'image1.svg')
+    const file = buildPptx(path.join(tmpDir, 'svg.pptx'), {
+      slides: { 'slide1.xml': SLIDE_CORNER_DECORATION },
+      media: { 'image1.svg': svg },
+      rels: { 'slide1.xml.rels': rel }
+    })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].images).toHaveLength(1)
+    expect(slides[0].images[0].mediaPath).toBe(`data:image/svg+xml;base64,${svg.toString('base64')}`)
+  })
+})
+
+describe('parsePptx — flat coloured shapes', () => {
+  const SLIDE_BARS = sld(`
+<p:sp>
+  <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="6096000" cy="1219200"/></a:xfrm><a:prstGeom prst="roundRect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="1F4E79"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></p:spPr>
+</p:sp>
+<p:sp>
+  <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1219200" cy="1219200"/></a:xfrm><a:prstGeom prst="star5"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill></p:spPr>
+</p:sp>
+<p:sp>
+  <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1219200" cy="1219200"/></a:xfrm><a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom><a:noFill/></p:spPr>
+</p:sp>`)
+
+  it('draws a filled rounded rectangle as a picture, ignoring its outline, and skips unsupported shapes', async () => {
+    const file = buildPptx(path.join(tmpDir, 'bars.pptx'), { slides: { 'slide1.xml': SLIDE_BARS } })
+    const { slides } = await parsePptx(file)
+    expect(slides[0].images).toHaveLength(1)
+    const img = slides[0].images[0]
+    expect(img.width).toBe(960) // 6096000 EMU is half the slide
+    const svg = Buffer.from(img.mediaPath.split(',')[1], 'base64').toString()
+    expect(svg).toContain('fill="#1F4E79"')
+    expect(svg).not.toContain('FF0000')
+    expect(svg).toContain('<rect')
+  })
+})

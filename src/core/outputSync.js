@@ -7,6 +7,8 @@
  * overlay, the logo/clear state, and the active theme's base styles.
  */
 
+import { fontsForPayload } from '../services/fontStore.js'
+
 export const TRANSITION_TYPES = ['cut', 'dissolve', 'wipe']
 
 /**
@@ -58,7 +60,9 @@ export function buildOutputPayload(layers, activeTheme, showLogo, timerValue, op
     showLogo: !!showLogo,
     hideSlide: !!options.hideSlide,
     transition: resolveTransition(content, options.transition, options.transitionMs, options.presentationTransition),
-    themeStyles: activeTheme?.styles || null
+    themeStyles: activeTheme?.styles || null,
+    // Only the added fonts this slide uses, so the audience screen can draw them
+    fonts: content ? fontsForPayload(options.userFonts, content, activeTheme?.styles) : null
   }
 }
 
@@ -74,7 +78,7 @@ export function payloadSignature(payload) {
   // represented by length only (they can be multi-MB base64).
   const els = payload.slide?.elements
   const elMarker = els
-    ? els.map((e) => `${e.x},${e.y},${e.width},${e.height},${e.fontSize},${e.text}`).join('|')
+    ? els.map((e) => `${e.x},${e.y},${e.width},${e.height},${e.fontSize},${e.text},${e.runs ? JSON.stringify(e.runs) : ''}`).join('|')
     : ''
   const imgs = payload.slide?.images
   const imgMarker = imgs
@@ -90,6 +94,7 @@ export function payloadSignature(payload) {
     payload.showLogo,
     payload.hideSlide,
     payload.transition,
-    payload.themeStyles
+    payload.themeStyles,
+    payload.fonts ? payload.fonts.map((f) => `${f.family}:${f.dataUrl.length}`) : null
   ])
 }

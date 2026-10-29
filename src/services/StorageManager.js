@@ -1,5 +1,6 @@
 import { state } from '../core/StateManager.js'
 import { dehydrate, rehydrate } from './mediaStore.js'
+import { cleanUserFonts } from './fontStore.js'
 
 const SAVE_DEBOUNCE_MS = 500
 
@@ -36,9 +37,10 @@ class StorageManager {
     const playlists = lift(state.get('playlists'))
     const themes = lift(state.get('themes'))
     const userTemplates = lift(state.get('userTemplates') || [])
+    const userFonts = lift(state.get('userFonts') || [])
 
     const activePlaylistId = state.get('activePlaylist')?.id || null // so a restart reopens the same setlist
-    return JSON.stringify({ version: SCHEMA_VERSION, presentations, playlists, themes, userTemplates, media, activePlaylistId })
+    return JSON.stringify({ version: SCHEMA_VERSION, presentations, playlists, themes, userTemplates, userFonts, media, activePlaylistId })
   }
 
   _applyData(data) {
@@ -58,6 +60,7 @@ class StorageManager {
     }
     if (data.themes) state.set('themes', drop(data.themes))
     if (Array.isArray(data.userTemplates)) state.set('userTemplates', drop(data.userTemplates))
+    if (Array.isArray(data.userFonts)) state.set('userFonts', cleanUserFonts(drop(data.userFonts)))
   }
 
   /** Immediate save (async when file-backed; sync fallback to localStorage) */
@@ -171,6 +174,7 @@ class StorageManager {
     state.on('playlists', () => this.scheduleSave())
     state.on('themes', () => this.scheduleSave())
     state.on('userTemplates', () => this.scheduleSave())
+    state.on('userFonts', () => this.scheduleSave())
     state.on('activePlaylist', () => this.scheduleSave()) // switching setlists alone must survive a restart
 
     // Don't lose a pending debounced save when the window closes

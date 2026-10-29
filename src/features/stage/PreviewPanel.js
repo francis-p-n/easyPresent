@@ -2,6 +2,7 @@ import { themeFor, livePresentation } from '../../core/presentationDefaults.js'
 import { state } from '../../core/StateManager.js'
 import NativeRender from '../../services/NativeRender.js'
 import { hasLayout, renderSlideLayout } from '../../core/slideLayout.js'
+import { isVideoBackground, placeBackgroundVideo } from '../../core/videoBackground.js'
 
 /**
  * PreviewPanel — Shows live output preview using the NativeRender engine
@@ -83,10 +84,10 @@ export class PreviewPanel {
     // Skip redundant repaints: navigation fires both 'liveSlideIndex' and
     // 'layers', and rasterizing slide text into a GPU texture isn't free.
     const bg = slideLayer.content?.background
-    const bgMarker = bg?.mediaPath ? `media:${bg.mediaPath.length}` : `color:${bg?.color || ''}`
+    const bgMarker = bg?.type === 'video' ? `video:${bg.mediaPath}` : bg?.mediaPath ? `media:${bg.mediaPath.length}` : `color:${bg?.color || ''}`
     const layoutMarker = hasLayout(slideLayer.content)
       ? JSON.stringify([
-          (slideLayer.content.elements || []).map((e) => [e.x, e.y, e.width, e.height, e.fontSize, e.text]),
+          (slideLayer.content.elements || []).map((e) => [e.x, e.y, e.width, e.height, e.fontSize, e.text, e.runs || null]),
           (slideLayer.content.images || []).map((i) => [i.x, i.y, i.width, i.height, i.mediaPath ? i.mediaPath.length : 0])
         ])
       : ''
@@ -108,7 +109,10 @@ export class PreviewPanel {
 
     // Background is CSS-layered behind the transparent PIXI canvas so image
     // backgrounds (imported PPTX designs) work without a GPU texture pipeline
-    if (slideOn && bg?.mediaPath) {
+    placeBackgroundVideo(screen, slideOn && isVideoBackground(bg) ? bg : null, 'preview-bg-video')
+    if (slideOn && isVideoBackground(bg)) {
+      screen.style.background = bg.color || '#000'
+    } else if (slideOn && bg?.mediaPath) {
       screen.style.background = `#000 url(${bg.mediaPath}) center / cover no-repeat`
     } else if (slideOn && bg?.color) {
       screen.style.background = bg.color

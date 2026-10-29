@@ -204,3 +204,88 @@ describe('renderAudienceState — screens that are not 16:9', () => {
     expect(root.querySelector('#output-page')).toBeNull()
   })
 })
+
+describe('renderAudienceState — per-run styling from a PPTX import', () => {
+  const state = (runs) => ({
+    slide: { text: 'x', elements: [{ x: 0, y: 0, width: 960, height: 540, text: 'Praise the Lord always', fontSize: 40, runs }] }
+  })
+
+  it('styles just the bold word and the red word', () => {
+    const root = makeRoot()
+    renderAudienceState(
+      state([
+        { start: 7, end: 10, bold: true },
+        { start: 16, end: 22, color: '#ff0000', fontSize: 80 }
+      ]),
+      root,
+      0.5
+    )
+    const spans = [...root.querySelectorAll('span')]
+    expect(spans.map((s) => s.textContent)).toEqual(['the', 'always'])
+    expect(spans[0].style.fontWeight).toBe('700')
+    expect(spans[1].style.color).toBe('rgb(255, 0, 0)')
+    expect(spans[1].style.fontSize).toBe('40px') // 80 * scale 0.5
+    expect(root.textContent).toBe('Praise the Lord always')
+  })
+
+  it('ignores ranges that are out of bounds or overlap, and shows plain text without runs', () => {
+    const root = makeRoot()
+    renderAudienceState(state([{ start: 99, end: 120, bold: true }, { start: 7, end: 10, bold: true }, { start: 8, end: 12, italic: true }]), root, 1)
+    expect(root.textContent).toBe('Praise the Lord always')
+    expect(root.querySelectorAll('span')).toHaveLength(1)
+    const plain = makeRoot()
+    renderAudienceState(state(undefined), plain, 1)
+    expect(plain.querySelectorAll('span')).toHaveLength(0)
+  })
+})
+
+describe('renderAudienceState — added fonts', () => {
+  it('registers the fonts sent with the slide, once', () => {
+    document.head.innerHTML = ''
+    const root = makeRoot()
+    const state = { slide: { text: 'Hi', style: { fontFamily: 'Lobster' } }, fonts: [{ family: 'Lobster', dataUrl: 'data:font/ttf;base64,AAAA' }] }
+    renderAudienceState(state, root, 1)
+    renderAudienceState(state, root, 1)
+    const styles = document.head.querySelectorAll('#ep-audience-fonts')
+    expect(styles).toHaveLength(1)
+    expect(styles[0].textContent).toBe('@font-face{font-family:"Lobster";src:url("data:font/ttf;base64,AAAA");}')
+  })
+
+  it('cannot be broken out of by a hostile font name', () => {
+    document.head.innerHTML = ''
+    renderAudienceState({ slide: { text: 'x' }, fonts: [{ family: 'A"};body{display:none}/*', dataUrl: 'data:font/ttf;base64,AAAA' }] }, makeRoot(), 1)
+    expect(document.getElementById('ep-audience-fonts').textContent).not.toContain('"};')
+  })
+})
+
+describe('renderAudienceState — video backgrounds', () => {
+  window.HTMLMediaElement.prototype.play = () => Promise.resolve() // jsdom has no media playback
+  const videoState = { slide: { text: 'Hi', background: { type: 'video', mediaPath: 'file:///C:/loop.mp4', color: '#101010' } } }
+
+  it('plays a muted looping video behind the text', () => {
+    const root = makeRoot()
+    renderAudienceState(videoState, root, 1)
+    const video = root.querySelector('#output-bg-video')
+    expect(video).not.toBeNull()
+    expect(video.getAttribute('src')).toBe('file:///C:/loop.mp4')
+    expect(video.muted && video.loop).toBe(true)
+    expect(root.firstChild).toBe(video)
+    expect(root.textContent).toBe('Hi')
+  })
+
+  it('keeps the same element when the next slide uses the same video, so the loop does not restart', () => {
+    const root = makeRoot()
+    renderAudienceState(videoState, root, 1)
+    const first = root.querySelector('#output-bg-video')
+    renderAudienceState({ slide: { text: 'Next', background: videoState.slide.background } }, root, 1)
+    expect(root.querySelector('#output-bg-video')).toBe(first)
+    expect(root.textContent).toBe('Next')
+  })
+
+  it('drops the video when the next slide has another background', () => {
+    const root = makeRoot()
+    renderAudienceState(videoState, root, 1)
+    renderAudienceState({ slide: { text: 'Plain', background: { type: 'color', color: '#222' } } }, root, 1)
+    expect(root.querySelector('video')).toBeNull()
+  })
+})

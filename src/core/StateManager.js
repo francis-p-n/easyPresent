@@ -47,6 +47,7 @@ export class StateManager {
       showLogo: false,
       shortcutOverrides: {}, // the operator's own key bindings (see shortcuts.js)
       hiddenControlTabs: [], // Show Controls tabs this operator has switched off (kept per device)
+      userFonts: [], // font files the operator added (see fontStore.js)
       userTemplates: [], // slide layouts the operator saved from the editor (see userTemplates.js)
       outputTransition: 'cut', // 'cut' | 'dissolve' | 'wipe' — audience screen, per-slide override wins
       outputTransitionMs: 400,

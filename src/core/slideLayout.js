@@ -17,6 +17,37 @@ const wpct = (px) => (px / DESIGN_W) * 100 // → cqw
 const hpct = (px) => (px / DESIGN_H) * 100 // → cqh
 
 /**
+ * Fills `target` with `text`, wrapping the character ranges in `runs` (from a PPTX import: a bold
+ * word, a red phrase) in spans carrying their own formatting. `size(px)` turns a design-space font
+ * size into this surface's unit. Without runs it is plain text.
+ */
+export function fillRuns(target, text, runs, size) {
+  const valid = (Array.isArray(runs) ? runs : [])
+    .filter((r) => r && r.start >= 0 && r.end > r.start && r.start < text.length)
+    .sort((a, b) => a.start - b.start)
+  if (!valid.length) {
+    target.textContent = text
+    return
+  }
+  let at = 0
+  for (const r of valid) {
+    if (r.start < at) continue // overlapping range: the earlier one wins
+    if (r.start > at) target.appendChild(document.createTextNode(text.slice(at, r.start)))
+    const span = document.createElement('span')
+    span.textContent = text.slice(r.start, Math.min(r.end, text.length))
+    if (r.bold !== undefined) span.style.fontWeight = r.bold ? '700' : '400'
+    if (r.italic !== undefined) span.style.fontStyle = r.italic ? 'italic' : 'normal'
+    if (r.underline !== undefined) span.style.textDecoration = r.underline ? 'underline' : 'none'
+    if (r.color) span.style.color = r.color
+    if (r.fontFamily) span.style.fontFamily = `"${r.fontFamily}", sans-serif`
+    if (r.fontSize) span.style.fontSize = size(r.fontSize)
+    target.appendChild(span)
+    at = Math.min(r.end, text.length)
+  }
+  if (at < text.length) target.appendChild(document.createTextNode(text.slice(at)))
+}
+
+/**
  * PPTX <a:fillRect> insets (1000ths of a percent) → the inner image's box as
  * percentages of the shape. Default (no fill) is a plain stretch-to-fill.
  * Negative insets make the image larger than the shape so it shows a cropped
@@ -122,7 +153,6 @@ export function renderSlideLayout(container, { elements = [], images = [] } = {}
       `display:flex;flex-direction:column;justify-content:${vAlign};align-items:${hAlign};`
 
     const text = document.createElement('div')
-    text.textContent = el.text || ''
     text.style.cssText =
       `width:100%;` +
       `font-family:"${el.fontFamily || 'Inter'}", sans-serif;` +
@@ -132,6 +162,7 @@ export function renderSlideLayout(container, { elements = [], images = [] } = {}
       `text-align:${['left', 'center', 'right'].includes(el.hAlign) ? el.hAlign : 'left'};` +
       `line-height:${el.lineSpacing || 1.2};` +
       `white-space:pre-wrap;word-break:break-word;`
+    fillRuns(text, el.text || '', el.runs, (px) => `${wpct(px)}cqw`)
     box.appendChild(text)
     layer.appendChild(box)
   })

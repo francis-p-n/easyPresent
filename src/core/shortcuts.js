@@ -16,7 +16,7 @@ export const SHORTCUT_ACTIONS = [
   { id: 'clearSlide', label: 'Clear the slide', keys: ['F2'] },
   { id: 'clearMedia', label: 'Clear media', keys: ['F3'] },
   { id: 'clearProps', label: 'Clear props', keys: ['F4'] },
-  { id: 'clearAudio', label: 'Clear audio', keys: ['F5'] },
+  { id: 'clearAudio', label: 'Clear audio', keys: ['F7'] }, // not F5: a clicker's "start slideshow" button sends F5 and must not stop the music
   { id: 'logo', label: 'Logo on / off', keys: ['F6'] },
   { id: 'hideAudienceText', label: 'Hide / show slide text on the audience screen', keys: [] },
   { id: 'help', label: 'Show the shortcut list', keys: ['?'] }

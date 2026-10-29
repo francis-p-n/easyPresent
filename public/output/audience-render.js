@@ -7,6 +7,9 @@
 // size that suits the screen's shape); positioned layouts are authored on a 16:9 page, so with a
 // viewport they are fitted and centred on it instead of being stretched to the width alone.
 function renderAudienceState(state, root, scale, viewport) {
+  // A background video that is already playing is kept across redraws, so the loop does not restart on every slide
+  var keptVideo = root.querySelector ? root.querySelector('#output-bg-video') : null
+  if (keptVideo) keptVideo.remove()
   root.innerHTML = ''
   root.style.position = 'relative'
   root.style.width = '100%'
@@ -15,6 +18,7 @@ function renderAudienceState(state, root, scale, viewport) {
   root.style.background = '#000'
 
   if (!state) return
+  registerAudienceFonts(state.fonts)
 
   // showLogo/no-slide only blank the SLIDE — a message (e.g. "Starting
   // soon...") must still show over the black screen, same as the operator's
@@ -43,6 +47,9 @@ function renderAudienceState(state, root, scale, viewport) {
     const bg = state.slide.background
     if (bg && bg.type === 'media' && bg.mediaPath) {
       root.style.background = `#000 url("${bg.mediaPath}") center / cover no-repeat`
+    } else if (bg && bg.type === 'video' && bg.mediaPath) {
+      root.style.background = bg.color || '#000'
+      placeAudienceVideo(root, bg, keptVideo)
     } else if (bg && bg.color) {
       root.style.background = bg.color
     } else if (theme.backgroundColor) {
@@ -209,7 +216,6 @@ function renderSlideLayout(slide, root, scale) {
       overflow: 'hidden'
     })
     const text = document.createElement('div')
-    text.textContent = el.text || ''
     Object.assign(text.style, {
       width: '100%',
       fontFamily: `"${el.fontFamily || 'Inter'}", sans-serif`,
@@ -224,9 +230,76 @@ function renderSlideLayout(slide, root, scale) {
       overflowWrap: 'anywhere',
       wordBreak: 'break-word'
     })
+    fillRuns(text, el.text || '', el.runs, scale)
     box.appendChild(text)
     root.appendChild(box)
   })
+}
+
+// Looping background video (a file on this computer), behind everything else.
+function placeAudienceVideo(root, bg, kept) {
+  var video = kept && kept.getAttribute('src') === bg.mediaPath ? kept : null
+  if (!video) {
+    video = document.createElement('video')
+    video.id = 'output-bg-video'
+    video.setAttribute('src', bg.mediaPath)
+    video.muted = true
+    video.loop = true
+    video.autoplay = true
+    video.playsInline = true
+    video.setAttribute('muted', '')
+    video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1;pointer-events:none;'
+  }
+  root.style.isolation = 'isolate'
+  root.insertBefore(video, root.firstChild)
+  var started = video.play && video.play()
+  if (started && started.catch) started.catch(function () {})
+}
+
+// Fonts the operator added, sent with the slide that uses them. One <style> element, rewritten only when the list changes.
+function registerAudienceFonts(fonts) {
+  if (!Array.isArray(fonts) || !fonts.length) return
+  var css = fonts
+    .map(function (f) {
+      var family = String(f.family).replace(/["\\]/g, '')
+      var url = String(f.dataUrl).replace(/["\\]/g, '')
+      return '@font-face{font-family:"' + family + '";src:url("' + url + '");}'
+    })
+    .join('\n')
+  var style = document.getElementById('ep-audience-fonts')
+  if (!style) {
+    style = document.createElement('style')
+    style.id = 'ep-audience-fonts'
+    document.head.appendChild(style)
+  }
+  if (style.textContent !== css) style.textContent = css
+}
+
+// Text with per-range formatting (bold word, red phrase from a PPTX import) as styled spans.
+function fillRuns(target, text, runs, scale) {
+  var valid = (Array.isArray(runs) ? runs : [])
+    .filter(function (r) { return r && r.start >= 0 && r.end > r.start && r.start < text.length })
+    .sort(function (a, b) { return a.start - b.start })
+  if (!valid.length) {
+    target.textContent = text
+    return
+  }
+  var at = 0
+  valid.forEach(function (r) {
+    if (r.start < at) return
+    if (r.start > at) target.appendChild(document.createTextNode(text.slice(at, r.start)))
+    var span = document.createElement('span')
+    span.textContent = text.slice(r.start, Math.min(r.end, text.length))
+    if (r.bold !== undefined) span.style.fontWeight = r.bold ? '700' : '400'
+    if (r.italic !== undefined) span.style.fontStyle = r.italic ? 'italic' : 'normal'
+    if (r.underline !== undefined) span.style.textDecoration = r.underline ? 'underline' : 'none'
+    if (r.color) span.style.color = r.color
+    if (r.fontFamily) span.style.fontFamily = '"' + r.fontFamily + '", sans-serif'
+    if (r.fontSize) span.style.fontSize = r.fontSize * scale + 'px'
+    target.appendChild(span)
+    at = Math.min(r.end, text.length)
+  })
+  if (at < text.length) target.appendChild(document.createTextNode(text.slice(at)))
 }
 
 function renderSlideText(text, style, root, scale) {

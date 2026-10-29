@@ -97,3 +97,31 @@ describe('ThemeEditor — closing without applying', () => {
     expect(state.get('themes').find((t) => t.id === 'default').styles.fontFamily).toBe('Inter')
   })
 })
+
+describe('ThemeEditor — fonts from a file', () => {
+  it('adds a font file, offers it in the list and can remove it again', async () => {
+    const { state } = await import('../../core/StateManager.js')
+    state.set('userFonts', [])
+    createThemeEditor()
+    const input = document.querySelector('#theme-editor-font-file')
+    const file = new window.File([new Uint8Array([1, 2, 3])], 'Lobster-Regular.ttf')
+    Object.defineProperty(input, 'files', { value: [file], configurable: true })
+    input.dispatchEvent(new window.Event('change'))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(state.get('userFonts').map((f) => f.family)).toEqual(['Lobster'])
+    expect([...document.querySelectorAll('#theme-editor-font-select option')].map((o) => o.value)).toContain('Lobster')
+    expect(document.querySelector('#theme-editor-font-note').textContent).toBe('Added Lobster.')
+    document.querySelector('.font-remove').click()
+    expect(state.get('userFonts')).toEqual([])
+    expect([...document.querySelectorAll('#theme-editor-font-select option')].map((o) => o.value)).not.toContain('Lobster')
+  })
+
+  it('says why a non-font file was refused', async () => {
+    createThemeEditor()
+    const input = document.querySelector('#theme-editor-font-file')
+    Object.defineProperty(input, 'files', { value: [new window.File(['x'], 'photo.png')], configurable: true })
+    input.dispatchEvent(new window.Event('change'))
+    await new Promise((r) => setTimeout(r, 20))
+    expect(document.querySelector('#theme-editor-font-note').textContent).toMatch(/\.ttf/)
+  })
+})

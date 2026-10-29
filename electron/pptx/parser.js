@@ -388,30 +388,58 @@ function shapeXfrmAttrs(shapeXml) {
  * dropped (authors use them as spacing). Runs within a paragraph concatenate
  * with no separator (PowerPoint splits words across runs for spell-check).
  */
-function extractTextBoxText(txBody) {
+/** Reads one run's own formatting (<a:rPr>) as absolute values; anything not set is left out. */
+function runFormat(runBlock, theme, ptToPx, fontScale, cap) {
+  const fmt = {};
+  const rPr = runBlock.match(/<a:rPr\b([^>]*?)(?:\/>|>([\s\S]*?)<\/a:rPr>)/);
+  if (!rPr) return fmt;
+  const attrs = rPr[1];
+  const inner = rPr[2] || '';
+  const sz = attrs.match(/\bsz="(\d+)"/);
+  if (sz) fmt.fontSize = Math.min(cap, Math.max(MIN_FONT_SIZE, Math.round((parseInt(sz[1], 10) / 100) * ptToPx * fontScale)));
+  if (/\bb="(1|0)"/.test(attrs)) fmt.bold = /\bb="1"/.test(attrs);
+  if (/\bi="(1|0)"/.test(attrs)) fmt.italic = /\bi="1"/.test(attrs);
+  if (/\bu="\w+"/.test(attrs)) fmt.underline = /\bu="(?!none)\w+"/.test(attrs);
+  const fill = inner.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
+  const color = fill ? resolveFillColor(fill[1], theme) : null;
+  if (color) fmt.color = color;
+  const latin = inner.match(/<a:latin typeface="([^"]+)"/);
+  const family = latin ? resolveFontFamily(latin[1], theme) : null;
+  if (family) fmt.fontFamily = family;
+  return fmt;
+}
+
+/**
+ * Same text as extractTextBoxText, plus `runs`: the character ranges of that text whose own
+ * formatting is set, as { start, end, ...format } (formats in absolute values; callers keep
+ * only what differs from the box's base style). `fmtOf(runBlock)` reads a run's formatting.
+ */
+function extractTextBoxRuns(txBody, fmtOf = () => ({})) {
   const paraRegex = /<a:p(?:\s[^>]*)?>([\s\S]*?)<\/a:p>/g;
   const out = [];
+  const runs = [];
+  let length = 0; // characters emitted so far (paragraphs are joined with a newline)
   const counters = {}; // indent level → running auto-number
   let paraMatch;
   while ((paraMatch = paraRegex.exec(txBody)) !== null) {
     const paraContent = paraMatch[1];
 
-    const partRegex = /<a:t>([\s\S]*?)<\/a:t>|<a:br(?:\s[^>]*)?\/?>/g;
-    const lines = [];
-    let line = '';
+    const partRegex = /<a:(?:r|fld)\b[^>]*>([\s\S]*?)<\/a:(?:r|fld)>|<a:br(?:\s[^>]*)?\/?>/g;
+    // lines: each is a list of { text, fmt } pieces
+    const lines = [[]];
     let hasVisibleText = false;
     let partMatch;
     while ((partMatch = partRegex.exec(paraContent)) !== null) {
       if (partMatch[1] !== undefined) {
-        const decoded = decodeXmlEntities(partMatch[1]);
-        line += decoded;
+        const t = partMatch[1].match(/<a:t>([\s\S]*?)<\/a:t>/);
+        if (!t) continue;
+        const decoded = decodeXmlEntities(t[1]);
         if (decoded.trim()) hasVisibleText = true;
+        lines[lines.length - 1].push({ text: decoded, fmt: fmtOf(partMatch[1]) });
       } else {
-        lines.push(line);
-        line = '';
+        lines.push([]);
       }
     }
-    lines.push(line);
     if (!hasVisibleText) continue;
 
     // Resolve this paragraph's list marker from its <a:pPr>
@@ -435,12 +463,44 @@ function extractTextBoxText(txBody) {
 
     const indent = '    '.repeat(lvl);
     const hang = ' '.repeat(marker.length);
-    const rendered = lines
-      .map((ln, i) => (i === 0 ? indent + marker + ln : indent + hang + ln))
-      .join('\n');
+    const paraStart = out.length ? length + 1 : length; // +1: the newline joining this paragraph
+    let cursor = paraStart;
+    const rendered = lines.map((pieces, i) => {
+      const prefix = i === 0 ? indent + marker : indent + hang;
+      cursor += prefix.length;
+      let ln = prefix;
+      for (const piece of pieces) {
+        if (Object.keys(piece.fmt).length && piece.text) runs.push({ start: cursor, end: cursor + piece.text.length, ...piece.fmt });
+        cursor += piece.text.length;
+        ln += piece.text;
+      }
+      cursor += 1; // the newline between lines of one paragraph
+      return ln;
+    }).join('\n');
     out.push(rendered);
+    length = paraStart + rendered.length;
   }
-  return out.join('\n');
+  return { text: out.join('\n'), runs };
+}
+
+/**
+ * Keeps, for each run, only the formatting that differs from the box's base style, so a
+ * box formatted uniformly carries no runs and a bold word or red phrase carries just that.
+ * Font sizes are scaled the same way as the box's (groups scale their text).
+ */
+function differingRuns(runs, base, fontScale) {
+  const out = [];
+  for (const r of runs) {
+    const run = { start: r.start, end: r.end };
+    if (r.bold !== undefined && r.bold !== !!base.bold) run.bold = r.bold;
+    if (r.italic !== undefined && r.italic !== !!base.italic) run.italic = r.italic;
+    if (r.underline !== undefined && r.underline !== !!base.underline) run.underline = r.underline;
+    if (r.color && r.color !== (base.color || '#000000')) run.color = r.color;
+    if (r.fontFamily && r.fontFamily !== base.fontFamily) run.fontFamily = r.fontFamily;
+    if (r.fontSize && r.fontSize !== (base.fontSize || 48)) run.fontSize = Math.round(r.fontSize * fontScale);
+    if (Object.keys(run).length > 2) out.push(run);
+  }
+  return out;
 }
 
 /**
@@ -591,9 +651,16 @@ function resolveBlipImage(shapeXml, relMap, mediaByName, targetW) {
   const rel = relMap.get(embed[1]);
   if (!rel) return null;
   const name = rel.target.split('/').pop();
-  const mime = RASTER_EXT[path.extname(name).toLowerCase()];
-  if (!mime) return null;
+  const ext = path.extname(name).toLowerCase();
   const entry = mediaByName.get(name);
+  if (ext === '.svg') {
+    // A vector picture (logo, icon) stays vector: the browser draws it sharp at any size.
+    // Its text is not scriptable when shown through <img>, so no scrubbing is needed.
+    if (!entry || entry.header.size > MAX_BG_BYTES) return null;
+    return `data:image/svg+xml;base64,${entry.getData().toString('base64')}`;
+  }
+  const mime = RASTER_EXT[ext];
+  if (!mime) return null;
   if (!entry || entry.header.size > MAX_SOURCE_BYTES) return null;
   return encodeImage(entry.getData(), mime, targetW);
 }
@@ -651,6 +718,38 @@ function isFullBleed(geom) {
     geom.x + geom.width >= RENDER_WIDTH * 0.95 &&
     geom.y + geom.height >= RENDER_HEIGHT * 0.95
   );
+}
+
+/**
+ * A flat-coloured rectangle, rounded rectangle or ellipse (the bars, blocks and circles that
+ * template designs are built from) as a small SVG picture, so it can be drawn behind the text
+ * like any other positioned image. Gradients, outlines and other geometry are not reproduced.
+ */
+function solidShapeSvg(shapeXml, geom, theme) {
+  if (!geom || geom.width < 1 || geom.height < 1) return null;
+  const spPr = shapeXml.match(/<p:spPr\b[^>]*>([\s\S]*?)<\/p:spPr>/);
+  if (!spPr) return null;
+  const inner = spPr[1].replace(/<a:ln\b[\s\S]*?<\/a:ln>/g, '').replace(/<a:ln\b[^>]*\/>/g, '');
+  const prst = (inner.match(/<a:prstGeom\s+prst="(\w+)"/) || [])[1];
+  if (!['rect', 'roundRect', 'ellipse'].includes(prst)) return null;
+  const fill = inner.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
+  const color = fill ? resolveFillColor(fill[1], theme) : null;
+  if (!color) return null;
+  const alpha = fill[1].match(/<a:alpha val="(\d+)"/);
+  const opacity = alpha ? Math.max(0, Math.min(1, parseInt(alpha[1], 10) / 100000)) : 1;
+  if (opacity === 0) return null;
+  const w = Math.round(geom.width);
+  const h = Math.round(geom.height);
+  let shape;
+  if (prst === 'ellipse') {
+    shape = `<ellipse cx="${w / 2}" cy="${h / 2}" rx="${w / 2}" ry="${h / 2}"`;
+  } else {
+    const adj = inner.match(/<a:gd\s+name="adj"\s+fmla="val (\d+)"/);
+    const radius = prst === 'roundRect' ? Math.round((adj ? parseInt(adj[1], 10) : 16667) / 100000 * Math.min(w, h)) : 0;
+    shape = `<rect width="${w}" height="${h}" rx="${radius}"`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${shape} fill="${color}" fill-opacity="${opacity}"/></svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
 /**
@@ -768,11 +867,31 @@ function extractShapes(xmlData, theme, metrics, relMap, mediaByName, inheritBox 
       // Text inside a scaled group renders proportionally smaller/larger.
       const fontScale = Math.sqrt(Math.abs(t.kx * t.ky)) || 1;
 
+      // Flat coloured blocks behind the text (a title bar, a circle) come across as pictures
+      if (geom && !isFullBleed(geom)) {
+        const block = solidShapeSvg(shapeXml, geom, theme);
+        if (block) {
+          const { rot, flipH, flipV } = shapeXfrmAttrs(shapeXml);
+          images.push({
+            mediaPath: block,
+            x: geom.x, y: geom.y, width: geom.width, height: geom.height,
+            rot: rot || undefined,
+            flipH: flipH || undefined,
+            flipV: flipV || undefined
+          });
+        }
+      }
+
       const txBodyMatch = shapeXml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/);
-      const text = txBodyMatch ? extractTextBoxText(txBodyMatch[1]) : '';
+      const autofit = txBodyMatch ? txBodyMatch[1].match(/<a:normAutofit\b[^>]*\bfontScale="(\d+)"/) : null;
+      const runScale = autofit ? parseInt(autofit[1], 10) / 100000 : 1;
+      const { text, runs: rawRuns } = txBodyMatch
+        ? extractTextBoxRuns(txBodyMatch[1], (runBlock) => runFormat(runBlock, theme, ptToPx, runScale, ELEMENT_FONT_MAX))
+        : { text: '', runs: [] };
 
       if (text.trim()) {
         const style = styleFromBody(txBodyMatch[1], theme, ptToPx, ELEMENT_FONT_MAX);
+        const runs = differingRuns(rawRuns, style, fontScale);
         const box = geom || { x: 96, y: 190, width: RENDER_WIDTH - 192, height: RENDER_HEIGHT - 380 };
         elements.push({
           text,
@@ -789,6 +908,7 @@ function extractShapes(xmlData, theme, metrics, relMap, mediaByName, inheritBox 
           hAlign: style.hAlign || 'left',
           vAlign: style.vAlign || 'top',
           lineSpacing: style.lineSpacing,
+          ...(runs.length ? { runs } : {}),
           textScaling: 'none',
           hasShadow: false // PowerPoint body text has no drop shadow; match it
         });

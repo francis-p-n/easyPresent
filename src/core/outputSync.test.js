@@ -171,3 +171,19 @@ describe('transition + audience look', () => {
     expect(payloadSignature(a)).not.toBe(payloadSignature(b))
   })
 })
+
+describe('buildOutputPayload — added fonts', () => {
+  it('includes only the added fonts the live slide uses', async () => {
+    const { buildOutputPayload, payloadSignature } = await import('./outputSync.js')
+    const userFonts = [
+      { family: 'Lobster', dataUrl: 'data:font/ttf;base64,AAAA' },
+      { family: 'Unused', dataUrl: 'data:font/ttf;base64,BBBB' }
+    ]
+    const layers = { slide: { active: true, content: { text: 'x', style: { fontFamily: 'Lobster' } } } }
+    const withFont = buildOutputPayload(layers, null, false, '', { userFonts })
+    expect(withFont.fonts.map((f) => f.family)).toEqual(['Lobster'])
+    const without = buildOutputPayload({ slide: { active: true, content: { text: 'x' } } }, null, false, '', { userFonts })
+    expect(without.fonts).toBeNull()
+    expect(payloadSignature(withFont)).not.toBe(payloadSignature(without))
+  })
+})

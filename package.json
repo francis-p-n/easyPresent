@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && electron-builder",
+    "build:signed": "node scripts/check-signing.js && npm run build",
     "build:native": "cmake-js compile",
     "icon": "node scripts/generate-icon.js",
     "preview": "vite preview",

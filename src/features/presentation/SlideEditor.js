@@ -1,5 +1,7 @@
 import { state } from '../../core/StateManager.js'
 import { TextElement } from '../../models/TextElement.js'
+import { rasterizeIfSvg } from '../../services/svgRaster.js'
+import { isVideoFileName, fileUrlFromPath, videoLabel } from '../../core/videoBackground.js'
 import { getActiveSequence } from '../../core/arrangement.js'
 import { clampAutoSeconds } from '../../core/navigation.js'
 import { imageFrameStyle, shapeTransform } from '../../core/slideLayout.js'
@@ -100,9 +102,12 @@ export function createSlideEditor(container) {
             <div style="display:flex;gap:4px;align-items:center;">
               <input type="color" id="prop-bg-color" class="input" value="#000000" style="height:32px;flex:1;" />
               <button class="btn btn--icon" id="prop-bg-image-btn" title="Set background image" style="height:32px;padding:0 8px;flex-shrink:0;">&#128247;</button>
-              <button class="btn btn--icon" id="prop-bg-image-clear" title="Clear background image" style="height:32px;padding:0 6px;flex-shrink:0;display:none;">&#x2715;</button>
+              <button class="btn btn--icon" id="prop-bg-video-btn" title="Set a looping video background" aria-label="Set a looping video background" style="height:32px;padding:0 8px;flex-shrink:0;">&#127902;</button>
+              <button class="btn btn--icon" id="prop-bg-image-clear" title="Clear background image or video" aria-label="Clear background image or video" style="height:32px;padding:0 6px;flex-shrink:0;display:none;">&#x2715;</button>
             </div>
             <input type="file" id="prop-bg-image-file" accept="image/*" style="display:none;" />
+            <input type="file" id="prop-bg-video-file" accept="video/mp4,video/webm,video/quicktime,video/ogg,.mp4,.m4v,.webm,.mov,.ogv" style="display:none;" />
+            <span id="prop-bg-video-note" role="status" style="font-size:12px;"></span>
           </label>
           <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary);flex:1;">
             Slide Type
@@ -235,6 +240,11 @@ export function createSlideEditor(container) {
   const saveBtn = container.querySelector('#editor-save-btn')
   const closeBtn = container.querySelector('#editor-close-btn')
   const fontFamilyInput = container.querySelector('#prop-font-family')
+  for (const f of state.get('userFonts') || []) {
+    const opt = document.createElement('option')
+    opt.value = f.family // fonts the operator added are offered like the built-in ones
+    container.querySelector('#editor-font-list')?.appendChild(opt)
+  }
   const fontSizeInput = container.querySelector('#prop-font-size')
   const autosizeCheckbox = container.querySelector('#prop-autosize')
   const colorInput = container.querySelector('#prop-color')
@@ -243,6 +253,11 @@ export function createSlideEditor(container) {
   const bgImageClearBtn = container.querySelector('#prop-bg-image-clear')
   const bgImageFile = container.querySelector('#prop-bg-image-file')
   let bgImageDataUrl = null
+  let bgVideoUrl = null // file:// address of a looping background video (the file stays where it is)
+  const bgVideoBtn = container.querySelector('#prop-bg-video-btn')
+  const bgVideoFile = container.querySelector('#prop-bg-video-file')
+  const bgVideoNote = container.querySelector('#prop-bg-video-note')
+  const showVideoNote = (text) => (bgVideoNote.textContent = text)
   const alignInput = container.querySelector('#prop-align')
   const valignInput = container.querySelector('#prop-valign')
   const boldBtn = container.querySelector('#style-bold')
@@ -285,6 +300,7 @@ export function createSlideEditor(container) {
       images: images.map((im) => ({ ...im })),
       bgColor: bgColorInput.value,
       bgImage: bgImageDataUrl,
+      bgVideo: bgVideoUrl,
       templateId: templateSelect.value,
       type: slideTypeSelect.value,
       transition: transitionSelect.value,
@@ -337,7 +353,9 @@ export function createSlideEditor(container) {
     images = snap.images.map((im) => ({ ...im }))
     bgColorInput.value = snap.bgColor
     bgImageDataUrl = snap.bgImage
-    bgImageClearBtn.style.display = bgImageDataUrl ? 'block' : 'none'
+    bgVideoUrl = snap.bgVideo || null
+    showVideoNote(bgVideoUrl ? `Video background: ${videoLabel(bgVideoUrl)}` : '')
+    bgImageClearBtn.style.display = bgImageDataUrl || bgVideoUrl ? 'block' : 'none'
     canvas.style.background = bgImageDataUrl
       ? `${snap.bgColor} url("${bgImageDataUrl}") center / cover no-repeat`
       : snap.bgColor
@@ -565,6 +583,7 @@ export function createSlideEditor(container) {
       document.execCommand('insertText', false, plain)
     }
     textDiv.oninput = () => {
+      if (el.text !== textDiv.innerText) delete el.runs // the character ranges no longer line up once the words change
       el.text = textDiv.innerText
       if (el.textScaling === 'scaleToFit') {
         applyAutosize(el)
@@ -806,8 +825,10 @@ export function createSlideEditor(container) {
     const file = bgImageFile.files[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = (ev) => {
-      bgImageDataUrl = ev.target.result
+    reader.onload = async (ev) => {
+      bgImageDataUrl = await rasterizeIfSvg(ev.target.result) // an SVG becomes a screen-sized PNG
+      bgVideoUrl = null
+      showVideoNote('')
       canvas.style.background = `${bgColorInput.value} url(${bgImageDataUrl}) center / cover no-repeat`
       bgImageClearBtn.style.display = 'block'
       checkpoint()
@@ -816,7 +837,25 @@ export function createSlideEditor(container) {
     bgImageFile.value = ''
   })
 
+  bgVideoBtn.addEventListener('click', () => bgVideoFile.click())
+  bgVideoFile.addEventListener('change', () => {
+    const file = bgVideoFile.files[0]
+    bgVideoFile.value = ''
+    if (!file) return
+    if (!isVideoFileName(file.name)) return showVideoNote('Choose an .mp4, .webm or .mov video.')
+    const location = window.electronAPI?.getPathForFile?.(file) || file.path
+    if (!location) return showVideoNote('Video backgrounds need the desktop app (the video stays where it is on this computer).')
+    bgVideoUrl = fileUrlFromPath(location)
+    bgImageDataUrl = null
+    canvas.style.background = bgColorInput.value
+    bgImageClearBtn.style.display = 'block'
+    showVideoNote(`Video background: ${videoLabel(bgVideoUrl)}`)
+    checkpoint()
+  })
+
   bgImageClearBtn.addEventListener('click', () => {
+    bgVideoUrl = null
+    showVideoNote('')
     bgImageDataUrl = null
     bgImageClearBtn.style.display = 'none'
     canvas.style.background = bgColorInput.value
@@ -831,6 +870,8 @@ export function createSlideEditor(container) {
     const bg = BUILTIN_BACKGROUNDS.find((b) => b.id === swatch.dataset.bgId)
     if (!bg) return
     bgImageDataUrl = bg.dataUrl
+    bgVideoUrl = null
+    showVideoNote('')
     canvas.style.background = `${bgColorInput.value} url("${bg.dataUrl}") center / cover no-repeat`
     bgImageClearBtn.style.display = 'block'
     checkpoint()
@@ -890,6 +931,8 @@ export function createSlideEditor(container) {
       bgColorInput.value = saved.bg
       canvas.style.background = saved.bg
       bgImageDataUrl = null
+      bgVideoUrl = null
+      showVideoNote('')
       bgImageClearBtn.style.display = 'none'
       const oldTexts = elements.map((e) => e.text).filter((s) => s.trim())
       elements = stampTemplate(saved, oldTexts).map((box) => new TextElement(box))
@@ -1016,7 +1059,9 @@ export function createSlideEditor(container) {
         ? slide.background.mediaPath
         : null
     bgImageDataUrl = bgMediaPath || null
-    bgImageClearBtn.style.display = bgImageDataUrl ? 'block' : 'none'
+    bgVideoUrl = slide.background && slide.background.type === 'video' && slide.background.mediaPath ? slide.background.mediaPath : null
+    showVideoNote(bgVideoUrl ? `Video background: ${videoLabel(bgVideoUrl)}` : '')
+    bgImageClearBtn.style.display = bgImageDataUrl || bgVideoUrl ? 'block' : 'none'
     if (bgImageDataUrl) {
       canvas.style.background = `${bg} url(${bgImageDataUrl}) center / cover no-repeat`
     } else {
@@ -1091,10 +1136,10 @@ export function createSlideEditor(container) {
       // clear button — so falling back to prevBg.mediaPath here would silently
       // resurrect an image the operator just cleared.
       const prevBg = slide.background || {}
-      const mediaPath = bgImageDataUrl || null
+      const mediaPath = bgVideoUrl || bgImageDataUrl || null
       slide.background = {
         ...prevBg,
-        type: mediaPath ? 'media' : 'color',
+        type: bgVideoUrl ? 'video' : mediaPath ? 'media' : 'color',
         color: bgColorInput.value,
         mediaPath: mediaPath || undefined,
       }

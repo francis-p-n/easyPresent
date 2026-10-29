@@ -16,6 +16,7 @@ import { buildLiveState } from './core/liveState.js'
 import { buildLookup, eventToSpec, loadOverrides } from './core/shortcuts.js'
 import { themeFor, livePresentation, presentationTransition } from './core/presentationDefaults.js'
 import { applyPanelWidths, loadPanelWidths, readPanelWidths, savePanelWidths } from './core/workspaces.js'
+import { registerUserFonts } from './services/fontStore.js'
 import { syncRemoteButtons } from './features/controls/RemoteButtonsEditor.js'
 import { makeTransposer } from './songs/transpose.js'
 import { slideToChordProText } from './songs/chordpro.js'
@@ -112,6 +113,30 @@ export function runShortcutAction(action) {
   }
 }
 
+/**
+ * Runs the show shortcut for a keydown (a clicker's PageDown/PageUp/./b/Esc/F5 arrive as plain keys).
+ * Returns false when the key was not for the show (typing, a dialog, a chord), so the caller stops too.
+ */
+export function handleShowKey(e, isEditing) {
+  if (isShowShortcutBlocked(e, isEditing)) return false
+
+  // Escape always closes an open dropdown first; only a bare Escape blanks the output
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    if (closeOpenMenus()) return true
+  }
+
+  const action = buildLookup(state.get('shortcutOverrides')).get(eventToSpec(e))
+  if (action) {
+    e.preventDefault()
+    // A clicker button held down (or stuck) must not race through the slides or flicker the logo
+    if (!e.repeat) runShortcutAction(action)
+  }
+  // A clicker's "start slideshow" key is F5: it must not reload the window or do anything else mid-service
+  if (e.key === 'F5') e.preventDefault()
+  return true
+}
+
 /** How long a typed slide number stays open for another digit ("1" then "2" = slide 12). */
 const SLIDE_NUMBER_WINDOW_MS = 700
 
@@ -128,6 +153,8 @@ class App {
     await storageManager.load()
     state.set('shortcutOverrides', loadOverrides())
     syncRemoteButtons()
+    registerUserFonts(state.get('userFonts')) // fonts the operator added draw in every panel
+    state.on('userFonts', (fonts) => registerUserFonts(fonts))
     applyPanelWidths(loadPanelWidths()) // panel sizes survive a restart
     storageManager.reportRecovery()
     if (await initSongLibrary()) storageManager.scheduleSave()
@@ -205,7 +232,8 @@ class App {
           hideSlide: state.get('hideAudienceSlide'),
           transition: state.get('outputTransition'),
           presentationTransition: presentationTransition(livePres),
-          transitionMs: state.get('outputTransitionMs')
+          transitionMs: state.get('outputTransitionMs'),
+          userFonts: state.get('userFonts')
         }
       )
       const sig = payloadSignature(payload)
@@ -418,19 +446,7 @@ class App {
 
   _setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-      if (isShowShortcutBlocked(e, state.get('isEditing'))) return
-
-      // Escape always closes an open dropdown first; only a bare Escape blanks the output
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        if (closeOpenMenus()) return
-      }
-
-      const action = buildLookup(state.get('shortcutOverrides')).get(eventToSpec(e))
-      if (action) {
-        e.preventDefault()
-        runShortcutAction(action)
-      }
+      if (!handleShowKey(e, state.get('isEditing'))) return
 
       // Number keys jump to a slide; digits typed in quick succession form one
       // number, so songs with 10+ slides are reachable ("1","2" -> slide 12)

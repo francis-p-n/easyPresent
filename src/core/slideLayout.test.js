@@ -151,3 +151,23 @@ describe('renderSlideLayout (DOM)', () => {
     expect(box.style.width).toBe('200cqw')
   })
 })
+
+describe('fillRuns', () => {
+  it('wraps only the styled ranges and keeps all the text', async () => {
+    const { fillRuns } = await import('./slideLayout.js')
+    const div = document.createElement('div')
+    fillRuns(div, 'Praise the Lord always', [{ start: 7, end: 10, bold: true }, { start: 16, end: 22, color: '#ff0000', fontSize: 96 }], (px) => `${px / 10}cqw`)
+    const spans = [...div.querySelectorAll('span')]
+    expect(spans.map((s) => s.textContent)).toEqual(['the', 'always'])
+    expect(spans[0].style.fontWeight).toBe('700')
+    expect(spans[1].style.fontSize).toBe('9.6cqw')
+    expect(div.textContent).toBe('Praise the Lord always')
+  })
+
+  it('is plain text with no runs', async () => {
+    const { fillRuns } = await import('./slideLayout.js')
+    const div = document.createElement('div')
+    fillRuns(div, 'Hello', undefined, String)
+    expect(div.innerHTML).toBe('Hello')
+  })
+})

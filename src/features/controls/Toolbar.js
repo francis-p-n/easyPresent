@@ -179,7 +179,7 @@ export class Toolbar {
       { key: 'slide', label: 'Slide', shortcut: 'F2' },
       { key: 'media', label: 'Media', shortcut: 'F3' },
       { key: 'props', label: 'Props', shortcut: 'F4' },
-      { key: 'audio', label: 'Audio', shortcut: 'F5' }
+      { key: 'audio', label: 'Audio', shortcut: 'F7' }
     ]
 
     clears.forEach((c) => {

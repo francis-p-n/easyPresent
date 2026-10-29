@@ -40,10 +40,11 @@
 - `[x]` Customization, round two: rebind any keyboard shortcut (the ? sheet: Set key / + / Default / Reset all; the shortcut list can also hide the audience text), choose/rename/resize/reorder the phone remote's buttons (Screens menu > Remote buttons; adds next/previous song, clear slide, hide text), per-presentation theme and transition (Arrangement editor; slide > presentation > app setting), named saved layouts (the ⋯ menu beside the control tabs: tabs, panel widths, transition, audience look, remote buttons, shortcuts), and panel widths now survive a restart
 
 ## Active Development
-- `[ ]` Audience output has no video backgrounds (needs the C++ DirectX addon wired in; `native/src/video_decoder.cc:137` TODO)
-- `[ ]` Rasterize SVG-based PPTX slides (shape-heavy templates import text-only)
-- `[ ]` PPTX custom/decorative fonts aren't embedded; per-run color/size variation within one text box not read
-- `[ ]` Code signing for distribution builds (needs a certificate)
+- `[x]` Video backgrounds: pick a looping video for any slide (editor, background row); the file stays where it is, plays muted in the audience and preview windows, and does not restart on the next slide that uses it
+- `[x]` SVG: pictures in PPTX files stay sharp vectors, SVG backgrounds are rasterised to a screen-sized PNG, and flat coloured rectangles/rounded rectangles/circles in templates are imported as shapes (gradients, outlines and other shapes are still not)
+- `[x]` Fonts: add .ttf/.otf/.woff/.woff2 files (Theme editor > Add font file); kept in the library and sent to the audience screen with the slides that use them. Per-word bold/italic/underline/colour/size/font from PPTX text boxes is imported and drawn
+- `[x]` Presentation clickers: PageUp/PageDown/arrows/Space advance, "." / B / Esc blank, F5 ("start slideshow") is ignored and cannot reload the window, held buttons do not race through slides; Clear audio moved to F7
+- `[~]` Code signing: build is ready (`npm run build:signed`, docs/CODE_SIGNING.md); a certificate must still be bought
 - `[ ]` Not yet verified in the real Electron app: transitions, Looks, phone remote, editor undo/redo (unit/integration tests only)
 
 ## Future Ideas

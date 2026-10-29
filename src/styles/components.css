@@ -353,6 +353,11 @@
   opacity: 1;
 }
 
+/* A button whose menu is open needs no tooltip: it would sit on top of the menu's first lines */
+.tooltip:has(~ [style*="display: block"])::after {
+  opacity: 0 !important;
+}
+
 /* Toolbar sits at the top of the window — flip its tooltips downward
    so they aren't clipped by the window edge */
 .app-toolbar .tooltip::after {
@@ -524,7 +529,7 @@
   color: white;
   font-size: 11px;
   font-weight: var(--font-weight-bold);
-  padding: 3px 6px;
+  padding: 3px 16px 3px 6px; /* room on the right for the on-air dot */
   border-radius: var(--radius-sm);
   z-index: 10;
   letter-spacing: 0.8px;
@@ -538,8 +543,8 @@
    * as "on-air" without becoming visual noise during a long service. */
   content: '';
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 12px;
+  right: 12px;
   width: 6px;
   height: 6px;
   border-radius: 50%;

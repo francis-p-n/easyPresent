@@ -489,6 +489,12 @@
 }
 
 /* Each tab is as wide as its label (never clipped); rows fill up and the rest wrap */
+/* Text-only tabs: with icons the eight tabs needed three rows, the last holding one tab */
+#show-controls-tabs .tab .icon,
+#show-controls-tabs .tab svg {
+  display: none !important; /* the icon wrapper carries an inline display */
+}
+
 #show-controls-tabs .tab {
   flex: 1 1 auto;
   justify-content: center;

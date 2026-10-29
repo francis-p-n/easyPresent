@@ -210,7 +210,8 @@ export function createSongImporter(onImport) {
     const converted = looksLikeChordsOverLyrics(rawText)
     if (converted) rawText = chordsOverLyricsToChordPro(rawText, { keepInstrumental: true })
 
-    const maxLines = parseInt(maxLinesInput.value, 10) || 4
+    const maxLines = Math.min(4, Math.max(1, parseInt(maxLinesInput.value, 10) || 4))
+    maxLinesInput.value = maxLines
     state.set('maxLinesPerSlide', maxLines)
 
     // A `Title:` / `{title: ...}` line in the text fills in what the fields leave empty

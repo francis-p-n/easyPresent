@@ -794,7 +794,8 @@ export function createSlideEditor(container) {
     if (el.textScaling === 'scaleToFit') applyAutosize(el)
   }))
   fontSizeInput.addEventListener('input', () => withSelected((el) => {
-    el.fontSize = parseInt(fontSizeInput.value, 10) || el.fontSize
+    const typed = parseInt(fontSizeInput.value, 10)
+    el.fontSize = Number.isFinite(typed) && typed > 0 ? Math.min(300, Math.max(12, typed)) : el.fontSize
     el.textScaling = 'none'
     autosizeCheckbox.checked = false
   }))

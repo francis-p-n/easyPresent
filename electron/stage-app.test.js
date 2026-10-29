@@ -111,3 +111,18 @@ describe('stage display — renderSlide protocol', () => {
     expect(box.children[2].children.length).toBeGreaterThan(0)
   })
 })
+
+describe('stage display — views', () => {
+  it('?view= wins, then the remembered choice, then chords', () => {
+    expect(sandbox.chooseView('?view=lyrics', 'cues')).toBe('lyrics')
+    expect(sandbox.chooseView('', 'cues')).toBe('cues')
+    expect(sandbox.chooseView('?view=bogus', 'nonsense')).toBe('chords')
+    expect(sandbox.chooseView('', '')).toBe('chords')
+  })
+
+  it('takes the chords out of lyrics', () => {
+    expect(sandbox.stripChords('[C]Amazing [G]grace')).toBe('Amazing grace')
+    expect(sandbox.stripChords('[C] [G]').trim()).toBe('')
+    expect(sandbox.stripChords(undefined)).toBe('')
+  })
+})

@@ -1,5 +1,6 @@
 const socket = io();
 let currentText = '';
+let liveState = null;    // what Presenter/PA also get: song title, next song, message, timer
 let currentTransposition = 0;
 let currentChart = [];   // every section of the live song, chords inline
 let currentIndex = -1;   // which of them is on the audience screen
@@ -18,6 +19,72 @@ socket.on('slide-update', (slideData) => {
   currentIndex = slideData && typeof slideData.index === 'number' ? slideData.index : -1;
   renderSlide();
 });
+
+// What this screen shows: the chord chart, lyrics only (singers), or big section cues (drums / leader).
+// `?view=` in the address wins, so two screens on one computer can differ; the choice is remembered otherwise.
+const VIEWS = ['chords', 'lyrics', 'cues'];
+function chooseView(search, saved) {
+  const found = /[?&]view=([a-z]+)/.exec(String(search || ''));
+  const asked = found ? found[1] : '';
+  if (VIEWS.indexOf(asked) !== -1) return asked;
+  return VIEWS.indexOf(saved) !== -1 ? saved : 'chords';
+}
+let savedView = '';
+try { savedView = localStorage.getItem('stageView') || ''; } catch (e) { /* private window */ }
+let currentView = chooseView(typeof location !== 'undefined' ? location.search : '', savedView);
+
+function setView(view) {
+  if (VIEWS.indexOf(view) === -1) return;
+  currentView = view;
+  try { localStorage.setItem('stageView', view); } catch (e) { /* private window */ }
+  try { history.replaceState(null, '', '?view=' + view); } catch (e) { /* not in a page */ }
+  applyView();
+  renderSlide();
+}
+
+function applyView() {
+  const body = typeof document !== 'undefined' && document.body;
+  if (!body || !body.classList) return;
+  VIEWS.forEach(function (v) { body.classList.toggle('view-' + v, v === currentView); });
+  document.querySelectorAll('.view-btn').forEach(function (b) {
+    b.setAttribute('aria-pressed', b.dataset.view === currentView ? 'true' : 'false');
+  });
+}
+
+// Chords out: a singer reads words, not letters. A line that was only chords (an instrumental) disappears.
+function stripChords(text) {
+  return String(text || '').replace(/\[[^\]]*\]/g, '');
+}
+
+// The bar across the top: song, what is next, the countdown and the time of day
+function formatClock(date) {
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function renderBar() {
+  if (typeof document === 'undefined' || !document.getElementById) return;
+  const set = function (id, text) { const el = document.getElementById(id); if (el) el.textContent = text; };
+  const live = liveState || {};
+  set('bar-title', live.title || '');
+  set('bar-next', live.nextSong ? 'Next: ' + live.nextSong : '');
+  const timer = live.timer && live.timer !== '00:00' ? '⏱ ' + live.timer : '';
+  set('bar-timer', timer);
+  set('bar-clock', formatClock(new Date()));
+  const banner = document.getElementById('stage-message');
+  if (banner) {
+    banner.textContent = live.message || '';
+    banner.hidden = !live.message;
+    if (document.body && document.body.classList) document.body.classList.toggle('has-message', !!live.message);
+  }
+}
+
+socket.on('live-state', (state) => {
+  liveState = state || null;
+  renderBar();
+  if (currentView === 'cues') renderSlide();
+});
+
+if (typeof setInterval === 'function') setInterval(renderBar, 1000);
 
 // Text size for the band, kept on this device only
 let textScale = 1;
@@ -80,6 +147,29 @@ function renderSlide() {
   container.innerHTML = '';
   container.style.fontSize = textScale + 'em';
 
+  // Cues: the section now and the one after, big enough to read from the drum kit
+  if (currentView === 'cues') {
+    const now = currentChart[currentIndex];
+    const after = currentChart[currentIndex + 1];
+    if (now) {
+      const big = document.createElement('div');
+      big.className = 'cue-now';
+      big.textContent = now.label || 'NOW';
+      container.appendChild(big);
+      const small = document.createElement('div');
+      small.className = 'cue-next';
+      small.textContent = after ? 'NEXT: ' + (after.label || 'section') : 'LAST SECTION';
+      container.appendChild(small);
+      const count = document.createElement('div');
+      count.className = 'cue-count';
+      count.textContent = (currentIndex + 1) + ' of ' + currentChart.length;
+      container.appendChild(count);
+    } else if (currentText) {
+      renderLines(container, currentText);
+    }
+    return;
+  }
+
   // The whole song, with the live section lit and kept in view
   if (currentChart.length && currentIndex >= 0) {
     let liveEl = null;
@@ -109,6 +199,16 @@ function renderLines(container, text) {
   const lines = String(text || '').split('\n');
 
   lines.forEach(lineText => {
+    // Lyrics only: no chords, and no empty row where a chords-only line was
+    if (currentView === 'lyrics') {
+      const words = stripChords(lineText);
+      if (lineText.indexOf('[') !== -1 && words.trim() === '') return;
+      const plain = document.createElement('div');
+      plain.className = 'line plain';
+      plain.textContent = words === '' ? ' ' : words;
+      container.appendChild(plain);
+      return;
+    }
     const lineDiv = document.createElement('div');
     lineDiv.className = 'line';
 
@@ -162,3 +262,6 @@ function createChordWordPair(chord, lyric) {
   wrapper.appendChild(lyricSpan);
   return wrapper;
 }
+
+applyView();
+renderBar();

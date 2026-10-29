@@ -106,7 +106,8 @@ function createStageHub() {
           ? lanAddresses().map((ip) => ({
               presenter: `http://${ip}:${port}/presenter`,
               pa: `http://${ip}:${port}/pa`,
-              remote: `http://${ip}:${port}/remote`
+              remote: `http://${ip}:${port}/remote`,
+              stage: `http://${ip}:${port}/`
             }))
           : []
       }

@@ -10,7 +10,7 @@ function registerDisplayIpc({ displays, stageHub, getMainWindow }) {
 
   ipcMain.handle('list-displays', () => displays.listDisplays())
   ipcMain.handle('open-displays', () => displays.openRoles())
-  ipcMain.handle('toggle-display', (event, role, displayId) => displays.toggle(role, displayId))
+  ipcMain.handle('toggle-display', (event, role, displayId, options) => displays.toggle(role, displayId, options))
   // Legacy single-button entry point (kept for the existing Screens button)
   ipcMain.handle('toggle-audience-output', () => displays.toggle('audience'))
 

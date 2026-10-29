@@ -119,6 +119,15 @@ export class Toolbar {
         ${roleRow('audience', 'Audience', 'Congregation screen / projector')}
         ${roleRow('presenter', 'Presenter', 'Pastor: current + next slide, clock')}
         ${roleRow('pa', 'PA Team', 'Sound desk: output check, cues, timers')}
+        ${roleRow('stage', 'Band stage', 'Chords, lyrics or big cues for the band')}
+        <div style="padding:0 6px 6px;display:flex;align-items:center;gap:6px;font-size:12px;">
+          Show
+          <select id="screens-stage-view" class="input" style="flex:1;" aria-label="What the band stage shows">
+            <option value="chords">Chords and lyrics (guitar, keys)</option>
+            <option value="lyrics">Lyrics only (singers)</option>
+            <option value="cues">Big section cues (drums, leader)</option>
+          </select>
+        </div>
         <div style="padding:8px 6px 6px;border-top:1px solid var(--border-color);margin-top:4px;display:flex;flex-direction:column;gap:6px;">
           <div style="font-size:12px;font-weight:600;">Audience look</div>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
@@ -367,7 +376,7 @@ export class Toolbar {
       })
       screensBtn.classList.toggle('active', openRoles.size > 0)
       const label = screensBtn.querySelector('.toolbar-btn-label')
-      if (label) label.textContent = openRoles.size ? `Screens ${openRoles.size}/3` : 'Screens'
+      if (label) label.textContent = openRoles.size ? `Screens ${openRoles.size}/4` : 'Screens'
     }
     // "Phones & tablets": the web server only runs once someone asks for it (or opens an output window)
     const shareBtn = screensMenu.querySelector('#screens-share-btn')
@@ -390,7 +399,7 @@ export class Toolbar {
         shareUrls.appendChild(pin)
       }
       for (const u of addresses) {
-        for (const [label, href] of [['Presenter', u.presenter], ['PA', u.pa], ['Remote', u.remote]]) {
+        for (const [label, href] of [['Presenter', u.presenter], ['PA', u.pa], ['Remote', u.remote], ['Band: chords', u.stage], ['Band: lyrics', u.stage && `${u.stage}?view=lyrics`], ['Band: cues', u.stage && `${u.stage}?view=cues`]]) {
           if (!href) continue
           const line = document.createElement('div')
           line.textContent = `${label}: ${href}`
@@ -445,7 +454,8 @@ export class Toolbar {
       const sel = screensMenu.querySelector(`.screens-display[data-role="${role}"]`)
       const displayId = sel && sel.value ? Number(sel.value) : undefined
       try {
-        const open = await window.electronAPI.toggleDisplay(role, displayId)
+        const view = role === 'stage' ? screensMenu.querySelector('#screens-stage-view')?.value : undefined
+        const open = await window.electronAPI.toggleDisplay(role, displayId, view ? { view } : undefined)
         if (open) openRoles.add(role)
         else openRoles.delete(role)
         // Opening the Presenter/PA window starts the server, so show the addresses now

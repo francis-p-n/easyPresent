@@ -13,7 +13,7 @@ import { getActiveSequence } from './core/arrangement.js'
 import { initSongLibrary } from './songs/songLibrary.js'
 import { installA11y } from './components/common/a11y.js'
 import { showShortcutHelp } from './features/controls/ShortcutHelp.js'
-import { buildLiveState } from './core/liveState.js'
+import { buildLiveState, nextSongTitle } from './core/liveState.js'
 import { buildLookup, eventToSpec, loadOverrides } from './core/shortcuts.js'
 import { themeFor, livePresentation, presentationTransition } from './core/presentationDefaults.js'
 import { applyPanelWidths, loadPanelWidths, readPanelWidths, savePanelWidths } from './core/workspaces.js'
@@ -280,8 +280,10 @@ class App {
       if (!window.electronAPI || !window.electronAPI.broadcastLiveState) return
       // The live song, not the selected one: selecting another song must not change what Presenter/PA report
       const liveId = state.get('livePresentationId')
+      const presentation = (state.get('presentations') || []).find((p) => p.id === liveId) || state.get('selectedPresentation')
       const live = buildLiveState({
-        presentation: (state.get('presentations') || []).find((p) => p.id === liveId) || state.get('selectedPresentation'),
+        presentation,
+        nextSong: nextSongTitle(state.get('activePlaylist'), state.get('presentations'), presentation?.id),
         liveIndex: state.get('liveSlideIndex'),
         layers: state.get('layers'),
         showLogo: state.get('showLogo'),
@@ -292,7 +294,7 @@ class App {
       this._lastLiveSig = sig
       window.electronAPI.broadcastLiveState(live)
     }
-    for (const key of ['layers', 'liveSlideIndex', 'livePresentationId', 'showLogo', 'timer_main', 'presentations', 'selectedPresentation']) {
+    for (const key of ['layers', 'liveSlideIndex', 'livePresentationId', 'showLogo', 'timer_main', 'presentations', 'selectedPresentation', 'activePlaylist']) {
       state.on(key, syncLiveState)
     }
     syncLiveState()

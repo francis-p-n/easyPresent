@@ -9,7 +9,18 @@ import { getActiveSequence } from './arrangement.js'
 
 const slideInfo = (slide) => (slide ? { label: slide.label || '', text: slide.text || '' } : null)
 
-export function buildLiveState({ presentation, liveIndex, layers, showLogo, timerValue }) {
+/** The title of the song after `currentId` in the open setlist, or '' (last song, or not in the list). */
+export function nextSongTitle(playlist, presentations, currentId) {
+  const songs = ((playlist && playlist.items) || [])
+    .filter((item) => item.type === 'presentation')
+    .map((item) => (presentations || []).find((p) => p.id === item.id))
+    .filter(Boolean)
+  const at = songs.findIndex((p) => p.id === currentId)
+  const next = at === -1 ? null : songs[at + 1]
+  return next ? next.title || next.name || '' : ''
+}
+
+export function buildLiveState({ presentation, liveIndex, layers, showLogo, timerValue, nextSong }) {
   const sequence = presentation ? getActiveSequence(presentation) : []
   const slideLayer = layers?.slide
   const messageLayer = layers?.message
@@ -32,6 +43,7 @@ export function buildLiveState({ presentation, liveIndex, layers, showLogo, time
     total: sequence.length,
     message,
     showLogo: !!showLogo,
-    timer: timerValue || ''
+    timer: timerValue || '',
+    nextSong: nextSong || ''
   }
 }

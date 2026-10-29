@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildLiveState } from './liveState.js'
+import { buildLiveState, nextSongTitle } from './liveState.js'
 
 const pres = {
   title: 'Sunday',
@@ -39,5 +39,30 @@ describe('buildLiveState', () => {
     const s = buildLiveState({ presentation: null, liveIndex: -1, layers, showLogo: true, timerValue: '04:59' })
     expect(s.message).toBe('Starts in 04:59')
     expect(s.showLogo).toBe(true)
+  })
+})
+
+describe('nextSongTitle', () => {
+  const songs = [
+    { id: 'a', name: 'Amazing Grace' },
+    { id: 'b', name: 'How Great', title: 'How Great Is Our God' },
+    { id: 'c', name: 'Reasons' }
+  ]
+  const playlist = { items: [{ type: 'header', text: 'Worship' }, { type: 'presentation', id: 'a' }, { type: 'note', text: 'n' }, { type: 'presentation', id: 'b' }, { type: 'presentation', id: 'c' }] }
+
+  it('names the next song, skipping headers and notes', () => {
+    expect(nextSongTitle(playlist, songs, 'a')).toBe('How Great Is Our God')
+    expect(nextSongTitle(playlist, songs, 'b')).toBe('Reasons')
+  })
+
+  it('is blank on the last song, for a song outside the list, and with no list', () => {
+    expect(nextSongTitle(playlist, songs, 'c')).toBe('')
+    expect(nextSongTitle(playlist, songs, 'zzz')).toBe('')
+    expect(nextSongTitle(null, songs, 'a')).toBe('')
+  })
+
+  it('travels in the live state', () => {
+    expect(buildLiveState({ presentation: null, layers: {}, nextSong: 'Reasons' }).nextSong).toBe('Reasons')
+    expect(buildLiveState({ presentation: null, layers: {} }).nextSong).toBe('')
   })
 })

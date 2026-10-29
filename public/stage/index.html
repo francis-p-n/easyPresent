@@ -11,8 +11,52 @@
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 40px;
+      padding-top: 84px; /* room for the bar across the top */
       overflow-x: hidden;
     }
+
+    /* The bar across the top: song, what is next, countdown, time of day */
+    #stage-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 50;
+      display: flex;
+      align-items: baseline;
+      gap: 24px;
+      padding: 12px 24px;
+      background: #111;
+      border-bottom: 1px solid #333;
+      font-size: 2vw;
+    }
+    #bar-title { font-weight: bold; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #bar-next { color: #a3acb8; white-space: nowrap; }
+    #bar-timer { color: #ffcc00; font-weight: bold; white-space: nowrap; }
+    #bar-clock { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    /* An operator message ("last chorus", "slow down") across the top of everything */
+    #stage-message {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 60;
+      padding: 18px 24px;
+      background: #ffcc00;
+      color: #000;
+      font-size: 4vw;
+      font-weight: bold;
+      text-align: center;
+    }
+    #stage-message[hidden] { display: none; }
+
+    /* Lyrics only: bigger words, nothing else */
+    .view-lyrics .line.plain { font-size: 4.6vw; line-height: 1.25; }
+    .view-lyrics #transpo-group { display: none; }
+
+    /* Cues: the section now and the one after, readable from across the stage */
+    .view-cues #slide-content { align-items: center; justify-content: center; text-align: center; min-height: 70vh; }
+    .cue-now { font-size: 11vw; overflow-wrap: normal; font-weight: bold; color: #ffcc00; line-height: 1; text-transform: uppercase; }
+    .cue-next { font-size: 5vw; color: #fff; }
+    .cue-count { font-size: 2.4vw; color: #a3acb8; }
+    .view-cues #transpo-group { display: none; }
     
     #slide-content {
       display: flex;
@@ -77,7 +121,9 @@
       margin-bottom: 0.3em;
     }
     .section.live .section-label { color: #ffcc00; }
-    section.section { scroll-margin-top: 20px; }
+    section.section { scroll-margin-top: 100px; } /* below the bar */
+    body.has-message section.section { scroll-margin-top: 190px; }
+    body.has-message { padding-top: 170px; }
 
     /* Controls */
     .controls {
@@ -114,6 +160,10 @@
       background: #666;
     }
 
+    .controls .view-btn { width: auto; border-radius: 20px; padding: 0 14px; font-size: 1rem; }
+    .controls .view-btn[aria-pressed="true"] { background: #ffcc00; color: #000; }
+    #transpo-group { display: flex; align-items: center; gap: 10px; }
+
     #transpo-val {
       font-size: 1.5rem;
       font-weight: bold;
@@ -124,14 +174,27 @@
 </head>
 <body>
   
+  <div id="stage-bar">
+    <div id="bar-title"></div>
+    <div id="bar-next"></div>
+    <div id="bar-timer"></div>
+    <div id="bar-clock"></div>
+  </div>
+  <div id="stage-message" role="alert" hidden></div>
+
   <div id="slide-content">Waiting for presentation to start...</div>
 
   <div class="controls">
+    <button class="view-btn" data-view="chords" onclick="setView('chords')" aria-pressed="true">Chords</button>
+    <button class="view-btn" data-view="lyrics" onclick="setView('lyrics')" aria-pressed="false">Lyrics</button>
+    <button class="view-btn" data-view="cues" onclick="setView('cues')" aria-pressed="false">Cues</button>
     <button onclick="changeTextSize(-0.1)" aria-label="Smaller text">A-</button>
     <button onclick="changeTextSize(0.1)" aria-label="Larger text">A+</button>
-    <button onclick="changeTransposition(-1)" aria-label="Down a half step">-</button>
-    <div id="transpo-val">0</div>
-    <button onclick="changeTransposition(1)" aria-label="Up a half step">+</button>
+    <div id="transpo-group">
+      <button onclick="changeTransposition(-1)" aria-label="Down a half step">-</button>
+      <div id="transpo-val">0</div>
+      <button onclick="changeTransposition(1)" aria-label="Up a half step">+</button>
+    </div>
   </div>
 
   <!-- Vendored socket.io client: the server's built-in /socket.io/socket.io.js

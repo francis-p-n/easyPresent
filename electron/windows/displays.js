@@ -4,6 +4,7 @@
  *   audience   fullscreen projection, fed over IPC from the operator window
  *   presenter  the pastor's confirmation monitor (current + next slide, clock)
  *   pa         the sound desk (output check, cues, timers)
+ *   stage      the band's screen: chords, lyrics only, or big section cues
  *
  * Presenter and PA are local clients of the stage server, so the same pages
  * also open on any phone/laptop at http://<this-pc>:8080/presenter and /pa.
@@ -11,7 +12,8 @@
 const { BrowserWindow, screen } = require('electron')
 const { appIcon, publicPage, preload } = require('../paths')
 
-const ROLE_TITLES = { presenter: 'Presenter View', pa: 'PA View' }
+const ROLE_TITLES = { presenter: 'Presenter View', pa: 'PA View', stage: 'Band Stage' }
+const STAGE_VIEWS = ['chords', 'lyrics', 'cues']
 
 // When there is no spare display the outputs open as ordinary windows. Each gets
 // its own cascade slot and a size smaller than the operator window, so none hides
@@ -19,15 +21,16 @@ const ROLE_TITLES = { presenter: 'Presenter View', pa: 'PA View' }
 const WINDOWED = {
   audience: { x: 40, y: 40, width: 960, height: 540 },
   presenter: { x: 110, y: 90, width: 900, height: 560 },
-  pa: { x: 180, y: 140, width: 900, height: 560 }
+  pa: { x: 180, y: 140, width: 900, height: 560 },
+  stage: { x: 250, y: 190, width: 900, height: 560 }
 }
 
 function createDisplayManager({ stageHub, getMainWindow = () => null }) {
   let audienceWindow = null
   let lastAudiencePayload = null
-  const roleWindows = { presenter: null, pa: null }
+  const roleWindows = { presenter: null, pa: null, stage: null }
 
-  const allWindows = () => [audienceWindow, roleWindows.presenter, roleWindows.pa]
+  const allWindows = () => [audienceWindow, roleWindows.presenter, roleWindows.pa, roleWindows.stage]
   const inUse = (display) => allWindows().some((w) => w && w.__displayId === display.id)
 
   // Explicit choice wins; otherwise the first external display nothing else is
@@ -110,7 +113,7 @@ function createDisplayManager({ stageHub, getMainWindow = () => null }) {
 
   const opening = new Set() // roles whose window is waiting on the server, so a double click can't open two
 
-  async function openRole(role, requestedId) {
+  async function openRole(role, requestedId, options) {
     opening.add(role)
     try {
       await stageHub.start()
@@ -136,7 +139,9 @@ function createDisplayManager({ stageHub, getMainWindow = () => null }) {
       webPreferences: { nodeIntegration: false, contextIsolation: true }
     })
     win.__displayId = target.id
-    win.loadURL(stageHub.url(`/${role}/`))
+    // The band stage is the server's front page; ?view= picks chords, lyrics only or cues for this screen
+    const view = STAGE_VIEWS.includes(options && options.view) ? options.view : 'chords'
+    win.loadURL(role === 'stage' ? stageHub.url(`/?view=${view}`) : stageHub.url(`/${role}/`))
     keepOperatorFocused(win)
     win.on('closed', () => {
       roleWindows[role] = null
@@ -147,7 +152,7 @@ function createDisplayManager({ stageHub, getMainWindow = () => null }) {
   }
 
   /** Returns true when the window is now open, false when it was closed (a Promise for Presenter/PA, which wait for the server). */
-  function toggle(role, displayId) {
+  function toggle(role, displayId, options) {
     if (role === 'audience') {
       if (audienceWindow) {
         audienceWindow.close()
@@ -164,7 +169,7 @@ function createDisplayManager({ stageHub, getMainWindow = () => null }) {
       return false
     }
     if (opening.has(role)) return Promise.resolve(true)
-    return openRole(role, displayId)
+    return openRole(role, displayId, options)
   }
 
   function updateAudience(payload) {

@@ -67,6 +67,7 @@ export class PlaylistPanel {
             <div class="dropdown-item" data-add="song" style="${MENU_ITEM_STYLE}">Add Song…</div>
             <div class="dropdown-item" data-add="title" style="${MENU_ITEM_STYLE}">Add Welcome slide</div>
             <div class="dropdown-item" data-add="sermon" style="${MENU_ITEM_STYLE}">Add Sermon slide</div>
+            <div class="dropdown-item" data-add="closing" style="${MENU_ITEM_STYLE}">Add Thank-you slide</div>
             <div class="dropdown-item" data-add="header" style="${MENU_ITEM_STYLE}">Add Header</div>
             <div class="dropdown-item" data-add="note" style="${MENU_ITEM_STYLE}">Add Note</div>
           </div>
@@ -544,6 +545,7 @@ export class PlaylistPanel {
         if (add.dataset.add === 'song') this._showSongPicker()
         else if (add.dataset.add === 'title') this._addTitleSlide('welcome')
         else if (add.dataset.add === 'sermon') this._addTitleSlide('sermon')
+        else if (add.dataset.add === 'closing') this._addTitleSlide('closing')
         else if (add.dataset.add === 'header') {
           this._showTextPrompt('Add Header', 'Header text', (text) => this._addPlaylistItem({ type: 'header', text }))
         } else {

@@ -132,3 +132,28 @@ describe('the sermon slide', () => {
     expect(p.slides[0].elements.find((e) => e.role === 'title').text).toBe('FAITH UNDER PRESSURE')
   })
 })
+
+describe('the thank-you slide', () => {
+  it('thanks the room and names next week a week after this service', () => {
+    const p = createTitlePresentation(service(meta), 'closing')
+    expect(titleKindOf(p)).toBe('closing')
+    const text = (role) => p.slides[0].elements.find((e) => e.role === role).text
+    expect(p.slides[0].elements.map((e) => e.role)).toEqual(['church', 'thanks', 'title', 'next', 'date'])
+    expect(text('title')).toBe('FOR JOINING US')
+    expect(text('date')).toBe('2026 SEPTEMBER 6')
+    expect(text('next')).toBe('SEE YOU NEXT WEEK')
+    expect(p.slides[0].group).toBe('outro')
+  })
+
+  it('has no next-week line when the service has no date, and follows date changes', () => {
+    const svc = service({ ...meta, date: '' })
+    const p = createTitlePresentation(svc, 'closing')
+    expect(p.slides[0].elements.find((e) => e.role === 'next').text).toBe('')
+    const next = refreshTitleSlides({ ...svc, meta: { ...meta, date: '2026-12-27' } }, [p])
+    expect(next[0].slides[0].elements.find((e) => e.role === 'date').text).toBe('2027 JANUARY 3')
+  })
+
+  it('an unknown kind falls back to the welcome slide', () => {
+    expect(titleKindOf(createTitlePresentation(service(meta), 'nonsense'))).toBe('welcome')
+  })
+})

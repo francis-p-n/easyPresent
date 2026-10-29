@@ -9,7 +9,7 @@
  * fonts, sizes and positions the operator has adjusted are kept.
  */
 
-import { metaOf, isValidDate } from './services.js'
+import { metaOf, isValidDate, addDays } from './services.js'
 
 export const TITLE_CATEGORY = 'Service'
 export const TITLE_FONTS = { script: 'Great Vibes', display: 'Playfair Display', small: 'Montserrat' }
@@ -47,8 +47,20 @@ export function sermonWords(meta) {
   }
 }
 
-export const TITLE_KINDS = ['welcome', 'sermon']
-export const wordsFor = (kind, meta) => (kind === 'sermon' ? sermonWords(meta) : titleWords(meta))
+/** The words on the closing slide: a thank-you, and when the next service is (a week after this one). */
+export function closingWords(meta) {
+  const m = metaOf({ meta })
+  return {
+    church: m.church.toUpperCase(),
+    thanks: 'Thank you',
+    title: 'FOR JOINING US',
+    next: m.date ? 'SEE YOU NEXT WEEK' : '',
+    date: titleDate(addDays(m.date, 7))
+  }
+}
+
+export const TITLE_KINDS = ['welcome', 'sermon', 'closing']
+export const wordsFor = (kind, meta) => (kind === 'sermon' ? sermonWords(meta) : kind === 'closing' ? closingWords(meta) : titleWords(meta))
 
 const slideId = () => 'slide-' + Math.random().toString(36).slice(2, 11)
 const presentationId = () => 'title-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
@@ -77,26 +89,38 @@ export function sermonElements(words) {
   ]
 }
 
+/** The closing slide's text boxes: church name, a script thank-you over the big line, next week on the bottom. */
+export function closingElements(words) {
+  const base = { vAlign: 'center', lineSpacing: 1.1, color: '#ffffff' }
+  return [
+    { ...base, role: 'church', text: words.church, x: 0, y: 56, width: 1920, height: 70, fontSize: 34, fontFamily: TITLE_FONTS.small, bold: true, hAlign: 'center', letterSpacing: 0.16 },
+    { ...base, role: 'thanks', text: words.thanks, x: 160, y: 300, width: 1600, height: 320, fontSize: 200, fontFamily: TITLE_FONTS.script, bold: false, hAlign: 'center' },
+    { ...base, role: 'title', text: words.title, x: 60, y: 440, width: 1800, height: 300, fontSize: 170, fontFamily: TITLE_FONTS.display, bold: false, hAlign: 'center' },
+    { ...base, role: 'next', text: words.next, x: 90, y: 930, width: 900, height: 70, fontSize: 32, fontFamily: TITLE_FONTS.small, bold: true, hAlign: 'left', letterSpacing: 0.12 },
+    { ...base, role: 'date', text: words.date, x: 930, y: 930, width: 900, height: 70, fontSize: 32, fontFamily: TITLE_FONTS.small, bold: true, hAlign: 'right', letterSpacing: 0.12 }
+  ]
+}
+
 const joinText = (elements) => elements.map((e) => e.text).filter(Boolean).join('\n')
 
 /** A new library entry holding the welcome (or sermon) slide for `playlist`. */
 export function createTitlePresentation(playlist, kind = 'welcome') {
-  const sermon = kind === 'sermon'
-  const words = wordsFor(kind, playlist.meta)
-  const elements = sermon ? sermonElements(words) : titleElements(words)
-  const label = sermon ? 'Sermon' : 'Welcome'
+  const k = TITLE_KINDS.includes(kind) ? kind : 'welcome'
+  const words = wordsFor(k, playlist.meta)
+  const elements = k === 'sermon' ? sermonElements(words) : k === 'closing' ? closingElements(words) : titleElements(words)
+  const label = k === 'sermon' ? 'Sermon' : k === 'closing' ? 'Thank you' : 'Welcome'
   return {
     id: presentationId(),
     name: label,
     category: TITLE_CATEGORY,
     serviceId: playlist.id,
-    titleKind: sermon ? 'sermon' : 'welcome',
-    slides: [{ id: slideId(), group: sermon ? 'verse' : 'intro', label, text: joinText(elements), elements }]
+    titleKind: k,
+    slides: [{ id: slideId(), group: k === 'sermon' ? 'verse' : k === 'closing' ? 'outro' : 'intro', label, text: joinText(elements), elements }]
   }
 }
 
 /** Which generated slide this is: 'welcome' or 'sermon' (null for any other library entry). */
-export const titleKindOf = (p) => (isTitlePresentation(p) ? (p.titleKind === 'sermon' ? 'sermon' : 'welcome') : null)
+export const titleKindOf = (p) => (isTitlePresentation(p) ? (TITLE_KINDS.includes(p.titleKind) ? p.titleKind : 'welcome') : null)
 
 /** Is this library entry a generated welcome slide? */
 export const isTitlePresentation = (p) => !!p && typeof p.serviceId === 'string' && p.category === TITLE_CATEGORY
